@@ -854,4 +854,209 @@
                     dot.className = 'status-dot status-live';
                     text.textContent = 'LIVE_FEED';
                     text.className = 'text-xs text-green-500';
-                    latency.textContent = Math.floor(Math.random() * 15
+                    latency.textContent = Math.floor(Math.random() * 15 + 8) + 'ms';
+                    latency.className = 'text-green-500';
+                    document.getElementById('syncBar').style.opacity = '0.3';
+                    break;
+                case 'error':
+                    dot.className = 'status-dot status-error';
+                    text.textContent = 'OFFLINE';
+                    text.className = 'text-xs text-red-500';
+                    latency.textContent = 'ERR';
+                    latency.className = 'text-red-500';
+                    document.getElementById('syncBar').style.opacity = '0.3';
+                    break;
+            }
+        }
+
+        // Show error banner
+        function showErrorBanner() {
+            document.getElementById('errorBanner').classList.add('show');
+            document.getElementById('dataSource').textContent = 'SRC: STATIC_FALLBACK';
+            document.getElementById('dataSource').className = 'text-xs text-orange-500 ml-4';
+            document.getElementById('stocksSource').textContent = 'SRC: STATIC_DATA';
+            document.getElementById('stocksSource').className = 'text-xs text-orange-500';
+            document.getElementById('connStatus').textContent = 'OFFLINE';
+            document.getElementById('connStatus').className = 'text-orange-500';
+            document.getElementById('dataSrcLabel').textContent = 'STATIC_FALLBACK';
+            document.getElementById('dataSrcLabel').className = 'text-orange-500';
+            document.getElementById('sysMode').textContent = 'OFFLINE';
+            document.getElementById('sysMode').className = 'text-orange-500';
+        }
+
+        function dismissError() {
+            document.getElementById('errorBanner').classList.remove('show');
+        }
+
+        // Force sync function
+        function forceSync() {
+            fetchMarketData(true);
+        }
+
+        // Countdown timer
+        function updateCountdown() {
+            if (appState.countdown > 0) {
+                appState.countdown--;
+                const mins = Math.floor(appState.countdown / 60);
+                const secs = appState.countdown % 60;
+                const timeStr = `${mins}:${secs.toString().padStart(2, '0')}`;
+                document.getElementById('countdown').textContent = timeStr;
+                document.getElementById('nextRefresh').textContent = timeStr;
+                
+                // Update next sync time display
+                if (appState.nextSync) {
+                    document.getElementById('nextSync').textContent = 
+                        appState.nextSync.toLocaleTimeString('fr-FR', {hour12:false, hour:'2-digit', minute:'2-digit'});
+                }
+            } else {
+                fetchMarketData();
+            }
+        }
+
+        // ============================================
+        // EVENT LISTENERS
+        // ============================================
+
+        // Search functionality
+        const searchInput = document.getElementById('searchInput');
+        const clearBtn = document.getElementById('clearSearch');
+
+        searchInput.addEventListener('input', function(e) {
+            appState.searchTerm = e.target.value.trim();
+            renderStocks();
+        });
+
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && appState.searchTerm) {
+                const stock = appState.stocks.find(s => s.symbol.toLowerCase() === appState.searchTerm.toLowerCase());
+                if (stock) {
+                    const row = document.getElementById(`stock-${stock.symbol}`);
+                    if (row) {
+                        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        row.style.backgroundColor = 'rgba(255,102,0,0.3)';
+                        setTimeout(() => row.style.backgroundColor = '', 2000);
+                    }
+                }
+            }
+        });
+
+        clearBtn.addEventListener('click', function() {
+            searchInput.value = '';
+            appState.searchTerm = '';
+            renderStocks();
+            searchInput.focus();
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'F5' || e.key === 'F9') {
+                e.preventDefault();
+                forceSync();
+            }
+            if (e.key === 'Escape') {
+                if (confirm('Quitter le terminal RISK NETWORK GROUP?')) {
+                    window.close();
+                }
+            }
+            if (e.key === 'F1') {
+                e.preventDefault();
+                alert(`RISK NETWORK GROUP - AIDE
+
+CONFIGURATION ACTUELLE:
+- API: ${CONFIG.API_BASE_URL}
+- Mode: ${appState.isLive ? 'ONLINE (GitHub)' : 'OFFLINE (Static)'}
+- Rafraîchissement: ${CONFIG.REFRESH_INTERVAL/60000} minutes
+
+RACCOURCIS:
+F1: Cette aide
+F2: Export CSV
+F3: Filtrer par secteur
+F5/F9: Rafraîchir immédiatement
+ESC: Quitter
+/: Focus recherche
+
+Pour activer le mode LIVE:
+1. Configurez CONFIG.API_BASE_URL avec votre URL GitHub
+2. Assurez-vous que scraper.py fonctionne via GitHub Actions
+3. Rafraîchissez la page (F5)`);
+            }
+            if (e.key === 'F2') {
+                e.preventDefault();
+                exportToCSV();
+            }
+            if (e.key === 'F3') {
+                e.preventDefault();
+                const sector = prompt(`Filtrer par secteur:
+BANK, TELECOM, ASSUR, IMMO, INDUS, MINES, ENERGY, TRANSPORT, SANTE, AGRO, TECH, RETAIL, HOLDING, FINANCE
+
+Ou "ALL" pour tout afficher:`);
+                if (sector) {
+                    appState.currentFilter = sector.toUpperCase();
+                    renderStocks();
+                }
+            }
+            if (e.key === '/' && document.activeElement !== searchInput) {
+                e.preventDefault();
+                searchInput.focus();
+            }
+        });
+
+        // Export to CSV
+        function exportToCSV() {
+            let csv = 'Symbol,Name,Sector,Price,Change%,Volume\n';
+            appState.stocks.filter(s => !s.suspended).forEach(s => {
+                csv += `${s.symbol},"${s.name}",${s.sector},${s.price.toFixed(2)},${s.change.toFixed(2)},${s.volume}\n`;
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `risk_network_stocks_${new Date().toISOString().slice(0,10)}.csv`;
+            a.click();
+        }
+
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+
+        function init() {
+            // Start clock
+            setInterval(updateClockAndMarketStatus, 1000);
+            updateClockAndMarketStatus();
+            
+            // Initial render with static data
+            renderStocks();
+            renderNews();
+            
+            // Try to fetch live data from GitHub
+            fetchMarketData();
+            
+            // Set up intervals
+            setInterval(updateCountdown, 1000);
+            
+            // Micro-updates when offline
+            setInterval(() => {
+                if (!appState.isLive && CONFIG.SIMULATE_UPDATES) {
+                    simulateMarketMovements();
+                }
+            }, 5000);
+            
+            // Periodic refresh attempts when offline
+            setInterval(() => {
+                if (!appState.isLive) {
+                    fetchMarketData();
+                }
+            }, CONFIG.RETRY_INTERVAL);
+            
+            // Log startup info
+            console.log('%c[RISK NETWORK GROUP]', 'color: #ff6600; font-weight: bold;');
+            console.log('%cTerminal initialized', 'color: #00ff41;');
+            console.log('GitHub API:', CONFIG.API_BASE_URL);
+        }
+
+        // Start the app
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
