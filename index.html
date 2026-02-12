@@ -343,27 +343,23 @@
         // CONFIGURATION - MODIFY THIS FOR YOUR GITHUB
         // ============================================
         const CONFIG = {
-            // CHANGE THIS to your GitHub username and repo name
-            API_BASE_URL: 'https://marouane159.github.io/risk-network-terminal',
-            
-            // Data endpoints (raw JSON files from GitHub)
-            ENDPOINTS: {
-                stocks: '/data/stocks.json',
-                news: '/data/news.json',
-                update: '/data/last_update.txt'
-            },
-            
-            // Timing settings
-            REFRESH_INTERVAL: 600000,  // 10 minutes (600 seconds)
-            RETRY_INTERVAL: 60000,     // 1 minute retry if failed
-            COUNTDOWN_START: 600,      // 10 minutes in seconds
-            
-            // Behavior settings
-            FALLBACK_TO_STATIC: true,  // Use static data if GitHub fetch fails
-            SIMULATE_UPDATES: false,   // DISABLED: No fake price movements
-            SHOW_DEBUG: true           // Console logging for debugging
-        };
-
+    // Use your Render.com API URL
+    API_BASE_URL: 'https://risk-network-api.onrender.com',  // <-- YOUR RENDER URL
+    
+    ENDPOINTS: {
+        stocks: '/api/stocks',
+        news: '/api/news',
+        update: '/api/all'
+    },
+    
+    REFRESH_INTERVAL: 30000,  // 30 seconds (Render free tier sleeps, so refresh more often)
+    RETRY_INTERVAL: 10000,    // 10 seconds
+    COUNTDOWN_START: 30,      // 30 seconds
+    
+    FALLBACK_TO_STATIC: false,  // NO static fallback - force real data only
+    SIMULATE_UPDATES: false,
+    SHOW_DEBUG: true
+};
         // ============================================
         // STATIC DATA FALLBACK (77 Moroccan Stocks)
         // ============================================
