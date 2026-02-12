@@ -344,7 +344,6 @@
         // ============================================
         const CONFIG = {
             // CHANGE THIS to your GitHub username and repo name
-            // Format: https://[USERNAME].github.io/[REPO_NAME]
             API_BASE_URL: 'https://marouane159.github.io/risk-network-terminal',
             
             // Data endpoints (raw JSON files from GitHub)
@@ -361,8 +360,8 @@
             
             // Behavior settings
             FALLBACK_TO_STATIC: true,  // Use static data if GitHub fetch fails
-            SIMULATE_UPDATES: true,    // Add micro-movements when offline
-            SHOW_DEBUG: false          // Console logging
+            SIMULATE_UPDATES: false,   // DISABLED: No fake price movements
+            SHOW_DEBUG: true           // Console logging for debugging
         };
 
         // ============================================
@@ -695,7 +694,7 @@
         }
 
         // ============================================
-        // GITHUB DATA FETCHING
+        // GITHUB DATA FETCHING - USE REAL DATA ONLY
         // ============================================
 
         async function fetchMarketData(force = false) {
@@ -704,6 +703,8 @@
             try {
                 // Add cache-busting timestamp
                 const timestamp = Date.now();
+                
+                console.log('[RISK NETWORK] Fetching from:', CONFIG.API_BASE_URL);
                 
                 // Fetch both endpoints in parallel
                 const [stocksRes, newsRes, updateRes] = await Promise.all([
@@ -721,6 +722,8 @@
                     }).catch(() => null)
                 ]);
                 
+                console.log('[RISK NETWORK] Response status:', stocksRes.status, newsRes.status);
+                
                 if (!stocksRes.ok || !newsRes.ok) {
                     throw new Error(`HTTP error: ${stocksRes.status}, ${newsRes.status}`);
                 }
@@ -729,21 +732,30 @@
                 const news = await newsRes.json();
                 const lastUpdate = updateRes ? await updateRes.text() : new Date().toISOString();
                 
+                console.log('[RISK NETWORK] Received stocks:', stocks.length, 'news:', news.length);
+                console.log('[RISK NETWORK] First stock:', stocks[0]);
+                
                 // Validate data
                 if (!Array.isArray(stocks) || !Array.isArray(news)) {
                     throw new Error('Invalid data format');
                 }
                 
-                // Merge with existing to preserve trends
+                // IMPORTANT: Use data EXACTLY as received from GitHub
+                // Do NOT modify prices or add random movements
                 if (stocks.length > 0) {
-                    appState.stocks = mergeStockData(appState.stocks, stocks);
+                    // Only add trend if missing, don't modify existing data
+                    appState.stocks = stocks.map(s => ({
+                        ...s,
+                        trend: s.trend || generate_trend_from_price(s.price, s.change)
+                    }));
                     appState.usingStaticData = false;
+                    appState.isLive = true;
                 }
+                
                 if (news.length > 0) {
                     appState.news = news;
                 }
                 
-                appState.isLive = true;
                 appState.lastSync = new Date(lastUpdate);
                 appState.nextSync = new Date(Date.now() + CONFIG.REFRESH_INTERVAL);
                 appState.countdown = CONFIG.COUNTDOWN_START;
@@ -751,16 +763,10 @@
                 updateUIForLiveMode();
                 updateSyncStatus('live');
                 
-                if (CONFIG.SHOW_DEBUG) {
-                    console.log('[RISK NETWORK] Live data loaded:', {
-                        stocks: stocks.length,
-                        news: news.length,
-                        timestamp: lastUpdate
-                    });
-                }
+                console.log('[RISK NETWORK] Live data loaded successfully');
                 
             } catch (error) {
-                console.warn('[RISK NETWORK] GitHub fetch failed:', error);
+                console.error('[RISK NETWORK] Fetch failed:', error);
                 handleFetchError();
             }
             
@@ -768,56 +774,26 @@
             renderNews();
         }
 
-        // Merge new data with existing to preserve trends
-        function mergeStockData(oldStocks, newStocks) {
-            const stockMap = new Map(oldStocks.map(s => [s.symbol, s]));
+        // Generate trend from price and change (deterministic, not random)
+        function generate_trend_from_price(price, change) {
+            const trend = [];
+            const base = price / (1 + (change / 100)) if change != 0 else price * 0.995;
             
-            return newStocks.map(newStock => {
-                const oldStock = stockMap.get(newStock.symbol);
-                let trend = oldStock ? [...oldStock.trend] : [];
-                
-                // Add new price to trend
-                trend.push(newStock.price);
-                if (trend.length > 20) trend.shift();
-                
-                return {
-                    ...newStock,
-                    trend: trend,
-                    sector: newStock.sector || (oldStock ? oldStock.sector : 'UNKNOWN')
-                };
-            });
-        }
-
-        // Handle fetch error
-        function handleFetchError() {
-            if (CONFIG.FALLBACK_TO_STATIC) {
-                appState.usingStaticData = true;
-                appState.isLive = false;
-                updateSyncStatus('error');
-                showErrorBanner();
-                
-                // Simulate updates for static data
-                if (CONFIG.SIMULATE_UPDATES) {
-                    simulateMarketMovements();
-                }
+            for (let i = 0; i < 7; i++) {
+                const point = base + ((price - base) * (i / 6));
+                trend.push(Math.round(point * 100) / 100);
             }
+            return trend;
         }
 
-        // Simulate micro-movements for static data
-        function simulateMarketMovements() {
-            appState.stocks.forEach(stock => {
-                if (stock.suspended) return;
-                
-                const volatility = 0.002;
-                const fluctuation = (Math.random() - 0.5) * stock.price * volatility;
-                stock.price = Math.max(0.01, stock.price + fluctuation);
-                stock.change = stock.change + (Math.random() - 0.5) * 0.02;
-                
-                stock.trend.shift();
-                stock.trend.push(stock.price);
-            });
-            
-            renderStocks();
+        // Handle fetch error - use static data WITHOUT modifications
+        function handleFetchError() {
+            console.log('[RISK NETWORK] Using static fallback data');
+            appState.usingStaticData = true;
+            appState.isLive = false;
+            updateSyncStatus('error');
+            showErrorBanner();
+            // DO NOT simulate market movements - use data as-is
         }
 
         // Update UI for live mode
@@ -903,7 +879,6 @@
                 document.getElementById('countdown').textContent = timeStr;
                 document.getElementById('nextRefresh').textContent = timeStr;
                 
-                // Update next sync time display
                 if (appState.nextSync) {
                     document.getElementById('nextSync').textContent = 
                         appState.nextSync.toLocaleTimeString('fr-FR', {hour12:false, hour:'2-digit', minute:'2-digit'});
@@ -1030,21 +1005,18 @@ Ou "ALL" pour tout afficher:`);
             renderNews();
             
             // Try to fetch live data from GitHub
+            console.log('[RISK NETWORK] Initializing...');
             fetchMarketData();
             
             // Set up intervals
             setInterval(updateCountdown, 1000);
             
-            // Micro-updates when offline
-            setInterval(() => {
-                if (!appState.isLive && CONFIG.SIMULATE_UPDATES) {
-                    simulateMarketMovements();
-                }
-            }, 5000);
+            // NO micro-updates when offline - keep data static
             
             // Periodic refresh attempts when offline
             setInterval(() => {
                 if (!appState.isLive) {
+                    console.log('[RISK NETWORK] Retrying connection...');
                     fetchMarketData();
                 }
             }, CONFIG.RETRY_INTERVAL);
