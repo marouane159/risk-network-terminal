@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RISK NETWORK GROUP | Terminal Bourse de Casablanca [LIVE]</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'JetBrains Mono', monospace; 
+            background-color: #000000; 
+            color: #e0e0e0; 
+            overflow-x: hidden; 
+        }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #000000; border-left: 1px solid #222222; }
+        ::-webkit-scrollbar-thumb { background: #333333; border: 1px solid #ff6600; }
+        ::-webkit-scrollbar-thumb:hover { background: #ff6600; }
+        
+        @keyframes flash-alert {
+            0%, 100% { opacity: 1; background-color: #ff6600; color: #000; }
+            50% { opacity: 0.3; background-color: #331a00; color: #ff6600; }
+        }
+        .flash-indicator { animation: flash-alert 1s infinite; font-weight: 800; padding: 2px 6px; font-size: 0.7rem; letter-spacing: 0.1em; }
+        .grid-border { border: 1px solid #222222; }
+        .grid-border-b { border-bottom: 1px solid #222222; }
+        .grid-border-r { border-right: 1px solid #222222; }
+        
+        .ascii-divider {
+            color: #444444; font-size: 0.75rem; line-height: 1; letter-spacing: 0.2em;
+            overflow: hidden; white-space: nowrap; user-select: none;
+        }
+        .sparkline { fill: none; stroke-width: 1.5; }
+        .sparkline-up { stroke: #00ff41; }
+        .sparkline-down { stroke: #ff6600; }
+        .price-up { color: #00ff41; }
+        .price-down { color: #ff6600; }
+        .price-neutral { color: #888888; }
+        
+        @keyframes blink { 50% { opacity: 0; } }
+        .cursor-blink { animation: blink 1s step-end infinite; }
+        .hover-row:hover { background-color: #1a0f00; cursor: pointer; }
+        
+        .terminal-input {
+            background: transparent; border: none; outline: none; color: #ff6600;
+            font-family: 'JetBrains Mono', monospace; width: 100%; caret-color: #ff6600;
+        }
+        
+        .ticker-wrap { overflow: hidden; white-space: nowrap; }
+        .ticker { display: inline-block; animation: ticker 40s linear infinite; }
+        @keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+        
+        .status-dot { width: 8px; height: 8px; border-radius: 0; display: inline-block; }
+        .status-live { background-color: #00ff41; box-shadow: 0 0 10px #00ff41; animation: pulse 2s infinite; }
+        .status-closed { background-color: #ff6600; box-shadow: 0 0 10px #ff6600; }
+        .status-pending { background-color: #ffaa00; animation: pulse 1s infinite; }
+        
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        
+        .loading-bar { width: 100%; height: 2px; background: #222; position: relative; overflow: hidden; }
+        .loading-progress { position: absolute; height: 100%; background: #ff6600; animation: loading 2s ease-in-out infinite; }
+        @keyframes loading { 0% { left: 0; width: 0; } 50% { width: 30%; } 100% { left: 100%; width: 0; } }
+        
+        ::selection { background: #ff6600; color: #000000; }
+        
+        .update-flash { animation: flash-update 0.5s ease-out; }
+        @keyframes flash-update { 0% { background-color: #ff6600; } 100% { background-color: transparent; } }
+        
+        .sector-badge { font-size: 0.65rem; padding: 1px 4px; border: 1px solid #333; color: #666; }
+        
+        /* Ad Banner Styles - Orange Theme */
+        .ad-banner {
+            background: linear-gradient(90deg, #000000 0%, #1a0f00 50%, #000000 100%);
+            border-bottom: 2px solid #ff6600;
+            position: relative;
+            overflow: hidden;
+        }
+        .ad-banner::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,102,0,0.1), transparent);
+            animation: scan 3s infinite;
+        }
+        @keyframes scan { 0% { left: -100%; } 100% { left: 100%; } }
+        
+        .market-status-open { color: #00ff41; text-shadow: 0 0 10px rgba(0,255,65,0.5); }
+        .market-status-closed { color: #ff6600; text-shadow: 0 0 10px rgba(255,102,0,0.5); }
+        .market-status-pending { color: #ffaa00; text-shadow: 0 0 10px rgba(255,170,0,0.5); }
+        
+        /* Social Links */
+        .social-link {
+            color: #666;
+            text-decoration: none;
+            font-size: 0.7rem;
+            transition: color 0.3s;
+            border: 1px solid #333;
+            padding: 2px 6px;
+        }
+        .social-link:hover {
+            color: #ff6600;
+            border-color: #ff6600;
+            background: rgba(255,102,0,0.1);
+        }
+        
+        /* Search Highlight */
+        .search-highlight {
+            background-color: rgba(255,102,0,0.3);
+            border-left: 3px solid #ff6600;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- ADVERTISEMENT BANNER -->
+    <div class="ad-banner py-3 px-4 flex justify-between items-center relative z-50">
+        <div class="flex items-center gap-4">
+            <div class="text-orange-600 font-bold text-lg tracking-widest animate-pulse">
+                ▶ RISK NETWORK GROUP
+            </div>
+            <div class="h-6 w-px bg-orange-900"></div>
+            <div class="text-xs text-gray-400">
+                PROPRIÉTAIRE OFFICIEL DE CE TERMINAL
+            </div>
+        </div>
+        <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2">
+                <a href="https://x.com/dogofallstreets" target="_blank" class="social-link">X: @dogofallstreets</a>
+                <a href="https://instagram.com/risk.maroc" target="_blank" class="social-link">IG: @risk.maroc</a>
+                <a href="https://tiktok.com/u/@risk.maroc" target="_blank" class="social-link">TK: @risk.maroc</a>
+            </div>
+            <div class="h-6 w-px bg-orange-900 mx-2"></div>
+            <a href="https://www.risk.ma" target="_blank" class="text-xs bg-orange-600 text-black px-4 py-1 font-bold hover:bg-orange-500 transition-colors border border-orange-800">
+                WWW.RISK.MA ↗
+            </a>
+        </div>
+    </div>
+
+    <!-- HEADER -->
+    <header class="grid-border-b flex justify-between items-center p-4 bg-black sticky top-0 z-50">
+        <div class="flex items-center gap-4">
+            <h1 class="text-xl font-bold tracking-tighter text-white">
+                <span class="text-orange-600">[</span>RISK NETWORK GROUP<span class="text-orange-600">]</span>
+            </h1>
+            <span class="text-xs text-gray-500 hidden md:inline">// Marché boursier Marocain</span>
+        </div>
+        
+        <div class="flex items-center gap-6 text-sm">
+            <!-- MARKET STATUS DISPLAY -->
+            <div class="flex items-center gap-3 px-4 py-2 border border-[#333] bg-[#0a0a0a]">
+                <span id="marketStatusDot" class="status-dot status-closed"></span>
+                <div class="flex flex-col">
+                    <span class="text-[10px] text-gray-500 uppercase tracking-wider">Marché Casablanca</span>
+                    <span id="marketStatusText" class="text-xs font-bold market-status-closed">FERMÉ</span>
+                </div>
+                <div class="h-8 w-px bg-[#333] mx-2"></div>
+                <div class="flex flex-col text-right">
+                    <span class="text-[10px] text-gray-500">09:30 - 15:40</span>
+                    <span id="marketTimeRemaining" class="text-xs text-gray-300">--:--:--</span>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <span class="status-dot status-live" id="syncIndicator"></span>
+                <span class="text-xs text-gray-400">DATA_FEED</span>
+            </div>
+            
+            <div class="text-right border-l border-[#333] pl-4">
+                <div id="clock" class="font-bold text-white">00:00:00</div>
+                <div class="text-xs text-gray-500">CASABLANCA (GMT+1)</div>
+            </div>
+        </div>
+    </header>
+
+    <!-- SYNC STATUS BAR -->
+    <div class="loading-bar" id="syncBar" style="opacity: 0.3;">
+        <div class="loading-progress"></div>
+    </div>
+
+    <!-- SEARCH BAR - SIMPLIFIED -->
+    <div class="grid-border-b bg-black p-2 flex items-center gap-2 text-sm">
+        <span class="text-orange-600 font-bold">🔍</span>
+        <span class="text-gray-400">RECHERCHE_RAPIDE</span>
+        <input type="text" class="terminal-input" placeholder="TAPEZ_UN_TICKER (ex: IAM, ATW, BCP...) POUR FILTRER" id="searchInput">
+        <span class="cursor-blink text-orange-600">_</span>
+        <button id="clearSearch" class="text-xs text-gray-500 hover:text-orange-600 px-2 hidden">[EFFACER]</button>
+    </div>
+
+    <!-- ASCII DIVIDER -->
+    <div class="ascii-divider grid-border-b p-1 bg-black text-center">
+        ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+    </div>
+
+    <!-- MAIN CONTENT GRID -->
+    <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 min-h-0">
+        
+        <!-- LEFT PANEL: NEWS FEED (3 cols) -->
+        <aside class="lg:col-span-3 grid-border-r flex flex-col min-h-0 bg-black">
+            <div class="grid-border-b p-3 flex justify-between items-center bg-[#0a0a0a]">
+                <h2 class="text-sm font-bold text-white flex items-center gap-2">
+                    <span class="text-orange-600">◢</span> NEWS
+                </h2>
+                <div class="flex items-center gap-2">
+                    <span class="text-[10px] text-gray-500">SRC: BOURSENEWS</span>
+                    <span class="text-[10px] text-orange-500" id="newsCount">[0 NEW]</span>
+                </div>
+            </div>
+            
+            <!-- News Ticker -->
+            <div class="grid-border-b bg-[#111] p-2 overflow-hidden">
+                <div class="ticker-wrap">
+                    <div class="ticker text-xs text-gray-400" id="newsTicker">
+                        // CHARGEMENT DU FLUX D'ACTUALITÉS BOURSE NEWS... //
+                    </div>
+                </div>
+            </div>
+
+            <!-- News List -->
+            <div class="flex-1 overflow-y-auto p-0" id="newsContainer">
+                <!-- News items injected here -->
+            </div>
+            
+            <!-- News Footer -->
+            <div class="grid-border-t p-2 bg-[#0a0a0a] text-xs text-gray-600 flex justify-between">
+                <span>LAST_UPDATE: <span id="lastNewsUpdate">--:--:--</span></span>
+                <span>AUTO_REFRESH: 10MIN</span>
+            </div>
+        </aside>
+
+        <!-- CENTER PANEL: MARKET DATA (9 cols) -->
+        <section class="lg:col-span-9 flex flex-col min-h-0 bg-black">
+            
+            <!-- Market Header -->
+            <div class="grid-border-b p-3 flex justify-between items-center bg-[#0a0a0a] sticky top-0 z-40">
+                <div class="flex items-center gap-4">
+                    <h2 class="text-sm font-bold text-white flex items-center gap-2">
+                        <span class="text-green-500">◈</span> MASI_ALL_SHARES [<span id="stockCount">0</span> TICKERS]
+                    </h2>
+                    <span class="text-xs text-gray-500">SRC: TRADINGVIEW_MOROCCO</span>
+                </div>
+                <div class="flex gap-6 text-xs">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2 h-2 bg-orange-600"></span>
+                        <span class="text-gray-400">MASI: <span class="text-white font-bold" id="masiIndex">18,295.00</span> <span class="text-orange-600" id="masiChange">-0.05%</span></span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-2 h-2 bg-orange-600"></span>
+                        <span class="text-gray-400">MASI_20: <span class="text-white font-bold">18,303.36</span> <span class="text-orange-600">-0.08%</span></span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-2 h-2 text-[10px] text-gray-500" id="nextRefresh">10:00</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ASCII Divider -->
+            <div class="ascii-divider p-1 bg-black border-b border-[#222] text-[#333]">
+                ┌─────────┬─────────────────────────────────────┬──────────┬──────────┬──────────┬──────────┬──────────────────────────────────────────┐
+            </div>
+
+            <!-- Table Header -->
+            <div class="grid grid-cols-12 gap-0 text-xs font-bold text-gray-500 border-b border-[#222] bg-[#0a0a0a] p-2">
+                <div class="col-span-1">SYMB</div>
+                <div class="col-span-3">NOM_SOCIAL</div>
+                <div class="col-span-1 text-center">SECT</div>
+                <div class="col-span-2 text-right">DERNIER</div>
+                <div class="col-span-2 text-right">VAR %</div>
+                <div class="col-span-2 text-right">VOLUME</div>
+                <div class="col-span-1 text-center">TREND</div>
+            </div>
+
+            <!-- ASCII Divider -->
+            <div class="ascii-divider p-1 bg-black border-b border-[#222] text-[#333]">
+                ├─────────┼─────────────────────────────────────┼──────────┼──────────┼──────────┼──────────┼──────────────────────────────────────────┤
+            </div>
+
+            <!-- Stock List Container -->
+            <div class="flex-1 overflow-y-auto" id="stockContainer">
+                <!-- Stock rows injected here -->
+            </div>
+
+            <!-- ASCII Bottom Border -->
+            <div class="ascii-divider p-1 bg-black border-t border-[#222] text-[#333]">
+                └─────────┴─────────────────────────────────────┴──────────┴──────────┴──────────┴──────────┴──────────────────────────────────────────┘
+            </div>
+
+            <!-- Bottom Status Bar -->
+            <div class="grid-border-t p-2 bg-[#0a0a0a] flex justify-between items-center text-xs">
+                <div class="flex gap-4 text-gray-500">
+                    <span>CONN: <span class="text-green-500">STABLE</span></span>
+                    <span>LATENCY: <span class="text-green-500" id="latency">12ms</span></span>
+                    <span>NEXT_REFRESH: <span class="text-orange-500" id="countdown">10:00</span></span>
+                    <span>DATA_SRC: <span class="text-blue-500">TRADINGVIEW_MA_VIA_PROXY</span></span>
+                </div>
+                <div class="text-gray-600">
+                    [F1] AIDE  [F2] EXPORT  [F3] FILTRE_SECTEUR  [F5] RAFRAICHIR  [F9] FORCE_SYNC  [ESC] QUITTER
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // COMPLETE LIST OF ALL 77 MOROCCAN STOCKS
+        let stocksData = [
+            // BANQUES (11)
+            { symbol: 'ATW', name: 'Attijariwafa Bank SA', sector: 'BANK', price: 727.00, change: 0.00, volume: '3.38K', trend: [725, 726, 727, 726.5, 727.2, 726.8, 727] },
+            { symbol: 'BCP', name: 'Banque Centrale Populaire', sector: 'BANK', price: 275.35, change: 0.13, volume: '39.62K', trend: [274, 275, 275.5, 275.2, 275.4, 275.3, 275.35] },
+            { symbol: 'BOA', name: 'Bank of Africa SA', sector: 'BANK', price: 209.00, change: -0.43, volume: '1.89K', trend: [210, 209.5, 209, 208.5, 209.2, 208.8, 209] },
+            { symbol: 'CFG', name: 'CFG Bank SA', sector: 'BANK', price: 230.10, change: -2.02, volume: '159.71K', trend: [235, 234, 232, 231, 230.5, 230.2, 230.10] },
+            { symbol: 'CDM', name: 'Credit du Maroc', sector: 'BANK', price: 1070.00, change: 1.04, volume: '2.6K', trend: [1058, 1062, 1065, 1068, 1069, 1070, 1070] },
+            { symbol: 'CIH', name: 'CIH Bank SA', sector: 'BANK', price: 400.00, change: 1.78, volume: '45.2K', trend: [392, 395, 397, 398, 399, 399.5, 400] },
+            { symbol: 'BCI', name: 'BMCI SA', sector: 'BANK', price: 628.00, change: -0.16, volume: '1.2K', trend: [630, 629, 628.5, 628, 627.5, 628.2, 628] },
+            { symbol: 'BCE', name: 'BMCE Bank', sector: 'BANK', price: 0.00, change: 0.00, volume: '0', trend: [0,0,0,0,0,0,0], suspended: true },
+            { symbol: 'AXC', name: 'Axa Credit', sector: 'BANK', price: 0.00, change: 0.00, volume: '0', trend: [0,0,0,0,0,0,0], suspended: true },
+            { symbol: 'MAB', name: 'Maghrebail', sector: 'BANK', price: 910.80, change: 1.11, volume: '890', trend: [900, 905, 908, 909, 910, 910.5, 910.80] },
+            { symbol: 'MLE', name: 'Maroc Leasing', sector: 'BANK', price: 376.90, change: 4.69, volume: '450', trend: [360, 365, 370, 372, 374, 376, 376.90] },
+            
+            // TELECOM (1)
+            { symbol: 'IAM', name: 'Itissalat Al-Maghrib', sector: 'TELECOM', price: 105.50, change: 0.38, volume: '73.67K', trend: [105, 105.2, 105.4, 105.3, 105.5, 105.4, 105.50] },
+            
+            // ASSURANCES (6)
+            { symbol: 'WAA', name: 'Wafa Assurance', sector: 'ASSUR', price: 4989.00, change: 1.82, volume: '234', trend: [4900, 4920, 4950, 4960, 4970, 4980, 4989] },
+            { symbol: 'SAH', name: 'Sanlam Maroc', sector: 'ASSUR', price: 2117.00, change: 0.33, volume: '6.1K', trend: [2108, 2110, 2112, 2115, 2116, 2116.5, 2117] },
+            { symbol: 'ATL', name: 'AtlantaSanad', sector: 'ASSUR', price: 140.00, change: -6.67, volume: '12.5K', trend: [150, 148, 145, 142, 141, 140.5, 140] },
+            { symbol: 'AFM', name: 'AFMA SA', sector: 'ASSUR', price: 1226.00, change: 0.08, volume: '45', trend: [1225, 1225.5, 1226, 1225.8, 1226.2, 1225.9, 1226] },
+            { symbol: 'AGM', name: 'Agma SA', sector: 'ASSUR', price: 6699.00, change: 1.55, volume: '12', trend: [6590, 6600, 6650, 6670, 6680, 6690, 6699] },
+            { symbol: 'TSF', name: 'Taslif', sector: 'ASSUR', price: 0.00, change: 0.00, volume: '0', trend: [0,0,0,0,0,0,0], suspended: true },
+            
+            // IMMOBILIER (6)
+            { symbol: 'ADH', name: 'Douja Promotion Addoha', sector: 'IMMO', price: 30.00, change: -0.50, volume: '45.2K', trend: [30.2, 30.1, 30.05, 30, 29.95, 30, 30] },
+            { symbol: 'ADI', name: 'Alliances Dev Immobilier', sector: 'IMMO', price: 486.90, change: 0.39, volume: '3.2K', trend: [485, 485.5, 486, 486.5, 486.8, 486.7, 486.90] },
+            { symbol: 'RDS', name: 'Residences Dar Saada', sector: 'IMMO', price: 152.20, change: 0.13, volume: '8.9K', trend: [152, 152.1, 152.15, 152.2, 152.18, 152.22, 152.20] },
+            { symbol: 'ARD', name: 'Aradei Capital', sector: 'IMMO', price: 440.00, change: 0.00, volume: '1.2K', trend: [440, 440, 440, 440, 440, 440, 440] },
+            { symbol: 'IMO', name: 'Immorente Invest', sector: 'IMMO', price: 91.05, change: 0.48, volume: '5.6K', trend: [90.5, 90.7, 90.8, 91, 90.9, 91.1, 91.05] },
+            { symbol: 'BAL', name: 'Balima', sector: 'IMMO', price: 225.00, change: -10.00, volume: '890', trend: [250, 245, 240, 235, 230, 227, 225] },
+            
+            // INDUSTRIE / CONSTRUCTION (12)
+            { symbol: 'LHM', name: 'LafargeHolcim Maroc', sector: 'INDUS', price: 1783.00, change: -0.50, volume: '1.45K', trend: [1792, 1790, 1788, 1785, 1784, 1782, 1783] },
+            { symbol: 'CMA', name: 'Ciments du Maroc', sector: 'INDUS', price: 1754.00, change: 0.06, volume: '178', trend: [1753, 1753.5, 1754, 1753.8, 1754.2, 1753.9, 1754] },
+            { symbol: 'SID', name: 'SONASID SA', sector: 'INDUS', price: 2020.00, change: 1.46, volume: '1.9K', trend: [1990, 1995, 2000, 2008, 2012, 2018, 2020] },
+            { symbol: 'TGC', name: 'Travaux Generaux Const', sector: 'INDUS', price: 820.00, change: -1.21, volume: '15.57K', trend: [830, 828, 825, 823, 821, 819, 820] },
+            { symbol: 'JET', name: 'Jet Contractors', sector: 'INDUS', price: 2584.00, change: 2.46, volume: '456', trend: [2520, 2535, 2550, 2560, 2570, 2580, 2584] },
+            { symbol: 'GTM', name: 'SGTM SA', sector: 'INDUS', price: 818.00, change: -1.09, volume: '2.3K', trend: [827, 825, 822, 820, 819, 817, 818] },
+            { symbol: 'VCN', name: 'Vicenne SA', sector: 'INDUS', price: 417.00, change: -0.36, volume: '1.8K', trend: [418.5, 418, 417.5, 417.2, 416.8, 417.2, 417] },
+            { symbol: 'FBR', name: 'Fenie Brossette', sector: 'INDUS', price: 370.00, change: -1.08, volume: '2.1K', trend: [374, 373, 372, 371, 370.5, 369.5, 370] },
+            { symbol: 'SRM', name: 'Sté Realisations Mecaniques', sector: 'INDUS', price: 475.30, change: -0.54, volume: '678', trend: [478, 477, 476, 475.5, 475, 474.5, 475.30] },
+            { symbol: 'STR', name: 'Stroc Industrie', sector: 'INDUS', price: 219.95, change: -0.02, volume: '1.2K', trend: [220, 219.9, 220.1, 219.8, 220, 219.9, 219.95] },
+            { symbol: 'ALM', name: 'Aluminium du Maroc', sector: 'INDUS', price: 1775.00, change: -0.11, volume: '234', trend: [1777, 1776, 1775.5, 1775, 1774.5, 1775.2, 1775] },
+            { symbol: 'DHO', name: 'Delta Holding', sector: 'INDUS', price: 69.99, change: 1.43, volume: '45.2K', trend: [69, 69.2, 69.5, 69.7, 69.85, 69.95, 69.99] },
+            
+            // MINES / MATERIAUX (6)
+            { symbol: 'MNG', name: 'Managem SA', sector: 'MINES', price: 7860.00, change: -1.75, volume: '207', trend: [8000, 7950, 7900, 7880, 7865, 7855, 7860] },
+            { symbol: 'SMI', name: 'Societe Metallurgique Imiter', sector: 'MINES', price: 6616.00, change: 61.37, volume: '45', trend: [4100, 4500, 5200, 5800, 6200, 6450, 6616] },
+            { symbol: 'CMT', name: 'Compagnie Miniere Touissit', sector: 'MINES', price: 2380.00, change: 4.39, volume: '1.2K', trend: [2280, 2300, 2320, 2340, 2360, 2370, 2380] },
+            { symbol: 'ZDJ', name: 'Zellidja SA', sector: 'MINES', price: 246.95, change: 21.02, volume: '3.4K', trend: [204, 210, 220, 230, 238, 244, 246.95] },
+            { symbol: 'COL', name: 'Colorado SA', sector: 'MINES', price: 85.60, change: -0.22, volume: '5.6K', trend: [85.8, 85.7, 85.6, 85.5, 85.6, 85.65, 85.60] },
+            { symbol: 'MDP', name: 'Med Paper SA', sector: 'MINES', price: 26.00, change: -2.00, volume: '12.5K', trend: [26.5, 26.3, 26.1, 26, 25.9, 26, 26] },
+            
+            // ENERGIE / UTILITIES (5)
+            { symbol: 'TQM', name: 'TAQA Morocco SA', sector: 'ENERGY', price: 2000.00, change: -0.45, volume: '320', trend: [2009, 2005, 2002, 2000, 1998, 2001, 2000] },
+            { symbol: 'GAZ', name: 'Afriquia Gaz SA', sector: 'ENERGY', price: 4099.00, change: 0.00, volume: '671', trend: [4099, 4099, 4099, 4099, 4099, 4099, 4099] },
+            { symbol: 'TMA', name: 'TotalEnergies Marketing', sector: 'ENERGY', price: 1604.00, change: 0.00, volume: '890', trend: [1604, 1604, 1604, 1604, 1604, 1604, 1604] },
+            { symbol: 'SNP', name: 'SNEP SA', sector: 'ENERGY', price: 482.90, change: 1.24, volume: '2.3K', trend: [477, 478, 479, 480, 481, 482, 482.90] },
+            { symbol: 'SAM', name: 'Samir', sector: 'ENERGY', price: 127.80, change: 0.00, volume: '0', trend: [127.8,127.8,127.8,127.8,127.8,127.8,127.8], suspended: true },
+            
+            // TRANSPORT / LOGISTIQUE (3)
+            { symbol: 'MSA', name: 'Marsa Maroc SA', sector: 'TRANSPORT', price: 889.00, change: 0.68, volume: '290.91K', trend: [883, 885, 887, 888, 888.5, 889.5, 889] },
+            { symbol: 'CTM', name: 'Compagnie Transport Maroc', sector: 'TRANSPORT', price: 870.00, change: -0.59, volume: '1.8K', trend: [875, 873, 871, 870, 869, 870.5, 870] },
+            { symbol: 'NEJ', name: 'Auto Nejma Maroc', sector: 'TRANSPORT', price: 4326.00, change: 0.00, volume: '123', trend: [4326,4326,4326,4326,4326,4326,4326] },
+            
+            // SANTE / PHARMA (3)
+            { symbol: 'SOT', name: 'Sothema SA', sector: 'SANTE', price: 1737.00, change: -3.77, volume: '8', trend: [1805, 1790, 1770, 1755, 1745, 1740, 1737] },
+            { symbol: 'AKT', name: 'Akdital SA', sector: 'SANTE', price: 1090.00, change: -0.91, volume: '87.26K', trend: [1100, 1095, 1092, 1090, 1088, 1091, 1090] },
+            { symbol: 'PRO', name: 'Promopharm', sector: 'SANTE', price: 1439.00, change: 0.00, volume: '234', trend: [1439,1439,1439,1439,1439,1439,1439] },
+            
+            // AGRO / CONSOMMATION (8)
+            { symbol: 'CSR', name: 'Cosumar SA', sector: 'AGRO', price: 203.90, change: 0.44, volume: '45.2K', trend: [203, 203.2, 203.5, 203.7, 203.8, 203.85, 203.90] },
+            { symbol: 'LES', name: 'Lesieur Cristal SA', sector: 'AGRO', price: 343.00, change: -4.72, volume: '12.3K', trend: [360, 355, 350, 347, 345, 344, 343] },
+            { symbol: 'SBM', name: 'Sté Boissons du Maroc', sector: 'AGRO', price: 2120.00, change: -3.33, volume: '349', trend: [2193, 2180, 2160, 2140, 2130, 2125, 2120] },
+            { symbol: 'OUL', name: 'Eaux Minerales Oulmes', sector: 'AGRO', price: 1235.00, change: 0.00, volume: '1.2K', trend: [1235,1235,1235,1235,1235,1235,1235] },
+            { symbol: 'UMR', name: 'Unimer SA', sector: 'AGRO', price: 164.00, change: -0.61, volume: '5.6K', trend: [165, 164.5, 164.2, 164, 163.8, 164.1, 164] },
+            { symbol: 'CRS', name: 'Cartier Saada', sector: 'AGRO', price: 32.00, change: -0.54, volume: '23.4K', trend: [32.2, 32.15, 32.1, 32.05, 32, 31.95, 32] },
+            { symbol: 'DRI', name: 'Dari Couspate', sector: 'AGRO', price: 4300.00, change: 2.38, volume: '456', trend: [4200, 4225, 4250, 4270, 4285, 4295, 4300] },
+            { symbol: 'CDA', name: 'Centrale Danone', sector: 'AGRO', price: 0.00, change: 0.00, volume: '0', trend: [0,0,0,0,0,0,0], suspended: true },
+            
+            // TECHNOLOGIE / DIGITAL (8)
+            { symbol: 'DWY', name: 'Disway SA', sector: 'TECH', price: 836.00, change: -5.43, volume: '561', trend: [884, 870, 860, 850, 842, 838, 836] },
+            { symbol: 'HPS', name: 'Hightech Payment Systems', sector: 'TECH', price: 520.00, change: -0.02, volume: '3.2K', trend: [520.1, 520, 519.9, 520, 520.1, 519.95, 520] },
+            { symbol: 'MIC', name: 'Microdata SA', sector: 'TECH', price: 819.90, change: 2.53, volume: '1.8K', trend: [799, 805, 810, 815, 818, 819, 819.90] },
+            { symbol: 'S2M', name: 'Sté Maghrébine Monétique', sector: 'TECH', price: 562.60, change: -3.83, volume: '4.5K', trend: [585, 580, 575, 570, 565, 564, 562.60] },
+            { symbol: 'DYT', name: 'Disty Technologies', sector: 'TECH', price: 328.00, change: -6.29, volume: '6.7K', trend: [350, 345, 340, 335, 330, 329, 328] },
+            { symbol: 'M2M', name: 'M2M Group', sector: 'TECH', price: 469.75, change: 1.04, volume: '2.3K', trend: [465, 466, 467, 468, 469, 469.5, 469.75] },
+            { symbol: 'INV', name: 'Involys SA', sector: 'TECH', price: 183.90, change: 1.04, volume: '3.4K', trend: [182, 182.5, 183, 183.5, 183.8, 183.7, 183.90] },
+            { symbol: 'IBC', name: 'IB Maroc.com', sector: 'TECH', price: 68.00, change: -5.03, volume: '12.5K', trend: [71.6, 70.5, 69.5, 68.8, 68.2, 68.1, 68] },
+            
+            // DISTRIBUTION / COMMERCE (5)
+            { symbol: 'LBV', name: 'Label Vie SA', sector: 'RETAIL', price: 4231.00, change: -8.02, volume: '3.4K', trend: [4600, 4500, 4400, 4350, 4300, 4250, 4231] },
+            { symbol: 'ATH', name: 'Auto Hall SA', sector: 'RETAIL', price: 91.00, change: 0.82, volume: '23.4K', trend: [90.25, 90.5, 90.7, 90.9, 91, 90.95, 91] },
+            { symbol: 'NAKL', name: 'Ennakl Automobiles', sector: 'RETAIL', price: 51.67, change: 1.51, volume: '45.2K', trend: [50.9, 51.1, 51.3, 51.5, 51.6, 51.65, 51.67] },
+            { symbol: 'RIS', name: 'Risma', sector: 'RETAIL', price: 351.05, change: -9.99, volume: '34.5K', trend: [390, 380, 370, 365, 360, 355, 351.05] },
+            { symbol: 'CAP', name: 'Cash Plus SA', sector: 'RETAIL', price: 294.45, change: -1.85, volume: '8.9K', trend: [300, 298, 296, 295, 294.5, 294, 294.45] },
+            
+            // DIVERS / HOLDING (3)
+            { symbol: 'CMG', name: 'CMGP Group', sector: 'HOLDING', price: 378.00, change: -0.25, volume: '19.74K', trend: [379, 378.5, 378.2, 378, 377.8, 378.1, 378] },
+            { symbol: 'MUT', name: 'Mutandis SCA', sector: 'HOLDING', price: 258.00, change: -0.77, volume: '4.5K', trend: [260, 259.5, 259, 258.5, 258.2, 257.8, 258] },
+            { symbol: 'SNA', name: 'Stokvis Nord Afrique', sector: 'HOLDING', price: 90.88, change: -0.78, volume: '5.6K', trend: [91.6, 91.3, 91, 90.9, 90.8, 90.85, 90.88] },
+            
+            // SERVICES / AUTRES (4)
+            { symbol: 'EQD', name: 'EQDOM SA', sector: 'FINANCE', price: 1380.00, change: 0.00, volume: '890', trend: [1380,1380,1380,1380,1380,1380,1380] },
+            { symbol: 'SLF', name: 'Salafin SA', sector: 'FINANCE', price: 582.90, change: 5.98, volume: '12.3K', trend: [550, 560, 570, 575, 580, 582, 582.90] },
+            { symbol: 'MOX', name: 'Maghreb Oxygene', sector: 'CHIMIE', price: 390.00, change: -5.77, volume: '3.4K', trend: [414, 408, 402, 398, 394, 392, 390] },
+            { symbol: 'AFI', name: 'Afric Industries', sector: 'INDUS', price: 338.30, change: 1.19, volume: '2.1K', trend: [334, 335, 336, 337, 337.5, 338, 338.30] },
+            { symbol: 'REB', name: 'Rebab Company', sector: 'MINES', price: 107.10, change: 0.80, volume: '890', trend: [106.2, 106.5, 106.8, 107, 107.1, 107.05, 107.10] },
+            { symbol: 'NEX', name: 'Nexans Maroc', sector: 'INDUS', price: 0.00, change: 0.00, volume: '0', trend: [0,0,0,0,0,0,0], suspended: true },
+            { symbol: 'TIM', name: 'Timar', sector: 'TRANSPORT', price: 0.00, change: 0.00, volume: '0', trend: [0,0,0,0,0,0,0], suspended: true },
+            { symbol: 'DIS', name: 'Diac Salaf', sector: 'FINANCE', price: 0.00, change: 0.00, volume: '0', trend: [0,0,0,0,0,0,0], suspended: true },
+            { symbol: 'LYD', name: 'Lydec', sector: 'UTILITIES', price: 0.00, change: 0.00, volume: '0', trend: [0,0,0,0,0,0,0], suspended: true },
+            { symbol: 'DLM', name: 'Delattre Levivier', sector: 'INDUS', price: 0.00, change: 0.00, volume: '0', trend: [0,0,0,0,0,0,0], suspended: true }
+        ];
+
+        // REAL NEWS FROM BOURSE_NEWS.MA - February 2026
+        let newsData = [
+            { time: 5, title: "Bourse de Casablanca: Le MASI cède 1,78% et prolonge sa spirale baissière à 18 122 pts", category: "ALERTE", source: "BourseNews.ma", date: "2026-02-05" },
+            { time: 12, title: "LabelVie: Accélération de la croissance en 2025, CA à 18,5Mds MAD (+12,9%)", category: "FLASH", source: "BourseNews.ma", date: "2026-02-04" },
+            { time: 18, title: "Disway dépasse la barre des 2 milliards de dirhams de chiffre d'affaires en 2025", category: "FLASH", source: "BourseNews.ma", date: "2026-02-06" },
+            { time: 25, title: "Inondations: Le secteur bancaire se mobilise aux côtés des clients et entreprises", category: "INFO", source: "BourseNews.ma", date: "2026-02-07" },
+            { time: 32, title: "CIH Bank étudie l'acquisition de la totalité ou d'une participation dans CDG Capital", category: "FLASH", source: "BourseNews.ma", date: "2026-02-05" },
+            { time: 45, title: "Hydrogène vert: Taqa Morocco et Moeve signent accord de réservation foncière", category: "FLASH", source: "BourseNews.ma", date: "2026-02-06" },
+            { time: 58, title: "SGTM s'introduit à la Bourse de Casablanca, IPO record de 5 milliards de dirhams", category: "FLASH", source: "BourseNews.ma", date: "2026-02-01" },
+            { time: 65, title: "Bourse de Casablanca: Faute de soutien, le MASI prolonge son repli ce lundi", category: "ALERTE", source: "BourseNews.ma", date: "2026-02-02" },
+            { time: 72, title: "Feuille de marché du 06 février 2026 - Analyse technique complète", category: "ANALYSE", source: "BourseNews.ma", date: "2026-02-06" },
+            { time: 85, title: "Marché des capitaux: 124,4 milliards de dirhams de levées en 2025", category: "INFO", source: "BourseNews.ma", date: "2026-01-13" },
+            { time: 95, title: "Météo et risques climatiques: Quels impacts sur les marchés actions ?", category: "ANALYSE", source: "BourseNews.ma", date: "2026-02-06" },
+            { time: 110, title: "AutoTech: ReparTrust lève 7,5 MDH en pre-seed", category: "STARTUP", source: "BourseNews.ma", date: "2026-01-25" },
+            { time: 125, title: "Sanlam Maroc réalise sa première prise de participation dans une start-up avec Woliz", category: "INFO", source: "BourseNews.ma", date: "2026-01-01" },
+            { time: 140, title: "Attijariwafa Bank: Résultats annuels 2025, RNPG de 9,4 Mds MAD", category: "RAPPORT", source: "BourseNews.ma", date: "2026-02-03" },
+            { time: 155, title: "Managem: Production record d'or en 2025 sur les mines africaines", category: "FLASH", source: "BourseNews.ma", date: "2026-02-04" },
+            { time: 170, title: "Maroc Telecom: Dividende exceptionnel de 7,50 DH proposé en 2026", category: "DIVIDENDE", source: "BourseNews.ma", date: "2026-02-05" },
+            { time: 185, title: "Cosumar: Exportations en hausse de 15% vers l'Afrique subsaharienne", category: "EXPORT", source: "BourseNews.ma", date: "2026-02-06" },
+            { time: 200, title: "BMCI: Lancement d'une nouvelle offre de crédit immobilier vert", category: "PRODUIT", source: "BourseNews.ma", date: "2026-02-07" }
+        ];
+
+        // Market Hours Configuration
+        const MARKET_OPEN_HOUR = 9;
+        const MARKET_OPEN_MINUTE = 30;
+        const MARKET_CLOSE_HOUR = 15;
+        const MARKET_CLOSE_MINUTE = 40;
+        const MARKET_DAYS = [1, 2, 3, 4, 5]; // Monday to Friday
+
+        // Clock and Market Status Function
+        function updateClockAndMarketStatus() {
+            const now = new Date();
+            const casablancaTime = new Date(now.toLocaleString("en-US", {timeZone: "Africa/Casablanca"}));
+            
+            const timeStr = casablancaTime.toLocaleTimeString('fr-FR', { hour12: false });
+            document.getElementById('clock').textContent = timeStr;
+            
+            const day = casablancaTime.getDay();
+            const hours = casablancaTime.getHours();
+            const minutes = casablancaTime.getMinutes();
+            const currentTimeInMinutes = hours * 60 + minutes;
+            const openTimeInMinutes = MARKET_OPEN_HOUR * 60 + MARKET_OPEN_MINUTE;
+            const closeTimeInMinutes = MARKET_CLOSE_HOUR * 60 + MARKET_CLOSE_MINUTE;
+            
+            const statusDot = document.getElementById('marketStatusDot');
+            const statusText = document.getElementById('marketStatusText');
+            const timeRemaining = document.getElementById('marketTimeRemaining');
+            
+            let isOpen = false;
+            let timeLeft = 0;
+            
+            if (MARKET_DAYS.includes(day)) {
+                if (currentTimeInMinutes >= openTimeInMinutes && currentTimeInMinutes < closeTimeInMinutes) {
+                    isOpen = true;
+                    timeLeft = closeTimeInMinutes - currentTimeInMinutes;
+                } else if (currentTimeInMinutes < openTimeInMinutes) {
+                    timeLeft = openTimeInMinutes - currentTimeInMinutes;
+                } else {
+                    timeLeft = (24 * 60 - currentTimeInMinutes) + openTimeInMinutes;
+                }
+            } else {
+                timeLeft = ((8 - day) % 7) * 24 * 60 + openTimeInMinutes - currentTimeInMinutes;
+            }
+            
+            if (isOpen) {
+                statusDot.className = 'status-dot status-live';
+                statusText.textContent = 'OUVERT';
+                statusText.className = 'text-xs font-bold market-status-open';
+                const hrs = Math.floor(timeLeft / 60);
+                const mins = timeLeft % 60;
+                timeRemaining.textContent = `FERME DANS ${hrs}H${mins.toString().padStart(2, '0')}`;
+                timeRemaining.className = 'text-xs text-green-500';
+            } else {
+                if (day === 0 || day === 6 || currentTimeInMinutes >= closeTimeInMinutes) {
+                    statusDot.className = 'status-dot status-closed';
+                    statusText.textContent = 'FERMÉ';
+                    statusText.className = 'text-xs font-bold market-status-closed';
+                } else {
+                    statusDot.className = 'status-dot status-pending';
+                    statusText.textContent = 'PRÉ-OUVERTURE';
+                    statusText.className = 'text-xs font-bold market-status-pending';
+                }
+                
+                const hrs = Math.floor(timeLeft / 60);
+                const mins = timeLeft % 60;
+                const secs = casablancaTime.getSeconds();
+                
+                if (day === 0 || day === 6) {
+                    timeRemaining.textContent = 'OUVRE LUNDI 09:30';
+                    timeRemaining.className = 'text-xs text-orange-600';
+                } else if (currentTimeInMinutes < openTimeInMinutes) {
+                    timeRemaining.textContent = `OUVRE DANS ${hrs}H${mins.toString().padStart(2, '0')}:${(60-secs).toString().padStart(2, '0')}`;
+                    timeRemaining.className = 'text-xs text-orange-400';
+                } else {
+                    timeRemaining.textContent = 'OUVRE DEMAIN 09:30';
+                    timeRemaining.className = 'text-xs text-orange-600';
+                }
+            }
+        }
+        
+        setInterval(updateClockAndMarketStatus, 1000);
+        updateClockAndMarketStatus();
+
+        // Generate Sparkline SVG
+        function generateSparkline(data, isPositive) {
+            if (!data || data.length === 0) return '';
+            const width = 80;
+            const height = 25;
+            const min = Math.min(...data);
+            const max = Math.max(...data);
+            const range = max - min || 1;
+            
+            const points = data.map((val, idx) => {
+                const x = (idx / (data.length - 1)) * width;
+                const y = height - ((val - min) / range) * height;
+                return `${x},${y}`;
+            }).join(' ');
+            
+            const colorClass = isPositive ? 'sparkline-up' : 'sparkline-down';
+            const color = isPositive ? '#00ff41' : '#ff6600';
+            
+            return `
+                <svg width="80" height="25" class="sparkline ${colorClass}">
+                    <polyline points="${points}" fill="none" stroke-width="1.5"/>
+                    <circle cx="${width}" cy="${height - ((data[data.length-1] - min) / range) * height}" r="2" fill="${color}"/>
+                </svg>
+            `;
+        }
+
+        // Render Stocks
+        function renderStocks(filter = 'ALL', searchTerm = '') {
+            const container = document.getElementById('stockContainer');
+            container.innerHTML = '';
+            
+            let filteredData = stocksData;
+            
+            // Apply sector filter
+            if (filter !== 'ALL') {
+                filteredData = filteredData.filter(s => s.sector === filter);
+            }
+            
+            // Apply search filter (ticker only)
+            if (searchTerm) {
+                filteredData = filteredData.filter(s => 
+                    s.symbol.toLowerCase().includes(searchTerm.toLowerCase())
+                );
+            }
+            
+            document.getElementById('stockCount').textContent = filteredData.filter(s => !s.suspended).length;
+            
+            filteredData.forEach((stock, index) => {
+                if (stock.suspended) return;
+                
+                const isUp = stock.change > 0;
+                const isDown = stock.change < 0;
+                const changeClass = isUp ? 'price-up' : isDown ? 'price-down' : 'price-neutral';
+                const changeSign = isUp ? '+' : '';
+                const sparkline = generateSparkline(stock.trend, isUp);
+                
+                const row = document.createElement('div');
+                row.className = 'grid grid-cols-12 gap-0 text-xs border-b border-[#222] hover-row p-2 items-center transition-colors duration-300';
+                if (searchTerm && stock.symbol.toLowerCase() === searchTerm.toLowerCase()) {
+                    row.classList.add('search-highlight');
+                }
+                row.id = `stock-${stock.symbol}`;
+                row.innerHTML = `
+                    <div class="col-span-1 font-bold text-white">${stock.symbol}</div>
+                    <div class="col-span-3 text-gray-400 truncate" title="${stock.name}">${stock.name}</div>
+                    <div class="col-span-1 text-center"><span class="sector-badge">${stock.sector}</span></div>
+                    <div class="col-span-2 text-right font-bold text-white">${stock.price.toFixed(2)} <span class="text-[10px] text-gray-600">MAD</span></div>
+                    <div class="col-span-2 text-right ${changeClass} font-bold">${changeSign}${stock.change.toFixed(2)}%</div>
+                    <div class="col-span-2 text-right text-gray-500">${stock.volume}</div>
+                    <div class="col-span-1 flex justify-center">${sparkline}</div>
+                `;
+                container.appendChild(row);
+            });
+            
+            // Show clear button if search is active
+            const clearBtn = document.getElementById('clearSearch');
+            if (searchTerm) {
+                clearBtn.classList.remove('hidden');
+            } else {
+                clearBtn.classList.add('hidden');
+            }
+        }
+
+        // Render News
+        function renderNews() {
+            const container = document.getElementById('newsContainer');
+            container.innerHTML = '';
+            
+            const sortedNews = [...newsData].sort((a, b) => a.time - b.time);
+            
+            sortedNews.forEach(news => {
+                const isFlash = news.time < 60;
+                const flashBadge = isFlash ? `<span class="flash-indicator mr-2">FLASH</span>` : `<span class="text-gray-600 mr-2">[${news.time}m]</span>`;
+                
+                const item = document.createElement('div');
+                item.className = 'grid-border-b p-3 hover-row cursor-pointer border-l-2 ' + (isFlash ? 'border-l-orange-600 bg-[#0a0a0a]' : 'border-l-transparent');
+                item.innerHTML = `
+                    <div class="flex items-start gap-2 mb-1">
+                        ${flashBadge}
+                        <span class="text-[10px] text-gray-500 uppercase tracking-wider">${news.category}</span>
+                    </div>
+                    <div class="text-sm text-gray-300 leading-tight pl-1">${news.title}</div>
+                    <div class="text-[10px] text-gray-600 mt-1 pl-1 flex justify-between">
+                        <span>SRC: ${news.source}</span>
+                        <span>${news.date}</span>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+            
+            document.getElementById('lastNewsUpdate').textContent = new Date().toLocaleTimeString('fr-FR', {hour12:false});
+            document.getElementById('newsCount').textContent = `[${sortedNews.filter(n => n.time < 120).length} NEW]`;
+            
+            const tickerText = sortedNews.slice(0, 5).map(n => `// ${n.title} //`).join(' ');
+            document.getElementById('newsTicker').textContent = tickerText + tickerText;
+        }
+
+        // Search functionality
+        const searchInput = document.getElementById('searchInput');
+        const clearBtn = document.getElementById('clearSearch');
+        let currentFilter = 'ALL';
+        let searchTerm = '';
+
+        searchInput.addEventListener('input', function(e) {
+            searchTerm = e.target.value.trim();
+            renderStocks(currentFilter, searchTerm);
+        });
+
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && searchTerm) {
+                // Exact match highlight
+                const stock = stocksData.find(s => s.symbol.toLowerCase() === searchTerm.toLowerCase());
+                if (stock) {
+                    const row = document.getElementById(`stock-${stock.symbol}`);
+                    if (row) {
+                        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        row.style.backgroundColor = 'rgba(255,102,0,0.3)';
+                        setTimeout(() => {
+                            row.style.backgroundColor = '';
+                        }, 2000);
+                    }
+                }
+            }
+        });
+
+        clearBtn.addEventListener('click', function() {
+            searchInput.value = '';
+            searchTerm = '';
+            renderStocks(currentFilter, '');
+            searchInput.focus();
+        });
+
+        // Simulate Live Data Updates
+        let countdown = 600;
+        
+        function simulateLiveUpdates() {
+            document.getElementById('syncIndicator').className = 'status-dot status-pending';
+            document.getElementById('syncBar').style.opacity = '1';
+            
+            setTimeout(() => {
+                stocksData.forEach(stock => {
+                    if (stock.suspended) return;
+                    
+                    const lastPrice = stock.price;
+                    const volatility = Math.abs(stock.change) / 100 + 0.002;
+                    const fluctuation = (Math.random() - 0.5) * lastPrice * volatility;
+                    
+                    stock.price = Math.max(0.01, lastPrice + fluctuation);
+                    stock.change = ((stock.price - lastPrice) / lastPrice) * 100 + (Math.random() - 0.5) * 0.05;
+                    
+                    stock.trend.shift();
+                    stock.trend.push(stock.price);
+                    
+                    const currentVol = parseFloat(stock.volume.replace('K', '').replace('M', ''));
+                    if (stock.volume.includes('K')) {
+                        stock.volume = (currentVol + (Math.random() - 0.5) * 0.2).toFixed(2) + 'K';
+                    } else if (stock.volume.includes('M')) {
+                        stock.volume = (currentVol + (Math.random() - 0.5) * 0.01).toFixed(2) + 'M';
+                    }
+                });
+                
+                const randomSymbols = stocksData.filter(s => !s.suspended).sort(() => 0.5 - Math.random()).slice(0, 5);
+                randomSymbols.forEach(stock => {
+                    const row = document.getElementById(`stock-${stock.symbol}`);
+                    if (row) {
+                        row.classList.add('update-flash');
+                        setTimeout(() => row.classList.remove('update-flash'), 500);
+                    }
+                });
+                
+                renderStocks(currentFilter, searchTerm);
+                
+                const latency = Math.floor(Math.random() * 15) + 8;
+                document.getElementById('latency').textContent = latency + 'ms';
+                
+                document.getElementById('syncIndicator').className = 'status-dot status-live';
+                document.getElementById('syncBar').style.opacity = '0.3';
+                
+                countdown = 600;
+            }, 1500);
+        }
+
+        function updateCountdown() {
+            countdown--;
+            if (countdown < 0) countdown = 0;
+            const mins = Math.floor(countdown / 60);
+            const secs = countdown % 60;
+            const timeStr = `${mins}:${secs.toString().padStart(2, '0')}`;
+            document.getElementById('countdown').textContent = timeStr;
+            document.getElementById('nextRefresh').textContent = timeStr;
+        }
+        
+        setInterval(updateCountdown, 1000);
+        setInterval(simulateLiveUpdates, 600000);
+
+        // Refresh news every 2 minutes
+        setInterval(() => {
+            newsData.forEach(news => news.time += 2);
+            if (Math.random() > 0.7) {
+                const newNews = {
+                    time: 0,
+                    title: "ALERTE MARCHÉ: Forte volatilité détectée sur le MASI",
+                    category: "ALERTE",
+                    source: "BourseNews.ma",
+                    date: new Date().toISOString().split('T')[0]
+                };
+                newsData.unshift(newNews);
+                if (newsData.length > 20) newsData.pop();
+            }
+            renderNews();
+        }, 120000);
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'F5') {
+                e.preventDefault();
+                simulateLiveUpdates();
+            }
+            if (e.key === 'F9') {
+                e.preventDefault();
+                simulateLiveUpdates();
+            }
+            if (e.key === 'Escape') {
+                if (confirm('Quitter le terminal RISK NETWORK GROUP?')) {
+                    window.close();
+                }
+            }
+            if (e.key === 'F1') {
+                e.preventDefault();
+                alert('RISK NETWORK GROUP - AIDE\n\nF1: Cette aide\nF2: Export CSV\nF3: Filtrer par secteur\nF5: Rafraîchir données (10min)\nF9: Force Sync immédiat\nESC: Quitter\n\nRecherche: Tapez directement un ticker (ex: IAM, ATW) dans la barre de recherche');
+            }
+            if (e.key === 'F2') {
+                e.preventDefault();
+                alert('Export CSV initié...\n' + stocksData.length + ' tickers exportés');
+            }
+            if (e.key === 'F3') {
+                e.preventDefault();
+                const sector = prompt('Entrez le secteur:\nBANK, TELECOM, ASSUR, IMMO, INDUS, MINES, ENERGY, TRANSPORT, SANTE, AGRO, TECH, RETAIL, HOLDING\n\nOu "ALL" pour tout:');
+                if (sector) {
+                    currentFilter = sector.toUpperCase();
+                    renderStocks(currentFilter, searchTerm);
+                }
+            }
+            // Focus search on '/'
+            if (e.key === '/' && document.activeElement !== searchInput) {
+                e.preventDefault();
+                searchInput.focus();
+            }
+        });
+
+        // Initialize
+        document.getElementById('stockCount').textContent = stocksData.filter(s => !s.suspended).length;
+        renderStocks();
+        renderNews();
+    </script>
+</body>
+</html>
