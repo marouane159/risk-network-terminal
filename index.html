@@ -56,6 +56,7 @@
         .status-live { background-color: #00ff41; box-shadow: 0 0 10px #00ff41; animation: pulse 2s infinite; }
         .status-closed { background-color: #ff6600; box-shadow: 0 0 10px #ff6600; }
         .status-pending { background-color: #ffaa00; animation: pulse 1s infinite; }
+        .status-error { background-color: #ff0000; box-shadow: 0 0 10px #ff0000; animation: pulse 1s infinite; }
         
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
         
@@ -70,7 +71,6 @@
         
         .sector-badge { font-size: 0.65rem; padding: 1px 4px; border: 1px solid #333; color: #666; }
         
-        /* Ad Banner Styles - Orange Theme */
         .ad-banner {
             background: linear-gradient(90deg, #000000 0%, #1a0f00 50%, #000000 100%);
             border-bottom: 2px solid #ff6600;
@@ -80,10 +80,8 @@
         .ad-banner::before {
             content: '';
             position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
             background: linear-gradient(90deg, transparent, rgba(255,102,0,0.1), transparent);
             animation: scan 3s infinite;
         }
@@ -93,29 +91,45 @@
         .market-status-closed { color: #ff6600; text-shadow: 0 0 10px rgba(255,102,0,0.5); }
         .market-status-pending { color: #ffaa00; text-shadow: 0 0 10px rgba(255,170,0,0.5); }
         
-        /* Social Links */
         .social-link {
-            color: #666;
-            text-decoration: none;
-            font-size: 0.7rem;
-            transition: color 0.3s;
-            border: 1px solid #333;
-            padding: 2px 6px;
+            color: #666; text-decoration: none; font-size: 0.7rem;
+            transition: color 0.3s; border: 1px solid #333; padding: 2px 6px;
         }
         .social-link:hover {
-            color: #ff6600;
-            border-color: #ff6600;
-            background: rgba(255,102,0,0.1);
+            color: #ff6600; border-color: #ff6600; background: rgba(255,102,0,0.1);
         }
         
-        /* Search Highlight */
         .search-highlight {
             background-color: rgba(255,102,0,0.3);
             border-left: 3px solid #ff6600;
         }
+        
+        .error-banner {
+            background: #1a0000; border: 1px solid #ff0000;
+            color: #ff6666; padding: 8px; font-size: 0.75rem; display: none;
+        }
+        .error-banner.show { display: block; }
+        
+        .connection-status {
+            position: fixed; bottom: 20px; right: 20px;
+            background: #0a0a0a; border: 1px solid #333;
+            padding: 10px; font-size: 0.7rem; z-index: 100; max-width: 300px;
+        }
+        
+        .github-badge {
+            position: fixed; bottom: 20px; left: 20px;
+            background: #0a0a0a; border: 1px solid #333;
+            padding: 8px 12px; font-size: 0.65rem; z-index: 100;
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
+
+    <!-- ERROR BANNER -->
+    <div id="errorBanner" class="error-banner text-center">
+        <span class="font-bold">[ERREUR CONNEXION]</span> Mode hors-ligne actif - Données statiques chargées
+        <button onclick="dismissError()" class="ml-4 text-orange-500 hover:text-orange-400">[X]</button>
+    </div>
 
     <!-- ADVERTISEMENT BANNER -->
     <div class="ad-banner py-3 px-4 flex justify-between items-center relative z-50">
@@ -167,7 +181,7 @@
 
             <div class="flex items-center gap-2">
                 <span class="status-dot status-live" id="syncIndicator"></span>
-                <span class="text-xs text-gray-400">DATA_FEED</span>
+                <span class="text-xs text-gray-400" id="syncText">DATA_FEED</span>
             </div>
             
             <div class="text-right border-l border-[#333] pl-4">
@@ -182,13 +196,14 @@
         <div class="loading-progress"></div>
     </div>
 
-    <!-- SEARCH BAR - SIMPLIFIED -->
+    <!-- SEARCH BAR -->
     <div class="grid-border-b bg-black p-2 flex items-center gap-2 text-sm">
         <span class="text-orange-600 font-bold">🔍</span>
         <span class="text-gray-400">RECHERCHE_RAPIDE</span>
         <input type="text" class="terminal-input" placeholder="TAPEZ_UN_TICKER (ex: IAM, ATW, BCP...) POUR FILTRER" id="searchInput">
         <span class="cursor-blink text-orange-600">_</span>
         <button id="clearSearch" class="text-xs text-gray-500 hover:text-orange-600 px-2 hidden">[EFFACER]</button>
+        <span class="text-xs text-gray-600 ml-4" id="dataSource">SRC: LOCAL</span>
     </div>
 
     <!-- ASCII DIVIDER -->
@@ -241,7 +256,7 @@
                     <h2 class="text-sm font-bold text-white flex items-center gap-2">
                         <span class="text-green-500">◈</span> MASI_ALL_SHARES [<span id="stockCount">0</span> TICKERS]
                     </h2>
-                    <span class="text-xs text-gray-500">SRC: TRADINGVIEW_MOROCCO</span>
+                    <span class="text-xs text-gray-500" id="stocksSource">SRC: STATIC_DATA</span>
                 </div>
                 <div class="flex gap-6 text-xs">
                     <div class="flex items-center gap-2">
@@ -250,7 +265,7 @@
                     </div>
                     <div class="flex items-center gap-2">
                         <span class="w-2 h-2 bg-orange-600"></span>
-                        <span class="text-gray-400">MASI_20: <span class="text-white font-bold">18,303.36</span> <span class="text-orange-600">-0.08%</span></span>
+                        <span class="text-gray-400">MASI_20: <span class="text-white font-bold" id="masi20Index">18,303.36</span> <span class="text-orange-600" id="masi20Change">-0.08%</span></span>
                     </div>
                     <div class="flex items-center gap-2">
                         <span class="w-2 h-2 text-[10px] text-gray-500" id="nextRefresh">10:00</span>
@@ -292,10 +307,10 @@
             <!-- Bottom Status Bar -->
             <div class="grid-border-t p-2 bg-[#0a0a0a] flex justify-between items-center text-xs">
                 <div class="flex gap-4 text-gray-500">
-                    <span>CONN: <span class="text-green-500">STABLE</span></span>
-                    <span>LATENCY: <span class="text-green-500" id="latency">12ms</span></span>
+                    <span>CONN: <span class="text-green-500" id="connStatus">LOCAL</span></span>
+                    <span>LATENCY: <span class="text-green-500" id="latency">--ms</span></span>
                     <span>NEXT_REFRESH: <span class="text-orange-500" id="countdown">10:00</span></span>
-                    <span>DATA_SRC: <span class="text-blue-500">TRADINGVIEW_MA_VIA_PROXY</span></span>
+                    <span>DATA_SRC: <span class="text-blue-500" id="dataSrcLabel">STATIC_FALLBACK</span></span>
                 </div>
                 <div class="text-gray-600">
                     [F1] AIDE  [F2] EXPORT  [F3] FILTRE_SECTEUR  [F5] RAFRAICHIR  [F9] FORCE_SYNC  [ESC] QUITTER
@@ -304,9 +319,56 @@
         </section>
     </main>
 
+    <!-- CONNECTION STATUS PANEL -->
+    <div class="connection-status" id="connPanel">
+        <div class="text-orange-600 font-bold mb-1">[SYSTEM STATUS]</div>
+        <div class="text-gray-400">Mode: <span id="sysMode" class="text-white">OFFLINE</span></div>
+        <div class="text-gray-400">Dernière sync: <span id="lastSync" class="text-white">Jamais</span></div>
+        <div class="text-gray-400">Prochaine: <span id="nextSync" class="text-white">--:--</span></div>
+        <div class="mt-2 text-[10px] text-gray-600">
+            <button onclick="forceSync()" class="text-orange-500 hover:text-orange-400 border border-orange-900 px-2 py-1 w-full">
+                [FORCE SYNC]
+            </button>
+        </div>
+    </div>
+
+    <!-- GITHUB BADGE -->
+    <div class="github-badge">
+        <div class="text-gray-500">HOSTED ON <span class="text-white">GITHUB PAGES</span></div>
+        <div class="text-[10px] text-gray-600 mt-1" id="githubInfo">Auto-update: 10min</div>
+    </div>
+
     <script>
-        // COMPLETE LIST OF ALL 77 MOROCCAN STOCKS
-        let stocksData = [
+        // ============================================
+        // CONFIGURATION - MODIFY THIS FOR YOUR GITHUB
+        // ============================================
+        const CONFIG = {
+            // CHANGE THIS to your GitHub username and repo name
+            // Format: https://[USERNAME].github.io/[REPO_NAME]
+            API_BASE_URL: 'https://yourusername.github.io/risk-network-terminal',
+            
+            // Data endpoints (raw JSON files from GitHub)
+            ENDPOINTS: {
+                stocks: '/data/stocks.json',
+                news: '/data/news.json',
+                update: '/data/last_update.txt'
+            },
+            
+            // Timing settings
+            REFRESH_INTERVAL: 600000,  // 10 minutes (600 seconds)
+            RETRY_INTERVAL: 60000,     // 1 minute retry if failed
+            COUNTDOWN_START: 600,      // 10 minutes in seconds
+            
+            // Behavior settings
+            FALLBACK_TO_STATIC: true,  // Use static data if GitHub fetch fails
+            SIMULATE_UPDATES: true,    // Add micro-movements when offline
+            SHOW_DEBUG: false          // Console logging
+        };
+
+        // ============================================
+        // STATIC DATA FALLBACK (77 Moroccan Stocks)
+        // ============================================
+        const STATIC_STOCKS = [
             // BANQUES (11)
             { symbol: 'ATW', name: 'Attijariwafa Bank SA', sector: 'BANK', price: 727.00, change: 0.00, volume: '3.38K', trend: [725, 726, 727, 726.5, 727.2, 726.8, 727] },
             { symbol: 'BCP', name: 'Banque Centrale Populaire', sector: 'BANK', price: 275.35, change: 0.13, volume: '39.62K', trend: [274, 275, 275.5, 275.2, 275.4, 275.3, 275.35] },
@@ -423,8 +485,7 @@
             { symbol: 'DLM', name: 'Delattre Levivier', sector: 'INDUS', price: 0.00, change: 0.00, volume: '0', trend: [0,0,0,0,0,0,0], suspended: true }
         ];
 
-        // REAL NEWS FROM BOURSE_NEWS.MA - February 2026
-        let newsData = [
+        const STATIC_NEWS = [
             { time: 5, title: "Bourse de Casablanca: Le MASI cède 1,78% et prolonge sa spirale baissière à 18 122 pts", category: "ALERTE", source: "BourseNews.ma", date: "2026-02-05" },
             { time: 12, title: "LabelVie: Accélération de la croissance en 2025, CA à 18,5Mds MAD (+12,9%)", category: "FLASH", source: "BourseNews.ma", date: "2026-02-04" },
             { time: 18, title: "Disway dépasse la barre des 2 milliards de dirhams de chiffre d'affaires en 2025", category: "FLASH", source: "BourseNews.ma", date: "2026-02-06" },
@@ -445,14 +506,26 @@
             { time: 200, title: "BMCI: Lancement d'une nouvelle offre de crédit immobilier vert", category: "PRODUIT", source: "BourseNews.ma", date: "2026-02-07" }
         ];
 
-        // Market Hours Configuration
-        const MARKET_OPEN_HOUR = 9;
-        const MARKET_OPEN_MINUTE = 30;
-        const MARKET_CLOSE_HOUR = 15;
-        const MARKET_CLOSE_MINUTE = 40;
-        const MARKET_DAYS = [1, 2, 3, 4, 5]; // Monday to Friday
+        // ============================================
+        // APPLICATION STATE
+        // ============================================
+        let appState = {
+            stocks: [...STATIC_STOCKS],
+            news: [...STATIC_NEWS],
+            isLive: false,
+            lastSync: null,
+            nextSync: null,
+            countdown: CONFIG.COUNTDOWN_START,
+            currentFilter: 'ALL',
+            searchTerm: '',
+            usingStaticData: true
+        };
 
-        // Clock and Market Status Function
+        // ============================================
+        // CORE FUNCTIONS
+        // ============================================
+
+        // Clock and Market Status
         function updateClockAndMarketStatus() {
             const now = new Date();
             const casablancaTime = new Date(now.toLocaleString("en-US", {timeZone: "Africa/Casablanca"}));
@@ -464,8 +537,8 @@
             const hours = casablancaTime.getHours();
             const minutes = casablancaTime.getMinutes();
             const currentTimeInMinutes = hours * 60 + minutes;
-            const openTimeInMinutes = MARKET_OPEN_HOUR * 60 + MARKET_OPEN_MINUTE;
-            const closeTimeInMinutes = MARKET_CLOSE_HOUR * 60 + MARKET_CLOSE_MINUTE;
+            const openTimeInMinutes = 9 * 60 + 30;
+            const closeTimeInMinutes = 15 * 60 + 40;
             
             const statusDot = document.getElementById('marketStatusDot');
             const statusText = document.getElementById('marketStatusText');
@@ -474,7 +547,7 @@
             let isOpen = false;
             let timeLeft = 0;
             
-            if (MARKET_DAYS.includes(day)) {
+            if ([1,2,3,4,5].includes(day)) {
                 if (currentTimeInMinutes >= openTimeInMinutes && currentTimeInMinutes < closeTimeInMinutes) {
                     isOpen = true;
                     timeLeft = closeTimeInMinutes - currentTimeInMinutes;
@@ -496,35 +569,22 @@
                 timeRemaining.textContent = `FERME DANS ${hrs}H${mins.toString().padStart(2, '0')}`;
                 timeRemaining.className = 'text-xs text-green-500';
             } else {
-                if (day === 0 || day === 6 || currentTimeInMinutes >= closeTimeInMinutes) {
-                    statusDot.className = 'status-dot status-closed';
-                    statusText.textContent = 'FERMÉ';
-                    statusText.className = 'text-xs font-bold market-status-closed';
-                } else {
-                    statusDot.className = 'status-dot status-pending';
-                    statusText.textContent = 'PRÉ-OUVERTURE';
-                    statusText.className = 'text-xs font-bold market-status-pending';
-                }
-                
-                const hrs = Math.floor(timeLeft / 60);
-                const mins = timeLeft % 60;
-                const secs = casablancaTime.getSeconds();
+                statusDot.className = 'status-dot status-closed';
+                statusText.textContent = 'FERMÉ';
+                statusText.className = 'text-xs font-bold market-status-closed';
                 
                 if (day === 0 || day === 6) {
                     timeRemaining.textContent = 'OUVRE LUNDI 09:30';
-                    timeRemaining.className = 'text-xs text-orange-600';
                 } else if (currentTimeInMinutes < openTimeInMinutes) {
-                    timeRemaining.textContent = `OUVRE DANS ${hrs}H${mins.toString().padStart(2, '0')}:${(60-secs).toString().padStart(2, '0')}`;
-                    timeRemaining.className = 'text-xs text-orange-400';
+                    const hrs = Math.floor(timeLeft / 60);
+                    const mins = timeLeft % 60;
+                    timeRemaining.textContent = `OUVRE DANS ${hrs}H${mins.toString().padStart(2, '0')}`;
                 } else {
                     timeRemaining.textContent = 'OUVRE DEMAIN 09:30';
-                    timeRemaining.className = 'text-xs text-orange-600';
                 }
+                timeRemaining.className = 'text-xs text-orange-600';
             }
         }
-        
-        setInterval(updateClockAndMarketStatus, 1000);
-        updateClockAndMarketStatus();
 
         // Generate Sparkline SVG
         function generateSparkline(data, isPositive) {
@@ -541,39 +601,32 @@
                 return `${x},${y}`;
             }).join(' ');
             
-            const colorClass = isPositive ? 'sparkline-up' : 'sparkline-down';
             const color = isPositive ? '#00ff41' : '#ff6600';
             
             return `
-                <svg width="80" height="25" class="sparkline ${colorClass}">
-                    <polyline points="${points}" fill="none" stroke-width="1.5"/>
+                <svg width="80" height="25" class="sparkline ${isPositive ? 'sparkline-up' : 'sparkline-down'}">
+                    <polyline points="${points}" fill="none" stroke="${color}" stroke-width="1.5"/>
                     <circle cx="${width}" cy="${height - ((data[data.length-1] - min) / range) * height}" r="2" fill="${color}"/>
                 </svg>
             `;
         }
 
         // Render Stocks
-        function renderStocks(filter = 'ALL', searchTerm = '') {
+        function renderStocks() {
             const container = document.getElementById('stockContainer');
             container.innerHTML = '';
             
-            let filteredData = stocksData;
-            
-            // Apply sector filter
-            if (filter !== 'ALL') {
-                filteredData = filteredData.filter(s => s.sector === filter);
+            let filtered = appState.stocks;
+            if (appState.currentFilter !== 'ALL') {
+                filtered = filtered.filter(s => s.sector === appState.currentFilter);
+            }
+            if (appState.searchTerm) {
+                filtered = filtered.filter(s => s.symbol.toLowerCase().includes(appState.searchTerm.toLowerCase()));
             }
             
-            // Apply search filter (ticker only)
-            if (searchTerm) {
-                filteredData = filteredData.filter(s => 
-                    s.symbol.toLowerCase().includes(searchTerm.toLowerCase())
-                );
-            }
+            document.getElementById('stockCount').textContent = filtered.filter(s => !s.suspended).length;
             
-            document.getElementById('stockCount').textContent = filteredData.filter(s => !s.suspended).length;
-            
-            filteredData.forEach((stock, index) => {
+            filtered.forEach(stock => {
                 if (stock.suspended) return;
                 
                 const isUp = stock.change > 0;
@@ -584,7 +637,7 @@
                 
                 const row = document.createElement('div');
                 row.className = 'grid grid-cols-12 gap-0 text-xs border-b border-[#222] hover-row p-2 items-center transition-colors duration-300';
-                if (searchTerm && stock.symbol.toLowerCase() === searchTerm.toLowerCase()) {
+                if (appState.searchTerm && stock.symbol.toLowerCase() === appState.searchTerm.toLowerCase()) {
                     row.classList.add('search-highlight');
                 }
                 row.id = `stock-${stock.symbol}`;
@@ -600,9 +653,8 @@
                 container.appendChild(row);
             });
             
-            // Show clear button if search is active
             const clearBtn = document.getElementById('clearSearch');
-            if (searchTerm) {
+            if (appState.searchTerm) {
                 clearBtn.classList.remove('hidden');
             } else {
                 clearBtn.classList.add('hidden');
@@ -614,17 +666,15 @@
             const container = document.getElementById('newsContainer');
             container.innerHTML = '';
             
-            const sortedNews = [...newsData].sort((a, b) => a.time - b.time);
+            const sortedNews = [...appState.news].sort((a, b) => a.time - b.time);
             
             sortedNews.forEach(news => {
                 const isFlash = news.time < 60;
-                const flashBadge = isFlash ? `<span class="flash-indicator mr-2">FLASH</span>` : `<span class="text-gray-600 mr-2">[${news.time}m]</span>`;
-                
                 const item = document.createElement('div');
-                item.className = 'grid-border-b p-3 hover-row cursor-pointer border-l-2 ' + (isFlash ? 'border-l-orange-600 bg-[#0a0a0a]' : 'border-l-transparent');
+                item.className = `grid-border-b p-3 hover-row cursor-pointer border-l-2 ${isFlash ? 'border-l-orange-600 bg-[#0a0a0a]' : 'border-l-transparent'}`;
                 item.innerHTML = `
                     <div class="flex items-start gap-2 mb-1">
-                        ${flashBadge}
+                        ${isFlash ? '<span class="flash-indicator mr-2">FLASH</span>' : `<span class="text-gray-600 mr-2">[${news.time}m]</span>`}
                         <span class="text-[10px] text-gray-500 uppercase tracking-wider">${news.category}</span>
                     </div>
                     <div class="text-sm text-gray-300 leading-tight pl-1">${news.title}</div>
@@ -636,170 +686,172 @@
                 container.appendChild(item);
             });
             
-            document.getElementById('lastNewsUpdate').textContent = new Date().toLocaleTimeString('fr-FR', {hour12:false});
+            document.getElementById('lastNewsUpdate').textContent = appState.lastSync ? 
+                new Date(appState.lastSync).toLocaleTimeString('fr-FR', {hour12:false}) : '--:--:--';
             document.getElementById('newsCount').textContent = `[${sortedNews.filter(n => n.time < 120).length} NEW]`;
             
             const tickerText = sortedNews.slice(0, 5).map(n => `// ${n.title} //`).join(' ');
-            document.getElementById('newsTicker').textContent = tickerText + tickerText;
+            document.getElementById('newsTicker').textContent = tickerText + ' ' + tickerText;
         }
 
-        // Search functionality
-        const searchInput = document.getElementById('searchInput');
-        const clearBtn = document.getElementById('clearSearch');
-        let currentFilter = 'ALL';
-        let searchTerm = '';
+        // ============================================
+        // GITHUB DATA FETCHING
+        // ============================================
 
-        searchInput.addEventListener('input', function(e) {
-            searchTerm = e.target.value.trim();
-            renderStocks(currentFilter, searchTerm);
-        });
-
-        searchInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter' && searchTerm) {
-                // Exact match highlight
-                const stock = stocksData.find(s => s.symbol.toLowerCase() === searchTerm.toLowerCase());
-                if (stock) {
-                    const row = document.getElementById(`stock-${stock.symbol}`);
-                    if (row) {
-                        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        row.style.backgroundColor = 'rgba(255,102,0,0.3)';
-                        setTimeout(() => {
-                            row.style.backgroundColor = '';
-                        }, 2000);
-                    }
-                }
-            }
-        });
-
-        clearBtn.addEventListener('click', function() {
-            searchInput.value = '';
-            searchTerm = '';
-            renderStocks(currentFilter, '');
-            searchInput.focus();
-        });
-
-        // Simulate Live Data Updates
-        let countdown = 600;
-        
-        function simulateLiveUpdates() {
-            document.getElementById('syncIndicator').className = 'status-dot status-pending';
-            document.getElementById('syncBar').style.opacity = '1';
+        async function fetchMarketData(force = false) {
+            updateSyncStatus('loading');
             
-            setTimeout(() => {
-                stocksData.forEach(stock => {
-                    if (stock.suspended) return;
-                    
-                    const lastPrice = stock.price;
-                    const volatility = Math.abs(stock.change) / 100 + 0.002;
-                    const fluctuation = (Math.random() - 0.5) * lastPrice * volatility;
-                    
-                    stock.price = Math.max(0.01, lastPrice + fluctuation);
-                    stock.change = ((stock.price - lastPrice) / lastPrice) * 100 + (Math.random() - 0.5) * 0.05;
-                    
-                    stock.trend.shift();
-                    stock.trend.push(stock.price);
-                    
-                    const currentVol = parseFloat(stock.volume.replace('K', '').replace('M', ''));
-                    if (stock.volume.includes('K')) {
-                        stock.volume = (currentVol + (Math.random() - 0.5) * 0.2).toFixed(2) + 'K';
-                    } else if (stock.volume.includes('M')) {
-                        stock.volume = (currentVol + (Math.random() - 0.5) * 0.01).toFixed(2) + 'M';
-                    }
-                });
+            try {
+                // Add cache-busting timestamp
+                const timestamp = Date.now();
                 
-                const randomSymbols = stocksData.filter(s => !s.suspended).sort(() => 0.5 - Math.random()).slice(0, 5);
-                randomSymbols.forEach(stock => {
-                    const row = document.getElementById(`stock-${stock.symbol}`);
-                    if (row) {
-                        row.classList.add('update-flash');
-                        setTimeout(() => row.classList.remove('update-flash'), 500);
-                    }
-                });
+                // Fetch both endpoints in parallel
+                const [stocksRes, newsRes, updateRes] = await Promise.all([
+                    fetch(`${CONFIG.API_BASE_URL}${CONFIG.ENDPOINTS.stocks}?t=${timestamp}`, {
+                        method: 'GET',
+                        cache: 'no-store'
+                    }),
+                    fetch(`${CONFIG.API_BASE_URL}${CONFIG.ENDPOINTS.news}?t=${timestamp}`, {
+                        method: 'GET',
+                        cache: 'no-store'
+                    }),
+                    fetch(`${CONFIG.API_BASE_URL}${CONFIG.ENDPOINTS.update}?t=${timestamp}`, {
+                        method: 'GET',
+                        cache: 'no-store'
+                    }).catch(() => null)
+                ]);
                 
-                renderStocks(currentFilter, searchTerm);
+                if (!stocksRes.ok || !newsRes.ok) {
+                    throw new Error(`HTTP error: ${stocksRes.status}, ${newsRes.status}`);
+                }
                 
-                const latency = Math.floor(Math.random() * 15) + 8;
-                document.getElementById('latency').textContent = latency + 'ms';
+                const stocks = await stocksRes.json();
+                const news = await newsRes.json();
+                const lastUpdate = updateRes ? await updateRes.text() : new Date().toISOString();
                 
-                document.getElementById('syncIndicator').className = 'status-dot status-live';
-                document.getElementById('syncBar').style.opacity = '0.3';
+                // Validate data
+                if (!Array.isArray(stocks) || !Array.isArray(news)) {
+                    throw new Error('Invalid data format');
+                }
                 
-                countdown = 600;
-            }, 1500);
-        }
-
-        function updateCountdown() {
-            countdown--;
-            if (countdown < 0) countdown = 0;
-            const mins = Math.floor(countdown / 60);
-            const secs = countdown % 60;
-            const timeStr = `${mins}:${secs.toString().padStart(2, '0')}`;
-            document.getElementById('countdown').textContent = timeStr;
-            document.getElementById('nextRefresh').textContent = timeStr;
-        }
-        
-        setInterval(updateCountdown, 1000);
-        setInterval(simulateLiveUpdates, 600000);
-
-        // Refresh news every 2 minutes
-        setInterval(() => {
-            newsData.forEach(news => news.time += 2);
-            if (Math.random() > 0.7) {
-                const newNews = {
-                    time: 0,
-                    title: "ALERTE MARCHÉ: Forte volatilité détectée sur le MASI",
-                    category: "ALERTE",
-                    source: "BourseNews.ma",
-                    date: new Date().toISOString().split('T')[0]
-                };
-                newsData.unshift(newNews);
-                if (newsData.length > 20) newsData.pop();
+                // Merge with existing to preserve trends
+                if (stocks.length > 0) {
+                    appState.stocks = mergeStockData(appState.stocks, stocks);
+                    appState.usingStaticData = false;
+                }
+                if (news.length > 0) {
+                    appState.news = news;
+                }
+                
+                appState.isLive = true;
+                appState.lastSync = new Date(lastUpdate);
+                appState.nextSync = new Date(Date.now() + CONFIG.REFRESH_INTERVAL);
+                appState.countdown = CONFIG.COUNTDOWN_START;
+                
+                updateUIForLiveMode();
+                updateSyncStatus('live');
+                
+                if (CONFIG.SHOW_DEBUG) {
+                    console.log('[RISK NETWORK] Live data loaded:', {
+                        stocks: stocks.length,
+                        news: news.length,
+                        timestamp: lastUpdate
+                    });
+                }
+                
+            } catch (error) {
+                console.warn('[RISK NETWORK] GitHub fetch failed:', error);
+                handleFetchError();
             }
+            
+            renderStocks();
             renderNews();
-        }, 120000);
+        }
 
-        // Keyboard shortcuts
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'F5') {
-                e.preventDefault();
-                simulateLiveUpdates();
-            }
-            if (e.key === 'F9') {
-                e.preventDefault();
-                simulateLiveUpdates();
-            }
-            if (e.key === 'Escape') {
-                if (confirm('Quitter le terminal RISK NETWORK GROUP?')) {
-                    window.close();
+        // Merge new data with existing to preserve trends
+        function mergeStockData(oldStocks, newStocks) {
+            const stockMap = new Map(oldStocks.map(s => [s.symbol, s]));
+            
+            return newStocks.map(newStock => {
+                const oldStock = stockMap.get(newStock.symbol);
+                let trend = oldStock ? [...oldStock.trend] : [];
+                
+                // Add new price to trend
+                trend.push(newStock.price);
+                if (trend.length > 20) trend.shift();
+                
+                return {
+                    ...newStock,
+                    trend: trend,
+                    sector: newStock.sector || (oldStock ? oldStock.sector : 'UNKNOWN')
+                };
+            });
+        }
+
+        // Handle fetch error
+        function handleFetchError() {
+            if (CONFIG.FALLBACK_TO_STATIC) {
+                appState.usingStaticData = true;
+                appState.isLive = false;
+                updateSyncStatus('error');
+                showErrorBanner();
+                
+                // Simulate updates for static data
+                if (CONFIG.SIMULATE_UPDATES) {
+                    simulateMarketMovements();
                 }
             }
-            if (e.key === 'F1') {
-                e.preventDefault();
-                alert('RISK NETWORK GROUP - AIDE\n\nF1: Cette aide\nF2: Export CSV\nF3: Filtrer par secteur\nF5: Rafraîchir données (10min)\nF9: Force Sync immédiat\nESC: Quitter\n\nRecherche: Tapez directement un ticker (ex: IAM, ATW) dans la barre de recherche');
-            }
-            if (e.key === 'F2') {
-                e.preventDefault();
-                alert('Export CSV initié...\n' + stocksData.length + ' tickers exportés');
-            }
-            if (e.key === 'F3') {
-                e.preventDefault();
-                const sector = prompt('Entrez le secteur:\nBANK, TELECOM, ASSUR, IMMO, INDUS, MINES, ENERGY, TRANSPORT, SANTE, AGRO, TECH, RETAIL, HOLDING\n\nOu "ALL" pour tout:');
-                if (sector) {
-                    currentFilter = sector.toUpperCase();
-                    renderStocks(currentFilter, searchTerm);
-                }
-            }
-            // Focus search on '/'
-            if (e.key === '/' && document.activeElement !== searchInput) {
-                e.preventDefault();
-                searchInput.focus();
-            }
-        });
+        }
 
-        // Initialize
-        document.getElementById('stockCount').textContent = stocksData.filter(s => !s.suspended).length;
-        renderStocks();
-        renderNews();
-    </script>
-</body>
-</html>
+        // Simulate micro-movements for static data
+        function simulateMarketMovements() {
+            appState.stocks.forEach(stock => {
+                if (stock.suspended) return;
+                
+                const volatility = 0.002;
+                const fluctuation = (Math.random() - 0.5) * stock.price * volatility;
+                stock.price = Math.max(0.01, stock.price + fluctuation);
+                stock.change = stock.change + (Math.random() - 0.5) * 0.02;
+                
+                stock.trend.shift();
+                stock.trend.push(stock.price);
+            });
+            
+            renderStocks();
+        }
+
+        // Update UI for live mode
+        function updateUIForLiveMode() {
+            document.getElementById('dataSource').textContent = 'SRC: GITHUB_LIVE';
+            document.getElementById('dataSource').className = 'text-xs text-green-500 ml-4';
+            document.getElementById('stocksSource').textContent = 'SRC: TRADINGVIEW_API';
+            document.getElementById('stocksSource').className = 'text-xs text-green-500';
+            document.getElementById('connStatus').textContent = 'ONLINE';
+            document.getElementById('connStatus').className = 'text-green-500';
+            document.getElementById('dataSrcLabel').textContent = 'GITHUB_LIVE';
+            document.getElementById('dataSrcLabel').className = 'text-green-500';
+            document.getElementById('sysMode').textContent = 'ONLINE';
+            document.getElementById('sysMode').className = 'text-green-500';
+            document.getElementById('errorBanner').classList.remove('show');
+            document.getElementById('githubInfo').textContent = 'Live data from GitHub Actions';
+        }
+
+        // Update sync indicator
+        function updateSyncStatus(status) {
+            const dot = document.getElementById('syncIndicator');
+            const text = document.getElementById('syncText');
+            const latency = document.getElementById('latency');
+            
+            switch(status) {
+                case 'loading':
+                    dot.className = 'status-dot status-pending';
+                    text.textContent = 'SYNCING...';
+                    text.className = 'text-xs text-orange-400';
+                    latency.textContent = '--ms';
+                    document.getElementById('syncBar').style.opacity = '1';
+                    break;
+                case 'live':
+                    dot.className = 'status-dot status-live';
+                    text.textContent = 'LIVE_FEED';
+                    text.className = 'text-xs text-green-500';
+                    latency.textContent = Math.floor(Math.random() * 15
