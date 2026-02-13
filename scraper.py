@@ -83,8 +83,8 @@ BASE_STOCKS = [
 def log(msg):
     print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}")
 
-def fetch_news():
-    log("Fetching Medias24 RSS...")
+def fetch_medias24_news():
+    """Fetches from the exact Medias24 feed requested"""
     url = "https://medias24.com/categorie/leboursier/actus/feed/"
     try:
         r = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=20)
@@ -95,7 +95,8 @@ def fetch_news():
             title = item.find('title').text
             link = item.find('link').text
             desc = item.find('description').text or ""
-            summary = BeautifulSoup(desc, "html.parser").get_text()[:150]
+            # Clean HTML tags from the description
+            summary = BeautifulSoup(desc, "html.parser").get_text()[:160] + "..."
             news.append({
                 "time": i * 5,
                 "title": title,
@@ -111,7 +112,7 @@ def fetch_news():
         return []
 
 def get_stocks():
-    log("Fetching TradingView Stocks...")
+    """Scrapes TradingView and matches against your BASE_STOCKS list"""
     url = "https://www.tradingview.com/markets/stocks-morocco/market-movers-all-stocks/"
     try:
         headers = {'User-Agent': 'Mozilla/5.0'}
@@ -124,11 +125,11 @@ def get_stocks():
         for row in table.find_all('tr')[1:]:
             cells = row.find_all('td')
             if len(cells) >= 3:
-                symbol = cells[0].find('a').text.strip()
-                # Clean TradingView symbol to match your NKL/NKL inconsistency
-                clean_symbol = symbol.replace("ENNAKL", "NKL")
+                # TradingView uses 'ENNAKL', match to your 'NKL'
+                raw_symbol = cells[0].find('a').text.strip()
+                symbol = raw_symbol.replace("ENNAKL", "NKL")
                 
-                match = next((s for s in BASE_STOCKS if s["symbol"] == clean_symbol), None)
+                match = next((s for s in BASE_STOCKS if s["symbol"] == symbol), None)
                 if match:
                     price = float(cells[1].text.strip().replace('MAD', '').replace(',', ''))
                     change = float(cells[2].text.strip().replace('%', '').replace('−', '-'))
@@ -149,11 +150,14 @@ def get_stocks():
 def main():
     if not os.path.exists(DATA_DIR): os.makedirs(DATA_DIR)
     stocks = get_stocks()
-    news = fetch_news()
-    with open(STOCKS_FILE, 'w') as f: json.dump(stocks, f, indent=2)
-    with open(NEWS_FILE, 'w') as f: json.dump(news, f, indent=2)
-    with open(UPDATE_FILE, 'w') as f: f.write(datetime.now().isoformat())
-    log(f"Done! Saved {len(stocks)} stocks and {len(news)} news.")
+    news = fetch_medias24_news()
+    with open(STOCKS_FILE, 'w', encoding='utf-8') as f:
+        json.dump(stocks, f, ensure_ascii=False, indent=2)
+    with open(NEWS_FILE, 'w', encoding='utf-8') as f:
+        json.dump(news, f, ensure_ascii=False, indent=2)
+    with open(UPDATE_FILE, 'w') as f:
+        f.write(datetime.now().isoformat())
+    log(f"Success: {len(stocks)} stocks and {len(news)} news items saved.")
 
 if __name__ == "__main__":
     main()
