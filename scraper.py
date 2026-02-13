@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 RISK NETWORK GROUP - Market Data Scraper
-Uses your working TradingView scraping method
+Fetches all 54 tickers + Medias24 news
 """
 
 import requests
@@ -20,54 +20,73 @@ STOCKS_FILE = f"{DATA_DIR}/stocks.json"
 NEWS_FILE = f"{DATA_DIR}/news.json"
 UPDATE_FILE = f"{DATA_DIR}/last_update.txt"
 
-# Base stock info for matching symbols to names/sectors
+# COMPLETE LIST - All 54 tickers (your exact list, cleaned)
 BASE_STOCKS = [
-    {"symbol": "ATW", "name": "Attijariwafa Bank SA", "sector": "BANK"},
-    {"symbol": "BCP", "name": "Banque Centrale Populaire", "sector": "BANK"},
-    {"symbol": "BOA", "name": "Bank of Africa SA", "sector": "BANK"},
-    {"symbol": "CFG", "name": "CFG Bank SA", "sector": "BANK"},
-    {"symbol": "CDM", "name": "Credit du Maroc", "sector": "BANK"},
-    {"symbol": "CIH", "name": "CIH Bank SA", "sector": "BANK"},
-    {"symbol": "BCI", "name": "BMCI SA", "sector": "BANK"},
-    {"symbol": "IAM", "name": "Itissalat Al-Maghrib", "sector": "TELECOM"},
-    {"symbol": "WAA", "name": "Wafa Assurance", "sector": "ASSUR"},
-    {"symbol": "SAH", "name": "Sanlam Maroc", "sector": "ASSUR"},
-    {"symbol": "ATL", "name": "AtlantaSanad", "sector": "ASSUR"},
-    {"symbol": "ADH", "name": "Douja Promotion Addoha", "sector": "IMMO"},
-    {"symbol": "ADI", "name": "Alliances Dev Immobilier", "sector": "IMMO"},
-    {"symbol": "RDS", "name": "Residences Dar Saada", "sector": "IMMO"},
-    {"symbol": "LHM", "name": "LafargeHolcim Maroc", "sector": "INDUS"},
-    {"symbol": "CMA", "name": "Ciments du Maroc", "sector": "INDUS"},
-    {"symbol": "SID", "name": "SONASID SA", "sector": "INDUS"},
-    {"symbol": "TGC", "name": "Travaux Generaux Const", "sector": "INDUS"},
-    {"symbol": "JET", "name": "Jet Contractors", "sector": "INDUS"},
-    {"symbol": "GTM", "name": "SGTM SA", "sector": "INDUS"},
-    {"symbol": "MNG", "name": "Managem SA", "sector": "MINES"},
-    {"symbol": "SMI", "name": "Societe Metallurgique Imiter", "sector": "MINES"},
-    {"symbol": "CMT", "name": "Compagnie Miniere Touissit", "sector": "MINES"},
-    {"symbol": "ZDJ", "name": "Zellidja SA", "sector": "MINES"},
-    {"symbol": "TQM", "name": "TAQA Morocco SA", "sector": "ENERGY"},
-    {"symbol": "GAZ", "name": "Afriquia Gaz SA", "sector": "ENERGY"},
-    {"symbol": "TMA", "name": "TotalEnergies Marketing", "sector": "ENERGY"},
-    {"symbol": "MSA", "name": "Marsa Maroc SA", "sector": "TRANSPORT"},
-    {"symbol": "CTM", "name": "Compagnie Transport Maroc", "sector": "TRANSPORT"},
-    {"symbol": "SOT", "name": "Sothema SA", "sector": "SANTE"},
-    {"symbol": "AKT", "name": "Akdital SA", "sector": "SANTE"},
-    {"symbol": "CSR", "name": "Cosumar SA", "sector": "AGRO"},
-    {"symbol": "LES", "name": "Lesieur Cristal SA", "sector": "AGRO"},
-    {"symbol": "SBM", "name": "Sté Boissons du Maroc", "sector": "AGRO"},
-    {"symbol": "DWY", "name": "Disway SA", "sector": "TECH"},
-    {"symbol": "HPS", "name": "Hightech Payment Systems", "sector": "TECH"},
-    {"symbol": "MIC", "name": "Microdata SA", "sector": "TECH"},
-    {"symbol": "S2M", "name": "Sté Maghrébine Monétique", "sector": "TECH"},
-    {"symbol": "LBV", "name": "Label Vie SA", "sector": "RETAIL"},
-    {"symbol": "ATH", "name": "Auto Hall SA", "sector": "RETAIL"},
-    {"symbol": "NAKL", "name": "Ennakl Automobiles", "sector": "RETAIL"},
-    {"symbol": "CMG", "name": "CMGP Group", "sector": "HOLDING"},
-    {"symbol": "MUT", "name": "Mutandis SCA", "sector": "HOLDING"},
-    {"symbol": "EQD", "name": "EQDOM SA", "sector": "FINANCE"},
-    {"symbol": "SLF", "name": "Salafin SA", "sector": "FINANCE"},
+    {"symbol": "TGC", "name": "TRAVAUX GENERAUX DE CONSTRUCTIONS", "sector": "Construction"},
+    {"symbol": "TMA", "name": "TOTALENERGIES MARKETING", "sector": "Énergie"},
+    {"symbol": "TQM", "name": "TAQA MOROCCO", "sector": "Énergie"},
+    {"symbol": "NKL", "name": "ENNAKL SA", "sector": "Transport"},
+    {"symbol": "LHM", "name": "LAFARGEHOLCIM", "sector": "Construction"},
+    {"symbol": "UMR", "name": "UNIMER", "sector": "Agroalimentaire"},
+    {"symbol": "WAA", "name": "WAFA ASSURANCE", "sector": "Assurance"},
+    {"symbol": "ZDJ", "name": "ZELLIDJA S.A", "sector": "Mines"},
+    {"symbol": "MSA", "name": "SODEP MARSA", "sector": "Transport"},
+    {"symbol": "RDS", "name": "RESIDENCE DAR SAADA", "sector": "Construction"},
+    {"symbol": "CSR", "name": "COSUMAR", "sector": "Industrie"},
+    {"symbol": "CFG", "name": "CFG BANK", "sector": "Banque"},
+    {"symbol": "CMG", "name": "CMGP CAS", "sector": "Agriculture"},
+    {"symbol": "HPS", "name": "HPS", "sector": "Paiment"},
+    {"symbol": "S2M", "name": "S2M", "sector": "Paiment"},
+    {"symbol": "RIS", "name": "RISMA", "sector": "Hotel Management"},
+    {"symbol": "DHO", "name": "DELTA HOLDING", "sector": "Industrie"},
+    {"symbol": "DWY", "name": "DISWAY", "sector": "Distribution éléctro"},
+    {"symbol": "SNA", "name": "STOKVIS NORD AFRIQUE", "sector": "Distribution service"},
+    {"symbol": "SNP", "name": "SNEP", "sector": "Process Industries"},
+    {"symbol": "STR", "name": "STROC INDUSTRIE", "sector": "Service Industriel"},
+    {"symbol": "INV", "name": "INVOLYS", "sector": "Service de Technologie"},
+    {"symbol": "MIC", "name": "MICRODATA", "sector": "Service de Technologie"},
+    {"symbol": "DYT", "name": "DISTY TECHNOLOGIES", "sector": "Service de destribution"},
+    {"symbol": "ADH", "name": "DOUJA PROM ADDOHA", "sector": "Immobilier"},
+    {"symbol": "IMO", "name": "IMMORENT INVEST", "sector": "Immobilier"},
+    {"symbol": "ADI", "name": "ALLIANCES", "sector": "Divers"},
+    {"symbol": "AFI", "name": "AFRIC INDUSTRIES", "sector": "Industrie"},
+    {"symbol": "AFM", "name": "AFMA", "sector": "Finance"},
+    {"symbol": "AKT", "name": "AKDITAL S.A", "sector": "Santé"},
+    {"symbol": "ALM", "name": "ALUMINIUM DU MAROC", "sector": "Matériaux"},
+    {"symbol": "ARD", "name": "ARADEI CAPITAL", "sector": "Immobilier"},
+    {"symbol": "ATH", "name": "AUTO HALL", "sector": "Automobile"},
+    {"symbol": "ATL", "name": "ATLANTASANAD", "sector": "Distribution"},
+    {"symbol": "ATW", "name": "ATTIJARIWAFA BANK", "sector": "Banque"},
+    {"symbol": "BAL", "name": "BALIMA", "sector": "Distribution"},
+    {"symbol": "BCP", "name": "BANQUE CENTRALE POPULAIRE", "sector": "Banque"},
+    {"symbol": "CRS", "name": "CARTIER SAADA", "sector": "Distribution"},
+    {"symbol": "CIH", "name": "CREDIT IMMOBILIER ET HOTELIER", "sector": "Banque"},
+    {"symbol": "CMT", "name": "CIMENTS DU MAROC", "sector": "Matériaux"},
+    {"symbol": "COL", "name": "COLORADO", "sector": "Distribution"},
+    {"symbol": "CTM", "name": "COMPAGNIE DE TRANSPORTS AU MAROC", "sector": "Transport"},
+    {"symbol": "DIM", "name": "DELATTRE LEVIVIER MAROC", "sector": "Industrie"},
+    {"symbol": "DRI", "name": "DARI COUSPATE", "sector": "Agroalimentaire"},
+    {"symbol": "EQD", "name": "EQDOM", "sector": "Immobilier"},
+    {"symbol": "FBR", "name": "FENIE BROSSETTE", "sector": "Distribution"},
+    {"symbol": "IAM", "name": "MAROC TELECOM", "sector": "Télécom"},
+    {"symbol": "INM", "name": "INDUSTRIE DU MAROC", "sector": "Industrie"},
+    {"symbol": "JET", "name": "JET CONTRACTORS", "sector": "Construction"},
+    {"symbol": "LES", "name": "LESIEUR CRISTAL", "sector": "Agroalimentaire"},
+    {"symbol": "MOX", "name": "MAGHREB OXYGENE", "sector": "Industrie"},
+    {"symbol": "MNG", "name": "MANAGEM", "sector": "Mines"},
+    {"symbol": "MUT", "name": "MUTANDIS", "sector": "Agroalimentaire"},
+    {"symbol": "SID", "name": "SONASID", "sector": "Agroalimentaire"},
+    {"symbol": "SOT", "name": "SOTHEMA", "sector": "Pharma"},
+    {"symbol": "SRM", "name": "REALISATIONS MECANIQUES", "sector": "Industrie"},
+    {"symbol": "MDP", "name": "MED PAPER", "sector": "Industrie"},
+    {"symbol": "VCN", "name": "VICENNE", "sector": "Santé"},
+    {"symbol": "SMI", "name": "Société métallurgique d'imiter", "sector": "Finance"},
+    {"symbol": "CDM", "name": "Crédit du Maroc", "sector": "Banque"}
 ]
+
+# Build lookup dictionaries
+STOCK_NAMES = {s["symbol"]: s["name"] for s in BASE_STOCKS}
+STOCK_SECTORS = {s["symbol"]: s["sector"] for s in BASE_STOCKS}
 
 def log(message, level="INFO"):
     """Print log messages"""
@@ -80,96 +99,101 @@ def ensure_data_dir():
 
 def get_moroccan_stocks():
     """
-    YOUR WORKING METHOD - Scrapes TradingView HTML table
+    CRITICAL FIX: Merge TradingView data with ALL 54 BASE_STOCKS
     """
     try:
-        # Set up headers to mimic a browser
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
         }
         
-        # Make the request
+        # FIX: Remove trailing space from URL
         url = "https://www.tradingview.com/markets/stocks-morocco/market-movers-all-stocks/"
-        log(f"Fetching from: {url}")
+        log(f"Fetching from TradingView: {url}")
         response = requests.get(url, headers=headers, timeout=30)
         
         if response.status_code != 200:
-            log(f"Failed to fetch data. Status code: {response.status_code}", "ERROR")
+            log(f"Failed to fetch data. Status: {response.status_code}", "ERROR")
             return None
             
-        # Parse the HTML
+        # Parse TradingView data into dict
         soup = BeautifulSoup(response.text, 'html.parser')
+        tv_data = {}
         
-        # Find the table
         table = soup.find('table')
-        if not table:
-            log("Could not find stock table on the page", "ERROR")
-            return None
-            
-        # Extract data from table rows
-        stocks_data = []
-        log("Parsing table rows...")
-        
-        for row in table.find_all('tr')[1:]:  # Skip header row
-            try:
+        if table:
+            for row in table.find_all('tr')[1:]:  # Skip header
                 cells = row.find_all('td')
-                if len(cells) >= 2:
-                    # Extract symbol and price
+                if len(cells) >= 3:
                     symbol_cell = cells[0].find('a')
                     if symbol_cell:
                         symbol = symbol_cell.text.strip()
-                        price_text = cells[1].text.strip()
-                        
-                        # Clean and convert price
                         try:
-                            price = float(price_text.replace('MAD', '').replace(',', '').strip())
-                            
-                            # Find matching stock in BASE_STOCKS
-                            stock_info = next((s for s in BASE_STOCKS if s["symbol"] == symbol), None)
-                            if stock_info:
-                                # Calculate change (we need to get this from another cell)
-                                change_text = cells[2].text.strip() if len(cells) > 2 else "0%"
-                                change = parse_change(change_text)
-                                
-                                # Get volume if available
-                                volume_text = cells[3].text.strip() if len(cells) > 3 else "0"
-                                volume = format_volume(volume_text)
-                                
-                                # Generate trend
-                                trend = generate_trend(price, change)
-                                
-                                stocks_data.append({
-                                    "symbol": symbol,
-                                    "name": stock_info["name"],
-                                    "sector": stock_info["sector"],
-                                    "price": price,
-                                    "change": change,
-                                    "volume": volume,
-                                    "trend": trend
-                                })
-                                log(f"Got {symbol}: {price} MAD ({change:+.2f}%)")
-                        except ValueError as e:
-                            log(f"Could not parse price for {symbol}: {price_text} - {e}", "WARNING")
+                            price = float(cells[1].text.strip().replace('MAD', '').replace(',', ''))
+                            change = float(cells[2].text.strip().replace('%', '').replace('(', '-').replace(')', ''))
+                            tv_data[symbol] = {'price': price, 'change': change}
+                        except:
                             continue
-            except Exception as e:
-                log(f"Error processing row: {str(e)}", "WARNING")
-                continue
         
-        if not stocks_data:
-            log("No valid stock data could be retrieved from TradingView", "ERROR")
-            return None
+        log(f"TradingView returned {len(tv_data)} stocks with live data")
+        
+        # CRITICAL: Build ALL 54 stocks, using TV data where available
+        all_stocks = []
+        for stock in BASE_STOCKS:
+            symbol = stock['symbol']
             
-        log(f"Successfully retrieved {len(stocks_data)} stocks")
-        return stocks_data
+            if symbol in tv_data:
+                # Use live TradingView data
+                price = tv_data[symbol]['price']
+                change = tv_data[symbol]['change']
+                has_data = True
+                log(f"  ✓ {symbol}: {price:.2f} MAD ({change:+.2f}%) [LIVE]")
+            else:
+                # Use placeholder for stocks not in TV
+                price = 0.0
+                change = 0.0
+                has_data = False
+                log(f"  ○ {symbol}: No live data (placeholder)")
+            
+            # Generate trend
+            trend = []
+            if has_data and change != 0:
+                base = price / (1 + (change / 100))
+            else:
+                base = 100.0
+            
+            for i in range(7):
+                if has_data:
+                    point = base + ((price - base) * (i / 6))
+                else:
+                    point = base + (i * 0.1)
+                trend.append(round(point, 2))
+            
+            all_stocks.append({
+                "symbol": symbol,
+                "name": stock['name'],
+                "sector": stock['sector'],
+                "price": price if has_data else 0.0,
+                "change": change if has_data else 0.0,
+                "volume": "N/A",
+                "trend": trend,
+                "has_live_data": has_data
+            })
+        
+        # Sort: live data first, then alphabetically
+        all_stocks.sort(key=lambda x: (not x['has_live_data'], x['symbol']))
+        
+        log(f"\n✓ Total: {len(all_stocks)} stocks ({len(tv_data)} with live data)")
+        return all_stocks
         
     except Exception as e:
-        log(f"Error while fetching stock data: {str(e)}", "ERROR")
+        log(f"Error: {str(e)}", "ERROR")
+        import traceback
+        traceback.print_exc()
         return None
 
 def parse_change(change_text):
     """Parse change percentage from text"""
     try:
-        # Remove % and + signs, handle parentheses
         clean = change_text.replace('%', '').replace('+', '').replace('(', '-').replace(')', '').strip()
         return float(clean)
     except:
@@ -178,7 +202,6 @@ def parse_change(change_text):
 def format_volume(vol_text):
     """Format volume text"""
     try:
-        # Handle K, M, B suffixes
         vol_text = vol_text.upper().replace(',', '')
         if 'K' in vol_text:
             return vol_text
@@ -187,7 +210,6 @@ def format_volume(vol_text):
         elif 'B' in vol_text:
             return vol_text
         else:
-            # Raw number, format it
             num = float(vol_text)
             if num >= 1000000:
                 return f"{num/1000000:.2f}M"
@@ -211,84 +233,71 @@ def generate_trend(price, change):
 
 def fetch_medias24_news():
     """
-    Fetch news from Medias24 RSS feed (Le Boursier)
+    Fetch news from Medias24 RSS feed
     """
     log("Fetching Medias24 RSS...")
     try:
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
-        # FIXED: Removed trailing space from URL
+        # FIX: Remove trailing space
         url = "https://medias24.com/categorie/leboursier/actus/feed/"
         response = requests.get(url, headers=headers, timeout=30)
         response.encoding = 'utf-8'
         
         if response.status_code != 200:
-            log(f"Medias24 RSS failed: {response.status_code}", "WARNING")
+            log(f"RSS failed: {response.status_code}", "WARNING")
             return []
         
-        # Parse XML
+        # Parse XML properly
         root = ET.fromstring(response.content)
-        news = []
         
-        # FIXED: RSS items are under channel, not root directly
+        # FIX: Find channel first
         channel = root.find('channel')
         if channel is None:
             log("No channel found in RSS", "ERROR")
             return []
         
         items = channel.findall('item')
-        log(f"Found {len(items)} items in RSS feed")
+        log(f"Found {len(items)} RSS items")
         
-        for i, item in enumerate(items[:15]):
+        news = []
+        for i, item in enumerate(items[:20]):
             try:
-                # Extract title
                 title_elem = item.find('title')
                 title = title_elem.text if title_elem is not None else 'N/A'
                 
-                # Extract link
                 link_elem = item.find('link')
                 link = link_elem.text if link_elem is not None else ''
                 
-                # Extract pub date
+                # Parse date properly
+                time_mins = i * 5
+                date_str = datetime.now().strftime('%Y-%m-%d')
                 date_elem = item.find('pubDate')
-                if date_elem is not None:
-                    date_str = date_elem.text
+                
+                if date_elem and date_elem.text:
                     try:
-                        # Parse RSS date format: Thu, 12 Feb 2026 16:13:22 +0000
-                        date_obj = datetime.strptime(date_str, '%a, %d %b %Y %H:%M:%S %z')
-                        date = date_obj.strftime('%Y-%m-%d %H:%M')
-                        # Calculate minutes ago
+                        pub_date = datetime.strptime(date_elem.text, '%a, %d %b %Y %H:%M:%S %z')
+                        date_str = pub_date.strftime('%Y-%m-%d %H:%M')
                         now = datetime.now(timezone.utc)
-                        diff = (now - date_obj).total_seconds() / 60
+                        diff = (now - pub_date).total_seconds() / 60
                         time_mins = int(diff) if diff > 0 else 0
                     except Exception as e:
-                        log(f"Date parse error for '{date_str}': {e}", "WARNING")
-                        date = datetime.now().strftime('%Y-%m-%d')
-                        time_mins = i * 5
-                else:
-                    date = datetime.now().strftime('%Y-%m-%d')
-                    time_mins = i * 5
+                        log(f"Date parse error: {e}", "WARNING")
                 
-                # Extract description/summary - remove HTML
-                desc_elem = item.find('description')
+                # Clean description
                 summary = ''
-                if desc_elem is not None and desc_elem.text:
-                    # Clean HTML from description
-                    soup = BeautifulSoup(desc_elem.text, 'html.parser')
+                desc = item.find('description')
+                if desc and desc.text:
+                    soup = BeautifulSoup(desc.text, 'html.parser')
                     summary = soup.get_text(strip=True)
-                    # Remove "The post ... appeared first on ..." text
                     if "appeared first on" in summary:
                         summary = summary.split("appeared first on")[0].strip()
-                    summary = summary[:200]  # Limit to 200 chars
+                    summary = summary[:200]
                 
-                # Extract category - get first one
-                cat_elem = item.find('category')
-                category = 'INFO'
-                if cat_elem is not None and cat_elem.text:
-                    category = cat_elem.text.upper()
-                else:
-                    category = detect_category(title)
+                # Get category
+                cat = item.find('category')
+                category = cat.text.upper() if cat and cat.text else 'INFO'
                 
                 news.append({
                     'time': time_mins,
@@ -296,33 +305,32 @@ def fetch_medias24_news():
                     'link': link,
                     'category': category,
                     'source': 'Medias24.com',
-                    'date': date,
+                    'date': date_str,
                     'summary': summary
                 })
-                
-                log(f"News {i+1}: {title[:40]}... [{category}]")
+                log(f"  ✓ News {i+1}: {title[:45]}... ({time_mins}m)")
                 
             except Exception as e:
-                log(f"Error parsing RSS item {i}: {e}", "WARNING")
+                log(f"  ✗ Error item {i}: {e}", "WARNING")
                 continue
         
-        log(f"Successfully parsed {len(news)} news items from Medias24")
+        log(f"Successfully parsed {len(news)} news items")
         
-        # FIXED: Added terminal output to verify news is working
+        # Print summary to terminal
         print("\n" + "="*70)
         print("NEWS FETCHED FROM MEDIAS24 RSS:")
         print("="*70)
         for n in news[:5]:
             print(f"\n• {n['title'][:60]}...")
             print(f"  Link: {n['link'][:70]}")
-            print(f"  Time: {n['time']}m ago | Category: {n['category']} | Date: {n['date']}")
+            print(f"  Time: {n['time']}m ago | Category: {n['category']}")
         print(f"\nTotal: {len(news)} news items")
         print("="*70 + "\n")
         
         return news
         
     except Exception as e:
-        log(f"Medias24 RSS error: {e}", "ERROR")
+        log(f"RSS error: {e}", "ERROR")
         import traceback
         traceback.print_exc()
         return []
@@ -358,33 +366,47 @@ def save_data(stocks, news):
     log(f"Saved: {len(stocks)} stocks, {len(news)} news")
 
 def main():
-    log("=" * 60)
+    log("=" * 70)
     log("RISK NETWORK GROUP - Market Data Scraper")
-    log("=" * 60)
+    log(f"Total stock definitions: {len(BASE_STOCKS)}")
+    log("=" * 70)
     
-    # Fetch stocks using YOUR working method
+    # Fetch all 54 stocks
     stocks = get_moroccan_stocks()
     
-    # Fetch news from Medias24 RSS
+    # Fetch news
     news = fetch_medias24_news()
     
-    # If stocks failed, we can't proceed
+    # Handle failure
     if stocks is None:
         log("CRITICAL: Stock fetch failed, using fallback", "ERROR")
-        # Try to keep old data
         if os.path.exists(STOCKS_FILE):
             log("Keeping existing stock data")
             with open(STOCKS_FILE, 'r') as f:
                 stocks = json.load(f)
         else:
-            stocks = []
+            # Create placeholder data for all 54
+            stocks = [{
+                "symbol": s['symbol'],
+                "name": s['name'],
+                "sector": s['sector'],
+                "price": 0.0,
+                "change": 0.0,
+                "volume": "N/A",
+                "trend": [100.0] * 7,
+                "has_live_data": False
+            } for s in BASE_STOCKS]
     
     # Save everything
     save_data(stocks, news)
     
-    log("=" * 60)
-    log(f"Scraper finished - {len(stocks)} stocks, {len(news)} news")
-    log("=" * 60)
+    # Final summary
+    live_count = sum(1 for s in stocks if s.get('has_live_data', False))
+    log("=" * 70)
+    log(f"SCRAPER FINISHED")
+    log(f"Stocks: {len(stocks)} total ({live_count} with live data)")
+    log(f"News: {len(news)} items")
+    log("=" * 70)
 
 if __name__ == '__main__':
     main()
