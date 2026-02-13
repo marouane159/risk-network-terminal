@@ -2,84 +2,66 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RISK NETWORK | Terminal</title>
+    <title>RISK NETWORK TERMINAL</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'JetBrains Mono', monospace; background-color: #000; color: #0f0; }
+        body { font-family: 'JetBrains Mono', monospace; background: #000; color: #0f0; }
         .panel { border: 1px solid #222; background: #050505; }
-        .ticker-up { color: #00ff00; }
-        .ticker-down { color: #ff0000; }
-        .news-item { border-left: 2px solid #004400; transition: all 0.2s; }
-        .news-item:hover { border-left-color: #00ff00; background: #0a0a0a; }
+        .up { color: #0f0; } .down { color: #f00; }
     </style>
 </head>
 <body class="p-4">
-    <div class="flex justify-between items-center mb-4 border-b border-green-900 pb-2">
-        <h1 class="text-xl font-bold uppercase">Risk Network Terminal</h1>
-        <div id="status" class="text-xs bg-green-900 px-2 py-1">CONNECTED</div>
+    <div class="flex justify-between border-b border-green-900 mb-4 pb-2">
+        <h1 class="font-bold uppercase text-xl">Risk Network Terminal</h1>
+        <div id="clock" class="text-sm">--:--:--</div>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div class="lg:col-span-2 panel p-4 overflow-x-auto">
+        <div class="lg:col-span-2 panel p-4 h-[80vh] overflow-y-auto">
             <table class="w-full text-left text-xs">
-                <thead>
-                    <tr class="text-gray-500 border-b border-gray-800">
-                        <th class="pb-2">SYMBOLE</th>
-                        <th>NOM</th>
-                        <th>PRIX</th>
-                        <th>CHG%</th>
-                    </tr>
+                <thead class="text-gray-500 border-b border-gray-800">
+                    <tr><th class="pb-2">SYM</th><th>NOM</th><th>PRIX</th><th>CHG%</th></tr>
                 </thead>
                 <tbody id="stock-list"></tbody>
             </table>
         </div>
-
-        <div class="panel p-4">
-            <h2 class="text-xs font-bold mb-4 text-white uppercase border-b border-gray-800 pb-2">Live Medias24 News</h2>
-            <div id="news-list" class="space-y-4 max-h-[70vh] overflow-y-auto"></div>
+        <div class="panel p-4 h-[80vh] overflow-y-auto">
+            <h2 class="text-xs font-bold border-b border-gray-800 mb-4 pb-2 uppercase text-white">Medias24 Live Feed</h2>
+            <div id="news-list" class="space-y-4"></div>
         </div>
     </div>
 
     <script>
         const API = "https://risk-network-terminal.onrender.com/api/all";
 
-        async function refresh() {
+        async function update() {
             try {
                 const res = await fetch(API);
                 const data = await res.json();
                 
-                // Update Stocks
                 document.getElementById('stock-list').innerHTML = data.stocks.map(s => `
                     <tr class="border-b border-zinc-900">
                         <td class="py-2 font-bold">${s.symbol}</td>
-                        <td class="text-gray-500 text-[10px]">${s.name}</td>
+                        <td class="text-[10px] text-gray-500">${s.name}</td>
                         <td>${s.price.toFixed(2)}</td>
-                        <td class="${s.change >= 0 ? 'ticker-up' : 'ticker-down'}">
-                            ${s.change >= 0 ? '+' : ''}${s.change.toFixed(2)}%
-                        </td>
+                        <td class="${s.change >= 0 ? 'up' : 'down'}">${s.change >= 0 ? '+' : ''}${s.change.toFixed(2)}%</td>
                     </tr>
                 `).join('');
 
-                // Update News from Medias24
                 document.getElementById('news-list').innerHTML = data.news.map(n => `
-                    <div class="news-item pl-3 py-1">
+                    <div class="border-l border-green-800 pl-3">
                         <div class="text-[9px] text-gray-600">${n.date}</div>
-                        <a href="${n.link}" target="_blank" class="block text-xs font-bold text-gray-300 hover:text-green-400">
-                            ${n.title}
-                        </a>
-                        <p class="text-[10px] text-gray-600 mt-1 line-clamp-2">${n.summary}</p>
+                        <a href="${n.link}" target="_blank" class="block text-xs font-bold hover:text-green-400">${n.title}</a>
+                        <p class="text-[10px] text-gray-600 mt-1">${n.summary}</p>
                     </div>
                 `).join('');
-
-            } catch (e) {
-                console.log("Sync Error");
-            }
+            } catch (e) { console.error("API Error"); }
         }
 
-        setInterval(refresh, 60000);
-        refresh();
+        setInterval(() => { document.getElementById('clock').textContent = new Date().toLocaleTimeString(); }, 1000);
+        setInterval(update, 60000);
+        update();
     </script>
 </body>
 </html>
