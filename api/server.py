@@ -1,17 +1,16 @@
 from flask import Flask, jsonify
 from flask_cors import CORS
-import json
-import os
+import requests
+from bs4 import BeautifulSoup
+import xml.etree.ElementTree as ET
 from datetime import datetime
+import random
+import os
 
 app = Flask(__name__)
 CORS(app)
 
-DATA_DIR = "data"
-STOCKS_FILE = os.path.join(DATA_DIR, "stocks.json")
-NEWS_FILE = os.path.join(DATA_DIR, "news.json")
-
-# DATABASE OF STOCKS
+# YOUR EXACT STOCK LIST
 BASE_STOCKS = [
     {"symbol": "TGC", "name": "TRAVAUX GENERAUX DE CONSTRUCTIONS", "sector": "Construction"},
     {"symbol": "TMA", "name": "TOTALENERGIES MARKETING ", "sector": "Énergie"},
@@ -78,33 +77,66 @@ BASE_STOCKS = [
     {"symbol": "CDM", "name": "Crédit du Maroc", "sector": "Banque"}
 ]
 
-def load_data(file_path):
+# Simple in-memory cache to avoid hitting websites too hard
+cache = {"stocks": [], "news": [], "last_update": None}
+
+def scrape_medias24():
+    url = "https://medias24.com/categorie/leboursier/actus/feed/"
     try:
-        if os.path.exists(file_path):
-            with open(file_path, 'r', encoding='utf-8') as f:
-                return json.load(f)
+        r = requests.get(url, timeout=10)
+        root = ET.fromstring(r.content)
+        news_items = []
+        for item in root.findall('.//item')[:15]:
+            title = item.find('title').text
+            link = item.find('link').text
+            pub_date = item.find('pubDate').text
+            desc = item.find('description').text or ""
+            summary = BeautifulSoup(desc, "html.parser").get_text()[:150] + "..."
+            news_items.append({
+                "title": title, "link": link, "date": pub_date, "summary": summary, "source": "Medias24"
+            })
+        return news_items
     except Exception as e:
-        print(f"Error loading {file_path}: {e}")
-    return []
+        print(f"News Error: {e}")
+        return []
 
-@app.route('/')
-def index():
-    return "Risk Network API is running."
-
-@app.route('/api/stocks')
-def get_stocks():
-    return jsonify(load_data(STOCKS_FILE))
-
-@app.route('/api/news')
-def get_news():
-    return jsonify(load_data(NEWS_FILE))
+def scrape_stocks():
+    url = "https://www.tradingview.com/markets/stocks-morocco/market-movers-all-stocks/"
+    try:
+        r = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=10)
+        soup = BeautifulSoup(r.text, 'html.parser')
+        table = soup.find('table')
+        results = []
+        if table:
+            for row in table.find_all('tr')[1:]:
+                cells = row.find_all('td')
+                if len(cells) >= 3:
+                    sym = cells[0].find('a').text.strip().replace("ENNAKL", "NKL")
+                    match = next((s for s in BASE_STOCKS if s["symbol"] == sym), None)
+                    if match:
+                        price = float(cells[1].text.strip().replace('MAD', '').replace(',', ''))
+                        change = float(cells[2].text.strip().replace('%', '').replace('−', '-'))
+                        results.append({
+                            **match, "price": price, "change": change
+                        })
+        return results
+    except Exception as e:
+        print(f"Stock Error: {e}")
+        return []
 
 @app.route('/api/all')
 def get_all():
+    global cache
+    # Update cache if empty or older than 5 minutes
+    if not cache["last_update"] or (datetime.now() - cache["last_update"]).seconds > 300:
+        cache["stocks"] = scrape_stocks()
+        cache["news"] = scrape_medias24()
+        cache["last_update"] = datetime.now()
+    
     return jsonify({
-        "stocks": load_data(STOCKS_FILE),
-        "news": load_data(NEWS_FILE),
-        "lastUpdate": datetime.now().isoformat()
+        "stocks": cache["stocks"],
+        "news": cache["news"],
+        "lastUpdate": cache["last_update"].isoformat()
     })
 
 if __name__ == '__main__':
