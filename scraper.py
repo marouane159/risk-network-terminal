@@ -5,6 +5,7 @@ Uses your working TradingView scraping method
 """
 
 import requests
+import xml.etree.ElementTree as ET
 import json
 import random
 import os
@@ -207,52 +208,94 @@ def generate_trend(price, change):
     
     return trend
 
-def fetch_boursenews():
+def fetch_medias24_news():
     """
-    Fetch news from BourseNews.ma
+    Fetch news from Medias24 RSS feed (Le Boursier)
     """
-    log("Fetching BourseNews...")
+    log("Fetching Medias24 RSS...")
     try:
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
-        url = "https://boursenews.ma/espace-investisseurs"
+        url = "https://medias24.com/categorie/leboursier/actus/feed/"
         response = requests.get(url, headers=headers, timeout=30)
+        response.encoding = 'utf-8'
         
         if response.status_code != 200:
-            log(f"BourseNews failed: {response.status_code}", "WARNING")
+            log(f"Medias24 RSS failed: {response.status_code}", "WARNING")
             return []
         
-        soup = BeautifulSoup(response.text, 'html.parser')
+        # Parse XML
+        root = ET.fromstring(response.content)
         news = []
         
-        # Try multiple selectors
-        articles = soup.select('article') or soup.select('.news-item') or soup.select('.post')
+        # Find all items
+        items = root.findall('.//item')
+        log(f"Found {len(items)} items in RSS feed")
         
-        for i, article in enumerate(articles[:15]):
+        for i, item in enumerate(items[:15]):
             try:
-                title_elem = article.select_one('h2, h3, .title, .entry-title')
-                if title_elem:
-                    title = title_elem.get_text(strip=True)
-                    # Get relative time
-                    time_elem = article.select_one('time, .date, .meta')
-                    time_str = time_elem.get_text(strip=True) if time_elem else f"{i*5} min"
-                    
-                    news.append({
-                        'time': parse_time(time_str),
-                        'title': title,
-                        'category': detect_category(title),
-                        'source': 'BourseNews.ma',
-                        'date': datetime.now().strftime('%Y-%m-%d')
-                    })
-            except:
+                # Extract title
+                title_elem = item.find('title')
+                title = title_elem.text if title_elem is not None else 'N/A'
+                
+                # Extract link
+                link_elem = item.find('link')
+                link = link_elem.text if link_elem is not None else ''
+                
+                # Extract pub date
+                date_elem = item.find('pubDate')
+                if date_elem is not None:
+                    date_str = date_elem.text
+                    try:
+                        # Parse RSS date format: Mon, 13 Feb 2025 10:30:00 +0000
+                        from datetime import timezone
+                        date_obj = datetime.strptime(date_str, '%a, %d %b %Y %H:%M:%S %z')
+                        date = date_obj.strftime('%Y-%m-%d %H:%M')
+                        # Calculate minutes ago
+                        now = datetime.now(timezone.utc)
+                        diff = (now - date_obj).total_seconds() / 60
+                        time_mins = int(diff) if diff > 0 else 0
+                    except:
+                        date = datetime.now().strftime('%Y-%m-%d')
+                        time_mins = i * 5
+                else:
+                    date = datetime.now().strftime('%Y-%m-%d')
+                    time_mins = i * 5
+                
+                # Extract description/summary
+                desc_elem = item.find('description')
+                summary = ''
+                if desc_elem is not None and desc_elem.text:
+                    # Clean HTML from description
+                    soup = BeautifulSoup(desc_elem.text, 'html.parser')
+                    summary = soup.get_text(strip=True)[:200]  # Limit to 200 chars
+                
+                # Extract category if available
+                cat_elem = item.find('category')
+                category = cat_elem.text if cat_elem is not None else detect_category(title)
+                
+                news.append({
+                    'time': time_mins,
+                    'title': title,
+                    'link': link,
+                    'category': category.upper(),
+                    'source': 'Medias24.com',
+                    'date': date,
+                    'summary': summary
+                })
+                
+                log(f"News: {title[:50]}... [{category}]")
+                
+            except Exception as e:
+                log(f"Error parsing RSS item {i}: {e}", "WARNING")
                 continue
         
-        log(f"Got {len(news)} news items")
+        log(f"Got {len(news)} news items from Medias24")
         return news
         
     except Exception as e:
-        log(f"BourseNews error: {e}", "ERROR")
+        log(f"Medias24 RSS error: {e}", "ERROR")
         return []
 
 def parse_time(time_str):
@@ -309,7 +352,7 @@ def main():
     stocks = get_moroccan_stocks()
     
     # Fetch news
-    news = fetch_boursenews()
+    news = fetch_medias24_news()
     
     # If stocks failed, we can't proceed
     if stocks is None:
