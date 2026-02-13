@@ -1,34 +1,25 @@
-import asyncio
-import aiohttp
-import json
-from datetime import datetime, timedelta
+from flask import Flask, jsonify
+from flask_cors import CORS
+import requests
 from bs4 import BeautifulSoup
-import re
-from dataclasses import dataclass, asdict
-from typing import List, Optional
-import logging
+import json
+import os
+from datetime import datetime
 
-# Configure logging to show in terminal
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler()  # This ensures output goes to terminal
-    ]
-)
-logger = logging.getLogger(__name__)
+app = Flask(__name__)
+CORS(app)  # Allow cross-origin requests
 
-# Complete expanded stock list
+# Complete expanded stock list (your new tickers)
 BASE_STOCKS = [
     {"symbol": "TGC", "name": "TRAVAUX GENERAUX DE CONSTRUCTIONS", "sector": "Construction"},
-    {"symbol": "TMA", "name": "TOTALENERGIES MARKETING ", "sector": "Énergie"},
+    {"symbol": "TMA", "name": "TOTALENERGIES MARKETING", "sector": "Énergie"},
     {"symbol": "TQM", "name": "TAQA MOROCCO", "sector": "Énergie"},
     {"symbol": "NKL", "name": "ENNAKL SA", "sector": "Transport"},
     {"symbol": "LHM", "name": "LAFARGEHOLCIM", "sector": "Construction"},
     {"symbol": "UMR", "name": "UNIMER", "sector": "Agroalimentaire"},
     {"symbol": "WAA", "name": "WAFA ASSURANCE", "sector": "Assurance"},
     {"symbol": "ZDJ", "name": "ZELLIDJA S.A", "sector": "Mines"},
-    {"symbol": "MSA", "name": "SODEP MARSA ", "sector": "Transport"},
+    {"symbol": "MSA", "name": "SODEP MARSA", "sector": "Transport"},
     {"symbol": "RDS", "name": "RESIDENCE DAR SAADA", "sector": "Construction"},
     {"symbol": "CSR", "name": "COSUMAR", "sector": "Industrie"},
     {"symbol": "CFG", "name": "CFG BANK", "sector": "Banque"},
@@ -50,7 +41,7 @@ BASE_STOCKS = [
     {"symbol": "AFI", "name": "AFRIC INDUSTRIES", "sector": "Industrie"},
     {"symbol": "AFM", "name": "AFMA", "sector": "Finance"},
     {"symbol": "AKT", "name": "AKDITAL S.A", "sector": "Santé"},
-    {"symbol": "ALM", "name": "ALUMINIUM DU ", "sector": "Matériaux"},
+    {"symbol": "ALM", "name": "ALUMINIUM DU MAROC", "sector": "Matériaux"},
     {"symbol": "ARD", "name": "ARADEI CAPITAL", "sector": "Immobilier"},
     {"symbol": "ATH", "name": "AUTO HALL", "sector": "Automobile"},
     {"symbol": "ATL", "name": "ATLANTASANAD", "sector": "Distribution"},
@@ -59,9 +50,9 @@ BASE_STOCKS = [
     {"symbol": "BCP", "name": "BANQUE CENTRALE POPULAIRE", "sector": "Banque"},
     {"symbol": "CRS", "name": "CARTIER SAADA", "sector": "Distribution"},
     {"symbol": "CIH", "name": "CREDIT IMMOBILIER ET HOTELIER", "sector": "Banque"},
-    {"symbol": "CMT", "name": "CIMENTS DU ", "sector": "Matériaux"},
+    {"symbol": "CMT", "name": "CIMENTS DU MAROC", "sector": "Matériaux"},
     {"symbol": "COL", "name": "COLORADO", "sector": "Distribution"},
-    {"symbol": "CTM", "name": "COMPAGNIE DE TRANSPORTS AU ", "sector": "Transport"},
+    {"symbol": "CTM", "name": "COMPAGNIE DE TRANSPORTS AU MAROC", "sector": "Transport"},
     {"symbol": "DIM", "name": "DELATTRE LEVIVIER MAROC", "sector": "Industrie"},
     {"symbol": "DRI", "name": "DARI COUSPATE", "sector": "Agroalimentaire"},
     {"symbol": "EQD", "name": "EQDOM", "sector": "Immobilier"},
@@ -82,73 +73,115 @@ BASE_STOCKS = [
     {"symbol": "CDM", "name": "Crédit du Maroc", "sector": "Banque"}
 ]
 
-@dataclass
-class StockPrice:
-    symbol: str
-    price: float
-    change: float
-    change_percent: float
-    volume: int
-    timestamp: str
+# Build lookup dictionaries from BASE_STOCKS
+STOCK_NAMES = {s["symbol"]: s["name"] for s in BASE_STOCKS}
+STOCK_SECTORS = {s["symbol"]: s["sector"] for s in BASE_STOCKS}
 
-@dataclass
-class NewsItem:
-    title: str
-    link: str
-    source: str
-    date: str
-    summary: Optional[str] = None
+# In-memory cache
+cache = {
+    'stocks': [],
+    'news': [],
+    'last_update': None
+}
 
-class BourseNewsScraper:
-    def __init__(self):
-        self.session: Optional[aiohttp.ClientSession] = None
-        self.headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+def print_news_to_terminal(news_items):
+    """Print fetched news to terminal with formatting"""
+    if not news_items:
+        print("No news items to display")
+        return
+    
+    print("\n" + "="*80)
+    print("LATEST NEWS FROM BOURSE NEWS (boursenews.ma/espace-investisseurs)")
+    print("="*80)
+    
+    for i, item in enumerate(news_items[:10], 1):  # Show top 10
+        print(f"\n{i}. {item.get('title', 'N/A')}")
+        print(f"   Date: {item.get('date', 'N/A')}")
+        print(f"   Source: {item.get('source', 'N/A')}")
+        if item.get('summary'):
+            print(f"   Summary: {item['summary'][:150]}...")
+        print("-" * 80)
+    
+    print(f"\nTotal news items fetched: {len(news_items)}")
+    print("="*80 + "\n")
+
+def scrape_tradingview():
+    """Scrape TradingView Morocco"""
+    try:
+        url = "https://www.tradingview.com/markets/stocks-morocco/market-movers-all-stocks/"
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'DNT': '1',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1'
+        }
+        
+        response = requests.get(url, headers=headers, timeout=30)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        stocks = []
+        table = soup.find('table')
+        
+        if table:
+            rows = table.find_all('tr')[1:]  # Skip header
+            
+            for row in rows:
+                cells = row.find_all('td')
+                if len(cells) >= 4:
+                    symbol_elem = cells[0].find('a')
+                    if symbol_elem:
+                        symbol = symbol_elem.text.strip()
+                        price_text = cells[1].text.strip().replace('MAD', '').replace(',', '')
+                        change_text = cells[2].text.strip().replace('%', '')
+                        
+                        try:
+                            price = float(price_text)
+                            change = float(change_text)
+                            
+                            # Generate trend
+                            trend = []
+                            base = price / (1 + (change / 100)) if change != 0 else price * 0.995
+                            for i in range(7):
+                                point = base + ((price - base) * (i / 6))
+                                trend.append(round(point, 2))
+                            
+                            stocks.append({
+                                'symbol': symbol,
+                                'name': get_stock_name(symbol),
+                                'sector': get_sector(symbol),
+                                'price': price,
+                                'change': change,
+                                'volume': 'N/A',
+                                'trend': trend
+                            })
+                        except:
+                            continue
+        
+        return stocks
+    except Exception as e:
+        print(f"Error scraping TradingView: {e}")
+        return []
+
+def scrape_boursenews():
+    """Scrape BourseNews from espace-investisseurs"""
+    try:
+        url = "https://boursenews.ma/espace-investisseurs"
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
             'Accept-Language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7',
         }
-    
-    async def __aenter__(self):
-        self.session = aiohttp.ClientSession(headers=self.headers)
-        return self
-    
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        if self.session:
-            await self.session.close()
-    
-    async def fetch_news(self) -> List[NewsItem]:
-        """Fetch news from boursenews.ma/espace-investisseurs"""
-        url = "https://boursenews.ma/espace-investisseurs"
         
-        try:
-            logger.info(f"Fetching news from {url}...")
-            async with self.session.get(url, timeout=30) as response:
-                if response.status != 200:
-                    logger.error(f"Failed to fetch news: HTTP {response.status}")
-                    return []
-                
-                html = await response.text()
-                logger.info(f"Successfully fetched {len(html)} bytes of HTML")
-                
-                news_items = self._parse_news(html)
-                logger.info(f"Parsed {len(news_items)} news items")
-                
-                # Print news to terminal
-                self._print_news_to_terminal(news_items)
-                
-                return news_items
-                
-        except Exception as e:
-            logger.error(f"Error fetching news: {str(e)}")
-            return []
-    
-    def _parse_news(self, html: str) -> List[NewsItem]:
-        """Parse HTML to extract news items"""
-        soup = BeautifulSoup(html, 'html.parser')
-        news_items = []
+        print(f"Fetching news from {url}...")
+        response = requests.get(url, headers=headers, timeout=30)
+        soup = BeautifulSoup(response.text, 'html.parser')
         
-        # Common selectors for news articles on boursenews.ma
-        # Try multiple possible selectors
+        news = []
+        
+        # Try multiple selectors to find articles
         selectors = [
             'article.news-item',
             '.news-item',
@@ -163,15 +196,15 @@ class BourseNewsScraper:
         for selector in selectors:
             articles = soup.select(selector)
             if articles:
-                logger.info(f"Found {len(articles)} articles with selector: {selector}")
+                print(f"Found {len(articles)} articles with selector: {selector}")
                 break
         
         if not articles:
             # Fallback: look for any link with news-like structure
-            articles = soup.find_all('a', href=re.compile(r'/(actualite|news|article)/'))
-            logger.info(f"Fallback found {len(articles)} articles")
+            articles = soup.find_all('a', href=lambda x: x and ('actualite' in x or 'news' in x or 'article' in x))
+            print(f"Fallback found {len(articles)} articles")
         
-        for article in articles[:20]:  # Limit to 20 most recent
+        for i, article in enumerate(articles[:20]):
             try:
                 # Extract title
                 title_elem = article.find(['h1', 'h2', 'h3', 'h4', '.title', '.entry-title'])
@@ -194,164 +227,168 @@ class BourseNewsScraper:
                 
                 # Extract date
                 date_elem = article.find(['time', '.date', '.entry-date', '[class*="date"]'])
-                date = date_elem.get_text(strip=True) if date_elem else datetime.now().strftime("%Y-%m-%d")
+                date = date_elem.get_text(strip=True) if date_elem else datetime.now().strftime('%Y-%m-%d')
                 
                 # Extract summary
                 summary_elem = article.find(['p', '.summary', '.excerpt', '.description'])
                 summary = summary_elem.get_text(strip=True) if summary_elem else None
                 
-                if title and link:
-                    news_items.append(NewsItem(
-                        title=title,
-                        link=link,
-                        source="Bourse News",
-                        date=date,
-                        summary=summary
-                    ))
-                    
+                news.append({
+                    'time': i * 5,
+                    'title': title,
+                    'link': link,
+                    'category': 'INFO',
+                    'source': 'BourseNews.ma',
+                    'date': date,
+                    'summary': summary
+                })
             except Exception as e:
-                logger.warning(f"Error parsing article: {e}")
+                print(f"Error parsing article {i}: {e}")
                 continue
         
-        return news_items
-    
-    def _print_news_to_terminal(self, news_items: List[NewsItem]):
-        """Print fetched news to terminal"""
-        if not news_items:
-            logger.warning("No news items to display")
-            return
+        # Print news to terminal
+        print_news_to_terminal(news)
         
-        print("\n" + "="*80)
-        print("LATEST NEWS FROM BOURSE NEWS (boursenews.ma/espace-investisseurs)")
-        print("="*80)
-        
-        for i, item in enumerate(news_items[:10], 1):  # Show top 10
-            print(f"\n{i}. {item.title}")
-            print(f"   Date: {item.date}")
-            print(f"   Link: {item.link}")
-            if item.summary:
-                print(f"   Summary: {item.summary[:150]}...")
-            print("-" * 80)
-        
-        print(f"\nTotal news items fetched: {len(news_items)}")
-        print("="*80 + "\n")
+        return news
+    except Exception as e:
+        print(f"Error scraping BourseNews: {e}")
+        return []
 
-class StockDataFetcher:
-    def __init__(self):
-        self.session: Optional[aiohttp.ClientSession] = None
+def get_stock_name(symbol):
+    """Get full name from symbol - uses BASE_STOCKS first, then fallback"""
+    # First check our expanded list
+    if symbol in STOCK_NAMES:
+        return STOCK_NAMES[symbol]
     
-    async def __aenter__(self):
-        self.session = aiohttp.ClientSession()
-        return self
-    
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        if self.session:
-            await self.session.close()
-    
-    async def fetch_stock_data(self, symbol: str) -> Optional[StockPrice]:
-        """Fetch stock data for a given symbol"""
-        # This is a placeholder - implement actual API call
-        # You might need to use Casablanca Stock Exchange API or scrape data
-        
-        try:
-            # Example implementation - replace with actual data source
-            logger.info(f"Fetching data for {symbol}...")
-            
-            # Simulate API call or implement actual scraping
-            # For now, returning mock data structure
-            return StockPrice(
-                symbol=symbol,
-                price=0.0,
-                change=0.0,
-                change_percent=0.0,
-                volume=0,
-                timestamp=datetime.now().isoformat()
-            )
-            
-        except Exception as e:
-            logger.error(f"Error fetching {symbol}: {e}")
-            return None
+    # Fallback to old hardcoded names
+    fallback_names = {
+        'ATW': 'Attijariwafa Bank SA',
+        'BCP': 'Banque Centrale Populaire',
+        'BOA': 'Bank of Africa SA',
+        'BCI': 'BMCI SA',
+        'BCE': 'Banque Marocaine du Commerce Extérieur',
+        'AXC': 'AXA Credit',
+        'MAB': 'Maghrebail',
+        'MLE': 'Maroc Leasing',
+        'SAH': 'Sanlam Maroc',
+        'AGM': 'AGMA Lahlou-Tazi',
+        'TSF': 'Taslif',
+        'CMA': 'Ciments du Maroc',
+        'GTM': 'SGTM SA',
+        'VCN': 'Vicenne',
+        'FBR': 'Fenie Brossette',
+        'SRM': 'Sté Realisations Mecaniques',
+        'ALM': 'Aluminium du Maroc',
+        'GAZ': 'Afriquia Gaz SA',
+        'NEJ': 'Nouvelles Energies de Jorf',
+        'SBM': 'Sté Boissons du Maroc',
+        'OUL': 'Oulmes',
+        'CDA': 'Centrale Danone',
+        'M2M': 'M2M Group',
+        'IBC': 'IBC Corp',
+        'CAP': 'Cap Radio',
+        'DIS': 'Dislog Group',
+        'PRO': 'Promopharm',
+        'SLF': 'Salafin',
+        'NAKL': 'Ennakl Automobiles',
+    }
+    return fallback_names.get(symbol, symbol)
 
-class Server:
-    def __init__(self):
-        self.stocks = BASE_STOCKS
-        self.news_scraper = BourseNewsScraper()
-        self.stock_fetcher = StockDataFetcher()
-        self.cache = {
-            'news': [],
-            'stocks': [],
-            'last_update': None
-        }
+def get_sector(symbol):
+    """Get sector from symbol - uses BASE_STOCKS first, then fallback"""
+    # First check our expanded list
+    if symbol in STOCK_SECTORS:
+        return STOCK_SECTORS[symbol]
     
-    async def initialize(self):
-        """Initialize server and fetch initial data"""
-        logger.info("Initializing server...")
-        logger.info(f"Loaded {len(self.stocks)} stocks")
-        
-        # Print stock list to terminal
-        self._print_stock_list()
-        
-        # Fetch initial news
-        async with self.news_scraper as scraper:
-            self.cache['news'] = await scraper.fetch_news()
-        
-        self.cache['last_update'] = datetime.now()
-        logger.info("Server initialization complete")
-    
-    def _print_stock_list(self):
-        """Print loaded stocks to terminal"""
-        print("\n" + "="*80)
-        print(f"LOADED STOCKS ({len(self.stocks)} total)")
-        print("="*80)
-        
-        for stock in self.stocks:
-            print(f"  {stock['symbol']:<6} | {stock['name']:<35} | {stock['sector']}")
-        
-        print("="*80 + "\n")
-    
-    async def update_data(self):
-        """Update all data (news and stocks)"""
-        logger.info("Starting data update cycle...")
-        
-        # Update news
-        async with self.news_scraper as scraper:
-            self.cache['news'] = await scraper.fetch_news()
-        
-        # Update stock prices
-        async with self.stock_fetcher as fetcher:
-            stock_data = []
-            for stock in self.stocks:
-                data = await fetcher.fetch_stock_data(stock['symbol'])
-                if data:
-                    stock_data.append(asdict(data))
-            self.cache['stocks'] = stock_data
-        
-        self.cache['last_update'] = datetime.now()
-        logger.info("Data update cycle complete")
-    
-    def get_data(self):
-        """Get current cached data"""
-        return {
-            'stocks': self.cache['stocks'],
-            'news': [asdict(item) for item in self.cache['news']],
-            'last_update': self.cache['last_update'].isoformat() if self.cache['last_update'] else None
-        }
+    # Fallback to old hardcoded sectors
+    fallback_sectors = {
+        'ATW': 'BANK', 'BCP': 'BANK', 'BOA': 'BANK', 'CFG': 'BANK', 'CDM': 'BANK',
+        'CIH': 'BANK', 'BCI': 'BANK', 'BCE': 'BANK', 'AXC': 'BANK', 'MAB': 'BANK', 'MLE': 'BANK',
+        'IAM': 'TELECOM',
+        'WAA': 'ASSUR', 'SAH': 'ASSUR', 'ATL': 'ASSUR', 'AFM': 'ASSUR', 'AGM': 'ASSUR', 'TSF': 'ASSUR',
+        'ADH': 'IMMO', 'ADI': 'IMMO', 'RDS': 'IMMO', 'ARD': 'IMMO', 'IMO': 'IMMO', 'BAL': 'IMMO',
+        'LHM': 'INDUS', 'CMA': 'INDUS', 'SID': 'INDUS', 'TGC': 'INDUS', 'JET': 'INDUS', 'GTM': 'INDUS',
+        'VCN': 'INDUS', 'FBR': 'INDUS', 'SRM': 'INDUS', 'STR': 'INDUS', 'ALM': 'INDUS', 'DHO': 'INDUS',
+        'MNG': 'MINES', 'SMI': 'MINES', 'CMT': 'MINES', 'ZDJ': 'MINES', 'COL': 'MINES', 'MDP': 'MINES',
+        'TQM': 'ENERGY', 'GAZ': 'ENERGY', 'TMA': 'ENERGY', 'SNP': 'ENERGY', 'SAM': 'ENERGY',
+        'MSA': 'TRANSPORT', 'CTM': 'TRANSPORT', 'NEJ': 'TRANSPORT',
+        'SOT': 'SANTE', 'AKT': 'SANTE', 'PRO': 'SANTE',
+        'CSR': 'AGRO', 'LES': 'AGRO', 'SBM': 'AGRO', 'OUL': 'AGRO', 'UMR': 'AGRO', 'CRS': 'AGRO', 'DRI': 'AGRO', 'CDA': 'AGRO',
+        'DWY': 'TECH', 'HPS': 'TECH', 'MIC': 'TECH', 'S2M': 'TECH', 'DYT': 'TECH', 'M2M': 'TECH', 'INV': 'TECH', 'IBC': 'TECH',
+        'LBV': 'RETAIL', 'ATH': 'RETAIL', 'NAKL': 'RETAIL', 'RIS': 'RETAIL', 'CAP': 'RETAIL',
+        'CMG': 'HOLDING', 'MUT': 'HOLDING', 'SNA': 'HOLDING',
+        'EQD': 'FINANCE', 'SLF': 'FINANCE', 'DIS': 'FINANCE',
+    }
+    return fallback_sectors.get(symbol, 'DIVERS')
 
-# Global server instance
-server = Server()
+@app.route('/')
+def home():
+    return "RISK NETWORK GROUP API - Use /api/stocks or /api/news"
 
-async def main():
-    """Main entry point"""
-    await server.initialize()
+@app.route('/api/stocks')
+def get_stocks():
+    """Get stocks (fresh or cached)"""
+    global cache
     
-    # Keep running and update periodically
-    while True:
-        try:
-            await asyncio.sleep(300)  # Update every 5 minutes
-            await server.update_data()
-        except Exception as e:
-            logger.error(f"Error in main loop: {e}")
-            await asyncio.sleep(60)
+    # Refresh if cache is old (30 seconds)
+    if (not cache['last_update'] or 
+        (datetime.now() - cache['last_update']).seconds > 30):
+        
+        print("Refreshing cache...")
+        cache['stocks'] = scrape_tradingview()
+        cache['news'] = scrape_boursenews()
+        cache['last_update'] = datetime.now()
+    
+    return jsonify(cache['stocks'])
 
-if __name__ == "__main__":
-    asyncio.run(main())
+@app.route('/api/news')
+def get_news():
+    """Get news (fresh or cached)"""
+    global cache
+    
+    if (not cache['last_update'] or 
+        (datetime.now() - cache['last_update']).seconds > 30):
+        
+        cache['stocks'] = scrape_tradingview()
+        cache['news'] = scrape_boursenews()
+        cache['last_update'] = datetime.now()
+    
+    return jsonify(cache['news'])
+
+@app.route('/api/all')
+def get_all():
+    """Get everything"""
+    global cache
+    
+    if (not cache['last_update'] or 
+        (datetime.now() - cache['last_update']).seconds > 30):
+        
+        cache['stocks'] = scrape_tradingview()
+        cache['news'] = scrape_boursenews()
+        cache['last_update'] = datetime.now()
+    
+    return jsonify({
+        'stocks': cache['stocks'],
+        'news': cache['news'],
+        'lastUpdate': cache['last_update'].isoformat() if cache['last_update'] else None
+    })
+
+if __name__ == '__main__':
+    # Print loaded stocks at startup
+    print("\n" + "="*80)
+    print(f"LOADED STOCKS ({len(BASE_STOCKS)} total)")
+    print("="*80)
+    for stock in BASE_STOCKS:
+        print(f"  {stock['symbol']:<6} | {stock['name']:<35} | {stock['sector']}")
+    print("="*80 + "\n")
+    
+    # Initial scrape
+    print("Initial scrape...")
+    cache['stocks'] = scrape_tradingview()
+    cache['news'] = scrape_boursenews()
+    cache['last_update'] = datetime.now()
+    print(f"Loaded {len(cache['stocks'])} stocks and {len(cache['news'])} news items")
+    
+    # Run server
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
