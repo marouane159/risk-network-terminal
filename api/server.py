@@ -1,22 +1,19 @@
 from flask import Flask, jsonify, send_from_directory
 from flask_cors import CORS
 import requests
-from bs4 import BeautifulSoup
 import xml.etree.ElementTree as ET
 import json
 import os
 from datetime import datetime, timezone
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "*"}})
 
-# Configuration
 DATA_DIR = "data"
 STOCKS_FILE = f"{DATA_DIR}/stocks.json"
 NEWS_FILE = f"{DATA_DIR}/news.json"
-UPDATE_FILE = f"{DATA_DIR}/last_update.txt"
 
-# COMPLETE LIST - All 54 tickers
+# Fallback stock list (same as scraper)
 BASE_STOCKS = [
     {"symbol": "TGC", "name": "TRAVAUX GENERAUX DE CONSTRUCTIONS", "sector": "Construction"},
     {"symbol": "TMA", "name": "TOTALENERGIES MARKETING", "sector": "Énergie"},
@@ -80,151 +77,130 @@ BASE_STOCKS = [
     {"symbol": "CDM", "name": "Crédit du Maroc", "sector": "Banque"}
 ]
 
-STOCK_NAMES = {s["symbol"]: s["name"] for s in BASE_STOCKS}
-STOCK_SECTORS = {s["symbol"]: s["sector"] for s in BASE_STOCKS}
-
-# Cache for scraped data
-cache = {
-    'stocks': [],
-    'news': [],
-    'last_update': None
-}
-
-def load_scraped_data():
-    """Load data from scraped JSON files"""
+def load_stocks():
+    """Load stocks from file with fallback to base list"""
     try:
-        # Load stocks
         if os.path.exists(STOCKS_FILE):
             with open(STOCKS_FILE, 'r', encoding='utf-8') as f:
-                cache['stocks'] = json.load(f)
-            print(f"Loaded {len(cache['stocks'])} stocks from file")
-        else:
-            print("No stocks file found, using fallback data")
-            cache['stocks'] = fallback_stocks()
-        
-        # Load news
+                file_stocks = json.load(f)
+                if file_stocks and len(file_stocks) > 0:
+                    return file_stocks
+    except Exception as e:
+        print(f"Error loading stocks file: {e}")
+    
+    # Return base list with zeros if file missing/corrupt
+    return [{
+        'symbol': s['symbol'],
+        'name': s['name'],
+        'sector': s['sector'],
+        'price': 0.0,
+        'change': 0.0,
+        'has_live_data': False
+    } for s in BASE_STOCKS]
+
+def load_news():
+    """Load news from file"""
+    try:
         if os.path.exists(NEWS_FILE):
             with open(NEWS_FILE, 'r', encoding='utf-8') as f:
-                cache['news'] = json.load(f)
-            print(f"Loaded {len(cache['news'])} news from file")
-        else:
-            print("No news file found, using empty list")
-            cache['news'] = []
-        
-        # Load last update time
-        if os.path.exists(UPDATE_FILE):
-            with open(UPDATE_FILE, 'r') as f:
-                update_time = f.read().strip()
-                if update_time:
-                    cache['last_update'] = datetime.fromisoformat(update_time)
-                    print(f"Last update: {cache['last_update']}")
-        
-        return True
-    except Exception as e:
-        print(f"Error loading data: {e}")
-        return False
+                return json.load(f)
+    except:
+        pass
+    return []
 
-def fallback_stocks():
-    """Return fallback stock data when scraping fails"""
-    print("Using fallback stock data...")
-    fallback_stocks = []
-    for stock in BASE_STOCKS:
-        fallback_stocks.append({
-            'symbol': stock['symbol'],
-            'name': stock['name'],
-            'sector': stock['sector'],
-            'price': 0.0,
-            'change': 0.0,
-            'volume': 'N/A',
-            'trend': [100.0] * 7,
-            'has_live_data': False
-        })
-    return fallback_stocks
+def fetch_rss_live():
+    """Attempt to fetch fresh RSS data"""
+    try:
+        url = "https://medias24.com/categorie/leboursier/actus/feed/"
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+        response = requests.get(url, headers=headers, timeout=10)
+        response.encoding = 'utf-8'
+        
+        if response.status_code != 200:
+            return None
+            
+        root = ET.fromstring(response.content)
+        items = root.findall('.//item')
+        
+        news = []
+        now = datetime.now(timezone.utc)
+        
+        for item in items[:15]:
+            try:
+                title = item.find('title').text if item.find('title') is not None else 'Sans titre'
+                link = item.find('link').text if item.find('link') is not None else ''
+                pubDate = item.find('pubDate').text if item.find('pubDate') is not None else ''
+                category = item.find('category').text if item.find('category') is not None else 'INFO'
+                
+                time_mins = 0
+                if pubDate:
+                    try:
+                        pub_date = datetime.strptime(pubDate, '%a, %d %b %Y %H:%M:%S %z')
+                        diff = now - pub_date
+                        time_mins = int(diff.total_seconds() / 60)
+                    except:
+                        pass
+                
+                news.append({
+                    'title': title,
+                    'link': link,
+                    'date': pubDate,
+                    'category': category.upper(),
+                    'time': max(0, time_mins),
+                    'source': 'Medias24.com'
+                })
+            except:
+                continue
+        
+        return news if news else None
+    except:
+        return None
 
 @app.route('/')
-def home():
-    """Serve the main dashboard"""
+def index():
     return send_from_directory('.', 'index.html')
-
-@app.route('/<path:filename>')
-def serve_static(filename):
-    """Serve static files"""
-    return send_from_directory('.', filename)
 
 @app.route('/api/stocks')
 def get_stocks():
-    """Get stocks data"""
-    if not cache['stocks']:
-        if not load_scraped_data():
-            return jsonify({"error": "Failed to load stock data"}), 500
-    
-    return jsonify(cache['stocks'])
+    stocks = load_stocks()
+    return jsonify(stocks)
 
 @app.route('/api/news')
 def get_news():
-    """Get news data"""
-    if not cache['news']:
-        if not load_scraped_data():
-            return jsonify({"error": "Failed to load news data"}), 500
+    # Try live fetch first
+    live_news = fetch_rss_live()
+    if live_news:
+        return jsonify(live_news)
     
-    return jsonify(cache['news'])
+    # Fallback to file
+    news = load_news()
+    return jsonify(news if news else [])
 
 @app.route('/api/all')
 def get_all():
-    """Get everything"""
-    if not cache['stocks'] or not cache['news']:
-        if not load_scraped_data():
-            return jsonify({"error": "Failed to load data"}), 500
+    stocks = load_stocks()
+    
+    # Try live news, fallback to file
+    live_news = fetch_rss_live()
+    news = live_news if live_news else load_news()
     
     return jsonify({
-        'stocks': cache['stocks'],
-        'news': cache['news'],
-        'lastUpdate': cache['last_update'].isoformat() if cache['last_update'] else None
+        'stocks': stocks,
+        'news': news if news else [],
+        'updated': datetime.now().isoformat()
     })
 
-@app.route('/api/refresh')
-def refresh_data():
-    """Manually trigger data refresh"""
-    try:
-        # Import and run the scraper
-        import scraper
-        scraper.main()
-        
-        # Reload data
-        load_scraped_data()
-        
-        return jsonify({"message": "Data refreshed successfully", "stocks": len(cache['stocks']), "news": len(cache['news'])})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
 @app.route('/api/status')
-def get_status():
-    """Get API status"""
-    status = {
-        'api_status': 'online',
-        'stocks_count': len(cache['stocks']),
-        'news_count': len(cache['news']),
-        'last_update': cache['last_update'].isoformat() if cache['last_update'] else None,
-        'data_files_exist': {
-            'stocks': os.path.exists(STOCKS_FILE),
-            'news': os.path.exists(NEWS_FILE),
-            'update': os.path.exists(UPDATE_FILE)
-        }
-    }
-    return jsonify(status)
+def status():
+    stocks = load_stocks()
+    live_stocks = sum(1 for s in stocks if s.get('has_live_data', False))
+    return jsonify({
+        'status': 'online',
+        'total_stocks': len(stocks),
+        'live_stocks': live_stocks,
+        'timestamp': datetime.now().isoformat()
+    })
 
 if __name__ == '__main__':
-    print("\n" + "="*70)
-    print("RISK NETWORK GROUP API")
-    print(f"Total stocks: {len(BASE_STOCKS)}")
-    print("="*70 + "\n")
-    
-    # Load initial data
-    if load_scraped_data():
-        print("Data loaded successfully")
-    else:
-        print("Failed to load data, using fallbacks")
-    
-    # Run server
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=True)
+    app.run(host='0.0.0.0', port=port)
