@@ -2,51 +2,30 @@ name: Scrape Market Data
 
 on:
   schedule:
-    # Run every 30 minutes
     - cron: '*/30 * * * *'
-  workflow_dispatch:  # Allow manual trigger
+  workflow_dispatch:
   push:
-    branches: [ main ]  # Run on push to main
+    branches: [main]
 
 jobs:
   scrape:
     runs-on: ubuntu-latest
-    
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-        pip install requests beautifulsoup4 xmltodict
-    
-    - name: Run scraper
-      run: |
-        python scraper.py
-    
-    - name: Check if data was created
-      run: |
-        ls -la data/
-        if [ ! -f "data/stocks.json" ]; then echo "ERROR: stocks.json not created"; exit 1; fi
-        if [ ! -f "data/news.json" ]; then echo "ERROR: news.json not created"; exit 1; fi
-    
-    - name: Commit data changes
-      uses: stefanzweifel/git-auto-commit-action@v5
-      with:
-        commit_message: "Auto-update: Market data $(date '+%Y-%m-%d %H:%M:%S')"
-        file_pattern: data/*.json
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    
-    - name: Deploy to Render
-      run: |
-        echo "Deploying to Render..."
-        # You might want to add Render deployment trigger here
-        # This depends on your Render setup
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: pip install requests beautifulsoup4 lxml
+      
+      - name: Run scraper
+        run: python scraper.py
+      
+      - name: Commit data
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Update market data [$(date +%Y-%m-%d\ %H:%M)]"
+          file_pattern: data/*.json
