@@ -198,20 +198,29 @@
         <div class="news-panel">
             <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
                 <span>◢ ACTUALITÉS • MEDIAS24</span>
-                <button class="refresh-btn" onclick="fetchData()">↻ RAFRAICHIR</button>
+                <button class="refresh-btn" onclick="fetchAllData()">↻ RAFRAICHIR</button>
             </div>
             <div class="news-list" id="newsContainer">
-                <div class="loading">CHARGEMENT...</div>
+                <div class="loading">CHARGEMENT DU FLUX RSS...</div>
             </div>
         </div>
     </div>
 
     <script>
-        // API Configuration
+        // Configuration
         const API_BASE = window.location.origin.includes('localhost') 
             ? 'http://localhost:5000' 
             : 'https://risk-network-terminal.onrender.com';
         
+        const RSS_URL = 'https://medias24.com/categorie/leboursier/actus/feed/';
+        
+        // CORS Proxies to try (free services)
+        const CORS_PROXIES = [
+            'https://api.allorigins.win/raw?url=',
+            'https://api.codetabs.com/v1/proxy?quest=',
+            'https://corsproxy.io/?'
+        ];
+
         // Clock
         function updateClock() {
             const now = new Date();
@@ -220,8 +229,8 @@
         setInterval(updateClock, 1000);
         updateClock();
 
-        // Fetch all data
-        async function fetchData() {
+        // Fetch Stocks from API
+        async function fetchStocks() {
             const dot = document.getElementById('apiDot');
             const status = document.getElementById('apiStatus');
             
@@ -229,26 +238,134 @@
             status.textContent = 'SYNC...';
             
             try {
-                const response = await fetch(`${API_BASE}/api/all`);
+                const response = await fetch(`${API_BASE}/api/stocks`);
                 if (!response.ok) throw new Error('API Error');
                 
-                const data = await response.json();
-                
-                renderStocks(data.stocks);
-                renderNews(data.news);
+                const stocks = await response.json();
+                renderStocks(stocks);
                 
                 dot.className = 'dot live';
                 status.textContent = 'LIVE';
-                
             } catch (error) {
-                console.error('Error:', error);
+                console.error('Stock fetch error:', error);
                 dot.className = 'dot offline';
                 status.textContent = 'OFFLINE';
-                
                 document.getElementById('stockTableBody').innerHTML = 
-                    '<tr><td colspan="3" class="error">ERREUR: SERVEUR INACCESSIBLE<br>Vérifiez votre connexion</td></tr>';
-                document.getElementById('newsContainer').innerHTML = 
-                    '<div class="error">ERREUR DE CHARGEMENT<br><button onclick="fetchData()" class="refresh-btn">RÉESSAYER</button></div>';
+                    '<tr><td colspan="3" class="error">ERREUR: SERVEUR INACCESSIBLE</td></tr>';
+            }
+        }
+
+        // Fetch RSS News directly via CORS proxy
+        async function fetchNews() {
+            const container = document.getElementById('newsContainer');
+            container.innerHTML = '<div class="loading">CHARGEMENT RSS...</div>';
+            
+            // Try each proxy until one works
+            for (let proxy of CORS_PROXIES) {
+                try {
+                    const response = await fetch(proxy + encodeURIComponent(RSS_URL), {
+                        method: 'GET',
+                        headers: {
+                            'Accept': 'application/rss+xml, application/xml, text/xml'
+                        }
+                    });
+                    
+                    if (!response.ok) continue;
+                    
+                    const xmlText = await response.text();
+                    parseRSS(xmlText);
+                    return; // Success, exit function
+                    
+                } catch (error) {
+                    console.log(`Proxy ${proxy} failed, trying next...`);
+                    continue;
+                }
+            }
+            
+            // If all proxies fail
+            container.innerHTML = `
+                <div class="error">
+                    ERREUR: Impossible de charger le flux RSS<br>
+                    (CORS bloqué par le navigateur)<br>
+                    <button onclick="fetchNews()" class="refresh-btn" style="margin-top: 10px;">RÉESSAYER</button>
+                </div>
+            `;
+        }
+
+        // Parse RSS XML
+        function parseRSS(xmlText) {
+            const container = document.getElementById('newsContainer');
+            
+            try {
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+                
+                // Check for parse errors
+                if (xmlDoc.getElementsByTagName('parsererror').length > 0) {
+                    throw new Error('XML Parse Error');
+                }
+                
+                const items = xmlDoc.querySelectorAll('item');
+                
+                if (items.length === 0) {
+                    container.innerHTML = '<div class="loading">AUCUNE ACTUALITÉ</div>';
+                    return;
+                }
+                
+                let html = '';
+                const now = new Date();
+                
+                items.forEach((item, index) => {
+                    if (index >= 15) return; // Limit to 15 items
+                    
+                    const title = item.querySelector('title')?.textContent || 'Sans titre';
+                    const link = item.querySelector('link')?.textContent || '#';
+                    const pubDate = item.querySelector('pubDate')?.textContent || '';
+                    const category = item.querySelector('category')?.textContent || 'INFO';
+                    
+                    // Calculate time ago
+                    let timeText = 'À l\'instant';
+                    if (pubDate) {
+                        try {
+                            const pubDateObj = new Date(pubDate);
+                            const diffMs = now - pubDateObj;
+                            const diffMins = Math.floor(diffMs / 60000);
+                            const diffHours = Math.floor(diffMs / 3600000);
+                            const diffDays = Math.floor(diffMs / 86400000);
+                            
+                            if (diffMins < 60) {
+                                timeText = `il y a ${diffMins}min`;
+                            } else if (diffHours < 24) {
+                                timeText = `il y a ${diffHours}h`;
+                            } else {
+                                timeText = `il y a ${diffDays}j`;
+                            }
+                        } catch (e) {
+                            timeText = pubDate;
+                        }
+                    }
+                    
+                    html += `
+                        <div class="news-item">
+                            <div class="news-time">
+                                <span>${timeText}</span>
+                                <span class="news-cat">${category.toUpperCase()}</span>
+                            </div>
+                            <a href="${link}" target="_blank" class="news-title">${title}</a>
+                        </div>
+                    `;
+                });
+                
+                container.innerHTML = html;
+                
+            } catch (error) {
+                console.error('RSS Parse Error:', error);
+                container.innerHTML = `
+                    <div class="error">
+                        ERREUR: Format RSS invalide<br>
+                        <button onclick="fetchNews()" class="refresh-btn" style="margin-top: 10px;">RÉESSAYER</button>
+                    </div>
+                `;
             }
         }
 
@@ -275,7 +392,6 @@
                         </tr>
                     `;
                 } else {
-                    // Show stock with 0.00 instead of --
                     html += `
                         <tr class="stock-row">
                             <td class="symbol">${stock.symbol}</td>
@@ -288,38 +404,19 @@
             tbody.innerHTML = html;
         }
 
-        function renderNews(news) {
-            const container = document.getElementById('newsContainer');
-            
-            if (!news || news.length === 0) {
-                container.innerHTML = '<div class="loading">AUCUNE ACTUALITÉ DISPONIBLE</div>';
-                return;
-            }
-
-            let html = '';
-            news.forEach(item => {
-                const timeText = item.time < 60 ? `${item.time}min` : 
-                                item.time < 1440 ? `${Math.floor(item.time/60)}h` : 
-                                `${Math.floor(item.time/1440)}j`;
-                
-                html += `
-                    <div class="news-item">
-                        <div class="news-time">
-                            <span>il y a ${timeText}</span>
-                            <span class="news-cat">${item.category}</span>
-                        </div>
-                        <a href="${item.link}" target="_blank" class="news-title">${item.title}</a>
-                    </div>
-                `;
-            });
-            container.innerHTML = html;
+        // Fetch both
+        async function fetchAllData() {
+            await Promise.all([
+                fetchStocks(),
+                fetchNews()
+            ]);
         }
 
         // Initial load
-        fetchData();
+        fetchAllData();
         
         // Auto refresh every 30 seconds
-        setInterval(fetchData, 30000);
+        setInterval(fetchAllData, 30000);
     </script>
 </body>
 </html>
