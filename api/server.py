@@ -5,12 +5,12 @@ from bs4 import BeautifulSoup
 import xml.etree.ElementTree as ET
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 
 app = Flask(__name__)
 CORS(app)  # Allow cross-origin requests
 
-# Complete expanded stock list (your new tickers)
+# Complete expanded stock list (54 tickers)
 BASE_STOCKS = [
     {"symbol": "TGC", "name": "TRAVAUX GENERAUX DE CONSTRUCTIONS", "sector": "Construction"},
     {"symbol": "TMA", "name": "TOTALENERGIES MARKETING", "sector": "Énergie"},
@@ -95,35 +95,25 @@ def print_news_to_terminal(news_items):
     print("LATEST NEWS FROM MEDIAS24 RSS (Le Boursier)")
     print("="*80)
     
-    for i, item in enumerate(news_items[:10], 1):  # Show top 10
-        print(f"\n{i}. {item.get('title', 'N/A')}")
+    for i, item in enumerate(news_items[:10], 1):
+        print(f"\n{i}. {item.get('title', 'N/A')[:70]}")
         print(f"   Date: {item.get('date', 'N/A')}")
-        print(f"   Source: {item.get('source', 'N/A')}")
+        print(f"   Link: {item.get('link', 'N/A')[:60]}...")
         print(f"   Category: {item.get('category', 'N/A')}")
-        if item.get('link'):
-            print(f"   Link: {item['link']}")
-        if item.get('summary'):
-            summary = item['summary'][:150] + '...' if len(item['summary']) > 150 else item['summary']
-            print(f"   Summary: {summary}")
         print("-" * 80)
     
     print(f"\nTotal news items fetched: {len(news_items)}")
     print("="*80 + "\n")
 
 def scrape_tradingview():
-    """Scrape TradingView Morocco"""
+    """Scrape TradingView Morocco - ALL available stocks"""
     try:
         url = "https://www.tradingview.com/markets/stocks-morocco/market-movers-all-stocks/"
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.5',
-            'Accept-Encoding': 'gzip, deflate, br',
-            'DNT': '1',
-            'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
         }
         
+        print(f"Fetching from TradingView...")
         response = requests.get(url, headers=headers, timeout=30)
         soup = BeautifulSoup(response.text, 'html.parser')
         
@@ -135,12 +125,12 @@ def scrape_tradingview():
             
             for row in rows:
                 cells = row.find_all('td')
-                if len(cells) >= 4:
+                if len(cells) >= 3:
                     symbol_elem = cells[0].find('a')
                     if symbol_elem:
                         symbol = symbol_elem.text.strip()
                         price_text = cells[1].text.strip().replace('MAD', '').replace(',', '')
-                        change_text = cells[2].text.strip().replace('%', '')
+                        change_text = cells[2].text.strip().replace('%', '').replace('(', '-').replace(')', '')
                         
                         try:
                             price = float(price_text)
@@ -162,36 +152,51 @@ def scrape_tradingview():
                                 'volume': 'N/A',
                                 'trend': trend
                             })
-                        except:
+                            print(f"  ✓ {symbol}: {price:.2f} MAD ({change:+.2f}%)")
+                        except Exception as e:
+                            print(f"  ✗ Error parsing {symbol}: {e}")
                             continue
         
+        print(f"\nTotal stocks scraped: {len(stocks)}")
         return stocks
+        
     except Exception as e:
         print(f"Error scraping TradingView: {e}")
         return []
 
-def scrape_boursenews():
-    """Scrape news from Medias24 RSS feed"""
+def scrape_medias24_rss():
+    """Scrape news from Medias24 RSS feed - FIXED VERSION"""
     try:
         url = "https://medias24.com/categorie/leboursier/actus/feed/"
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
         
-        print(f"Fetching RSS feed from {url}...")
+        print(f"\nFetching RSS from {url}...")
         response = requests.get(url, headers=headers, timeout=30)
-        response.encoding = 'utf-8'  # Ensure proper encoding for French text
+        response.encoding = 'utf-8'
         
-        # Parse XML
+        print(f"RSS Status: {response.status_code}")
+        
+        if response.status_code != 200:
+            print(f"RSS fetch failed: {response.status_code}")
+            return []
+        
+        # Parse XML properly
         root = ET.fromstring(response.content)
+        
+        # CRITICAL FIX: Find channel first, then items
+        channel = root.find('channel')
+        if channel is None:
+            print("No channel found in RSS")
+            return []
+        
+        items = channel.findall('item')
+        print(f"Found {len(items)} RSS items")
         
         news = []
         
-        # Find all items
-        items = root.findall('.//item')
-        print(f"Found {len(items)} items in RSS feed")
-        
-        for i, item in enumerate(items[:20]):  # Get top 20
+        for i, item in enumerate(items[:20]):
             try:
                 # Extract title
                 title_elem = item.find('title')
@@ -201,152 +206,111 @@ def scrape_boursenews():
                 link_elem = item.find('link')
                 link = link_elem.text if link_elem is not None else ''
                 
-                # Extract pub date
+                # Extract and parse date properly
                 date_elem = item.find('pubDate')
-                if date_elem is not None:
-                    date_str = date_elem.text
-                    # Parse RSS date format
+                time_mins = i * 5  # fallback
+                date_str = datetime.now().strftime('%Y-%m-%d')
+                
+                if date_elem is not None and date_elem.text:
                     try:
-                        date_obj = datetime.strptime(date_str, '%a, %d %b %Y %H:%M:%S %z')
-                        date = date_obj.strftime('%Y-%m-%d %H:%M')
-                    except:
-                        date = date_str
-                else:
-                    date = datetime.now().strftime('%Y-%m-%d')
+                        # Parse: Thu, 12 Feb 2026 16:13:22 +0000
+                        pub_date = datetime.strptime(date_elem.text, '%a, %d %b %Y %H:%M:%S %z')
+                        date_str = pub_date.strftime('%Y-%m-%d %H:%M')
+                        
+                        # Calculate minutes ago
+                        now = datetime.now(timezone.utc)
+                        diff = (now - pub_date).total_seconds() / 60
+                        time_mins = int(diff) if diff > 0 else 0
+                    except Exception as e:
+                        print(f"  Date parse error: {e}")
                 
-                # Extract description/summary
+                # Extract description
                 desc_elem = item.find('description')
-                summary = desc_elem.text if desc_elem is not None else None
+                summary = ''
+                if desc_elem is not None and desc_elem.text:
+                    soup = BeautifulSoup(desc_elem.text, 'html.parser')
+                    summary = soup.get_text(strip=True)
+                    # Clean up "appeared first on" text
+                    if "appeared first on" in summary:
+                        summary = summary.split("appeared first on")[0].strip()
+                    summary = summary[:200]
                 
-                # Clean up HTML from description if present
-                if summary:
-                    summary = BeautifulSoup(summary, 'html.parser').get_text(strip=True)
-                
-                # Extract category if available
+                # Get category
                 cat_elem = item.find('category')
-                category = cat_elem.text if cat_elem is not None else 'INFO'
+                category = 'INFO'
+                if cat_elem is not None and cat_elem.text:
+                    category = cat_elem.text.upper()
                 
                 news.append({
-                    'time': i * 5,
+                    'time': time_mins,
                     'title': title,
                     'link': link,
-                    'category': category.upper(),
+                    'category': category,
                     'source': 'Medias24.com',
-                    'date': date,
+                    'date': date_str,
                     'summary': summary
                 })
+                print(f"  ✓ News {i+1}: {title[:50]}... ({time_mins}m ago)")
                 
             except Exception as e:
-                print(f"Error parsing RSS item {i}: {e}")
+                print(f"  ✗ Error parsing item {i}: {e}")
                 continue
         
-        # Print news to terminal
+        # Print to terminal
         print_news_to_terminal(news)
-        
         return news
         
     except Exception as e:
-        print(f"Error scraping Medias24 RSS: {e}")
+        print(f"Error scraping RSS: {e}")
+        import traceback
+        traceback.print_exc()
         return []
 
 def get_stock_name(symbol):
-    """Get full name from symbol - uses BASE_STOCKS first, then fallback"""
-    # First check our expanded list
+    """Get full name from symbol"""
     if symbol in STOCK_NAMES:
         return STOCK_NAMES[symbol]
-    
-    # Fallback to old hardcoded names
-    fallback_names = {
-        'ATW': 'Attijariwafa Bank SA',
-        'BCP': 'Banque Centrale Populaire',
-        'BOA': 'Bank of Africa SA',
-        'BCI': 'BMCI SA',
-        'BCE': 'Banque Marocaine du Commerce Extérieur',
-        'AXC': 'AXA Credit',
-        'MAB': 'Maghrebail',
-        'MLE': 'Maroc Leasing',
-        'SAH': 'Sanlam Maroc',
-        'AGM': 'AGMA Lahlou-Tazi',
-        'TSF': 'Taslif',
-        'CMA': 'Ciments du Maroc',
-        'GTM': 'SGTM SA',
-        'VCN': 'Vicenne',
-        'FBR': 'Fenie Brossette',
-        'SRM': 'Sté Realisations Mecaniques',
-        'ALM': 'Aluminium du Maroc',
-        'GAZ': 'Afriquia Gaz SA',
-        'NEJ': 'Nouvelles Energies de Jorf',
-        'SBM': 'Sté Boissons du Maroc',
-        'OUL': 'Oulmes',
-        'CDA': 'Centrale Danone',
-        'M2M': 'M2M Group',
-        'IBC': 'IBC Corp',
-        'CAP': 'Cap Radio',
-        'DIS': 'Dislog Group',
-        'PRO': 'Promopharm',
-        'SLF': 'Salafin',
-        'NAKL': 'Ennakl Automobiles',
-    }
-    return fallback_names.get(symbol, symbol)
+    return symbol
 
 def get_sector(symbol):
-    """Get sector from symbol - uses BASE_STOCKS first, then fallback"""
-    # First check our expanded list
+    """Get sector from symbol"""
     if symbol in STOCK_SECTORS:
         return STOCK_SECTORS[symbol]
-    
-    # Fallback to old hardcoded sectors
-    fallback_sectors = {
-        'ATW': 'BANK', 'BCP': 'BANK', 'BOA': 'BANK', 'CFG': 'BANK', 'CDM': 'BANK',
-        'CIH': 'BANK', 'BCI': 'BANK', 'BCE': 'BANK', 'AXC': 'BANK', 'MAB': 'BANK', 'MLE': 'BANK',
-        'IAM': 'TELECOM',
-        'WAA': 'ASSUR', 'SAH': 'ASSUR', 'ATL': 'ASSUR', 'AFM': 'ASSUR', 'AGM': 'ASSUR', 'TSF': 'ASSUR',
-        'ADH': 'IMMO', 'ADI': 'IMMO', 'RDS': 'IMMO', 'ARD': 'IMMO', 'IMO': 'IMMO', 'BAL': 'IMMO',
-        'LHM': 'INDUS', 'CMA': 'INDUS', 'SID': 'INDUS', 'TGC': 'INDUS', 'JET': 'INDUS', 'GTM': 'INDUS',
-        'VCN': 'INDUS', 'FBR': 'INDUS', 'SRM': 'INDUS', 'STR': 'INDUS', 'ALM': 'INDUS', 'DHO': 'INDUS',
-        'MNG': 'MINES', 'SMI': 'MINES', 'CMT': 'MINES', 'ZDJ': 'MINES', 'COL': 'MINES', 'MDP': 'MINES',
-        'TQM': 'ENERGY', 'GAZ': 'ENERGY', 'TMA': 'ENERGY', 'SNP': 'ENERGY', 'SAM': 'ENERGY',
-        'MSA': 'TRANSPORT', 'CTM': 'TRANSPORT', 'NEJ': 'TRANSPORT',
-        'SOT': 'SANTE', 'AKT': 'SANTE', 'PRO': 'SANTE',
-        'CSR': 'AGRO', 'LES': 'AGRO', 'SBM': 'AGRO', 'OUL': 'AGRO', 'UMR': 'AGRO', 'CRS': 'AGRO', 'DRI': 'AGRO', 'CDA': 'AGRO',
-        'DWY': 'TECH', 'HPS': 'TECH', 'MIC': 'TECH', 'S2M': 'TECH', 'DYT': 'TECH', 'M2M': 'TECH', 'INV': 'TECH', 'IBC': 'TECH',
-        'LBV': 'RETAIL', 'ATH': 'RETAIL', 'NAKL': 'RETAIL', 'RIS': 'RETAIL', 'CAP': 'RETAIL',
-        'CMG': 'HOLDING', 'MUT': 'HOLDING', 'SNA': 'HOLDING',
-        'EQD': 'FINANCE', 'SLF': 'FINANCE', 'DIS': 'FINANCE',
-    }
-    return fallback_sectors.get(symbol, 'DIVERS')
+    return 'DIVERS'
 
 @app.route('/')
 def home():
-    return "RISK NETWORK GROUP API - Use /api/stocks or /api/news"
+    return "RISK NETWORK GROUP API - Use /api/stocks or /api/news or /api/all"
 
 @app.route('/api/stocks')
 def get_stocks():
-    """Get stocks (fresh or cached)"""
+    """Get stocks"""
     global cache
     
-    # Refresh if cache is old (30 seconds)
     if (not cache['last_update'] or 
         (datetime.now() - cache['last_update']).seconds > 30):
         
-        print("Refreshing cache...")
+        print("\n=== REFRESHING CACHE ===")
         cache['stocks'] = scrape_tradingview()
-        cache['news'] = scrape_boursenews()
+        cache['news'] = scrape_medias24_rss()
         cache['last_update'] = datetime.now()
+        print("=== CACHE UPDATED ===\n")
     
     return jsonify(cache['stocks'])
 
 @app.route('/api/news')
 def get_news():
-    """Get news (fresh or cached)"""
+    """Get news"""
     global cache
     
     if (not cache['last_update'] or 
         (datetime.now() - cache['last_update']).seconds > 30):
         
+        print("\n=== REFRESHING CACHE ===")
         cache['stocks'] = scrape_tradingview()
-        cache['news'] = scrape_boursenews()
+        cache['news'] = scrape_medias24_rss()
         cache['last_update'] = datetime.now()
+        print("=== CACHE UPDATED ===\n")
     
     return jsonify(cache['news'])
 
@@ -358,9 +322,11 @@ def get_all():
     if (not cache['last_update'] or 
         (datetime.now() - cache['last_update']).seconds > 30):
         
+        print("\n=== REFRESHING CACHE ===")
         cache['stocks'] = scrape_tradingview()
-        cache['news'] = scrape_boursenews()
+        cache['news'] = scrape_medias24_rss()
         cache['last_update'] = datetime.now()
+        print("=== CACHE UPDATED ===\n")
     
     return jsonify({
         'stocks': cache['stocks'],
@@ -369,20 +335,19 @@ def get_all():
     })
 
 if __name__ == '__main__':
-    # Print loaded stocks at startup
+    # Print startup info
     print("\n" + "="*80)
-    print(f"LOADED STOCKS ({len(BASE_STOCKS)} total)")
-    print("="*80)
-    for stock in BASE_STOCKS:
-        print(f"  {stock['symbol']:<6} | {stock['name']:<35} | {stock['sector']}")
+    print(f"RISK NETWORK GROUP API SERVER")
+    print(f"Loaded {len(BASE_STOCKS)} stock definitions")
     print("="*80 + "\n")
     
     # Initial scrape
-    print("Initial scrape...")
+    print("Initial data fetch...")
     cache['stocks'] = scrape_tradingview()
-    cache['news'] = scrape_boursenews()
+    cache['news'] = scrape_medias24_rss()
     cache['last_update'] = datetime.now()
-    print(f"Loaded {len(cache['stocks'])} stocks and {len(cache['news'])} news items")
+    
+    print(f"\n✓ Server ready: {len(cache['stocks'])} stocks, {len(cache['news'])} news")
     
     # Run server
     port = int(os.environ.get('PORT', 5000))
