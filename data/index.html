@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RISK NETWORK GROUP - Market Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #1e3a8a;
+            --secondary-color: #3b82f6;
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            --dark-bg: #0f172a;
+            --dark-card: #1e293b;
+            --dark-text: #f1f5f9;
+            --light-bg: #f8fafc;
+            --light-card: #ffffff;
+            --light-text: #1e293b;
+            --border-color: #e2e8f0;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: var(--light-text);
+            background: var(--light-bg);
+            transition: all 0.3s ease;
+        }
+
+        .dark-mode {
+            background: var(--dark-bg);
+            color: var(--dark-text);
+        }
+
+        .dark-mode .card {
+            background: var(--dark-card);
+            color: var(--dark-text);
+            border-color: #334155;
+        }
+
+        .dark-mode .stock-table {
+            background: var(--dark-card);
+        }
+
+        .dark-mode .stock-table th,
+        .dark-mode .stock-table td {
+            border-color: #334155;
+            color: var(--dark-text);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 2rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--light-card);
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            text-align: center;
+            border-left: 4px solid var(--secondary-color);
+        }
+
+        .dark-mode .stat-card {
+            background: var(--dark-card);
+            border-color: var(--secondary-color);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--secondary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.7;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .search-box {
+            padding: 0.75rem 1rem;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            width: 300px;
+            max-width: 100%;
+            transition: border-color 0.3s ease;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: var(--secondary-color);
+        }
+
+        .dark-mode .search-box {
+            background: var(--dark-card);
+            border-color: #334155;
+            color: var(--dark-text);
+        }
+
+        .theme-toggle {
+            padding: 0.75rem 1.5rem;
+            background: var(--secondary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background 0.3s ease;
+        }
+
+        .theme-toggle:hover {
+            background: var(--primary-color);
+        }
+
+        .last-update {
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+
+        .card {
+            background: var(--light-card);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            margin-bottom: 2rem;
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .stock-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .stock-table th,
+        .stock-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .stock-table th {
+            background: #f8fafc;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 0.5px;
+        }
+
+        .dark-mode .stock-table th {
+            background: #334155;
+        }
+
+        .stock-symbol {
+            font-weight: bold;
+            color: var(--secondary-color);
+        }
+
+        .price {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .change {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .change.positive {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .change.negative {
+            background: #fef2f2;
+            color: #dc2626;
+        }
+
+        .change.neutral {
+            background: #f1f5f9;
+            color: #64748b;
+        }
+
+        .dark-mode .change.positive {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+
+        .dark-mode .change.negative {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        .dark-mode .change.neutral {
+            background: rgba(100, 116, 139, 0.2);
+            color: #94a3b8;
+        }
+
+        .sector-badge {
+            padding: 0.25rem 0.75rem;
+            background: var(--secondary-color);
+            color: white;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .news-item {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            transition: background 0.3s ease;
+        }
+
+        .news-item:hover {
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        .dark-mode .news-item:hover {
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .news-item:last-child {
+            border-bottom: none;
+        }
+
+        .news-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--secondary-color);
+            text-decoration: none;
+        }
+
+        .news-title:hover {
+            text-decoration: underline;
+        }
+
+        .news-meta {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.9rem;
+            opacity: 0.7;
+            margin-bottom: 0.5rem;
+        }
+
+        .news-summary {
+            line-height: 1.6;
+            margin-bottom: 0.5rem;
+        }
+
+        .news-category {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            background: var(--warning-color);
+            color: white;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 3rem;
+            font-size: 1.1rem;
+            color: var(--secondary-color);
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border-color);
+            border-top: 2px solid var(--secondary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 0.5rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #fef2f2;
+            color: #dc2626;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+
+        .dark-mode .error {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .search-box {
+                width: 100%;
+            }
+
+            .stock-table {
+                font-size: 0.9rem;
+            }
+
+            .stock-table th,
+            .stock-table td {
+                padding: 0.75rem 0.5rem;
+            }
+
+            .stats-bar {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            }
+        }
+
+        .trend-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+        }
+
+        .trend-up {
+            background: var(--success-color);
+        }
+
+        .trend-down {
+            background: var(--danger-color);
+        }
+
+        .trend-flat {
+            background: var(--warning-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>RISK NETWORK GROUP</h1>
+            <p>Moroccan Stock Market Dashboard - Real-time Data from TradingView & Medias24</p>
+        </div>
+
+        <!-- Stats Bar -->
+        <div class="stats-bar" id="statsBar">
+            <div class="stat-card">
+                <div class="stat-number" id="totalStocks">-</div>
+                <div class="stat-label">Total Stocks</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="liveStocks">-</div>
+                <div class="stat-label">Live Data</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="newsCount">-</div>
+                <div class="stat-label">News Items</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="lastUpdate">--:--</div>
+                <div class="stat-label">Last Update</div>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+            <input type="text" class="search-box" id="searchBox" placeholder="Search stocks by symbol, name, or sector...">
+            <button class="theme-toggle" onclick="toggleTheme()">🌙 Dark Mode</button>
+            <div class="last-update" id="lastUpdateText">Loading...</div>
+        </div>
+
+        <!-- Stocks Section -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">📈 Stock Market Data</h2>
+                <span id="stockCount">Loading...</span>
+            </div>
+            <div id="stocksContainer">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    Loading stock data...
+                </div>
+            </div>
+        </div>
+
+        <!-- News Section -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">📰 Latest News from Medias24</h2>
+                <span id="newsContainerCount">Loading...</span>
+            </div>
+            <div id="newsContainer">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    Loading news...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let allStocks = [];
+        let allNews = [];
+        let filteredStocks = [];
+        let isDarkMode = false;
+
+        // DOM elements
+        const stocksContainer = document.getElementById('stocksContainer');
+        const newsContainer = document.getElementById('newsContainer');
+        const searchBox = document.getElementById('searchBox');
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            loadData();
+            setupEventListeners();
+        });
+
+        function setupEventListeners() {
+            searchBox.addEventListener('input', filterStocks);
+        }
+
+        async function loadData() {
+            try {
+                console.log('Loading data...');
+                
+                // Load stocks and news data
+                const [stocksResponse, newsResponse, updateResponse] = await Promise.all([
+                    fetch('./data/stocks.json'),
+                    fetch('./data/news.json'),
+                    fetch('./data/last_update.txt')
+                ]);
+
+                if (!stocksResponse.ok || !newsResponse.ok) {
+                    throw new Error('Failed to load data files');
+                }
+
+                allStocks = await stocksResponse.json();
+                allNews = await newsResponse.json();
+                const updateTime = await updateResponse.text();
+
+                console.log(`Loaded ${allStocks.length} stocks and ${allNews.length} news items`);
+
+                // Update UI
+                updateStats();
+                renderStocks(allStocks);
+                renderNews(allNews);
+                updateLastUpdateTime(updateTime);
+
+                // Set initial filtered stocks
+                filteredStocks = [...allStocks];
+
+            } catch (error) {
+                console.error('Error loading data:', error);
+                showError('Failed to load data. Make sure you have run the scraper first.');
+            }
+        }
+
+        function updateStats() {
+            const totalStocks = allStocks.length;
+            const liveStocks = allStocks.filter(stock => stock.has_live_data).length;
+            const newsCount = allNews.length;
+
+            document.getElementById('totalStocks').textContent = totalStocks;
+            document.getElementById('liveStocks').textContent = liveStocks;
+            document.getElementById('newsCount').textContent = newsCount;
+            document.getElementById('stockCount').textContent = `${totalStocks} stocks`;
+            document.getElementById('newsContainerCount').textContent = `${newsCount} articles`;
+        }
+
+        function renderStocks(stocks) {
+            if (!stocks || stocks.length === 0) {
+                stocksContainer.innerHTML = '<div class="error">No stock data available</div>';
+                return;
+            }
+
+            let tableHTML = `
+                <table class="stock-table">
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Name</th>
+                            <th>Sector</th>
+                            <th>Price (MAD)</th>
+                            <th>Change</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            stocks.forEach(stock => {
+                const changeClass = stock.change > 0 ? 'positive' : 
+                                  stock.change < 0 ? 'negative' : 'neutral';
+                const trendClass = stock.change > 0 ? 'trend-up' : 
+                                 stock.change < 0 ? 'trend-down' : 'trend-flat';
+                const statusBadge = stock.has_live_data ? 
+                    `<span class="change positive">LIVE</span>` : 
+                    `<span class="change neutral">FALLBACK</span>`;
+
+                tableHTML += `
+                    <tr>
+                        <td><span class="stock-symbol">${stock.symbol}</span></td>
+                        <td>${stock.name}</td>
+                        <td><span class="sector-badge">${stock.sector}</span></td>
+                        <td class="price">${stock.price > 0 ? stock.price.toFixed(2) : '--'}</td>
+                        <td>
+                            <span class="change ${changeClass}">
+                                <span class="trend-indicator ${trendClass}"></span>
+                                ${stock.change !== 0 ? stock.change.toFixed(2) + '%' : '--'}
+                            </span>
+                        </td>
+                        <td>${statusBadge}</td>
+                    </tr>
+                `;
+            });
+
+            tableHTML += `
+                    </tbody>
+                </table>
+            `;
+
+            stocksContainer.innerHTML = tableHTML;
+        }
+
+        function renderNews(news) {
+            if (!news || news.length === 0) {
+                newsContainer.innerHTML = '<div class="error">No news data available</div>';
+                return;
+            }
+
+            let newsHTML = '';
+
+            news.forEach(article => {
+                const timeAgo = formatTimeAgo(article.time);
+                const truncatedSummary = article.summary && article.summary.length > 150 ? 
+                    article.summary.substring(0, 150) + '...' : article.summary;
+
+                newsHTML += `
+                    <div class="news-item">
+                        <a href="${article.link}" target="_blank" class="news-title">${article.title}</a>
+                        <div class="news-meta">
+                            <span>📅 ${article.date}</span>
+                            <span>⏰ ${timeAgo}</span>
+                            <span>📰 ${article.source}</span>
+                        </div>
+                        ${truncatedSummary ? `<div class="news-summary">${truncatedSummary}</div>` : ''}
+                        <span class="news-category">${article.category}</span>
+                    </div>
+                `;
+            });
+
+            newsContainer.innerHTML = newsHTML;
+        }
+
+        function filterStocks() {
+            const searchTerm = searchBox.value.toLowerCase().trim();
+            
+            if (searchTerm === '') {
+                filteredStocks = [...allStocks];
+            } else {
+                filteredStocks = allStocks.filter(stock => 
+                    stock.symbol.toLowerCase().includes(searchTerm) ||
+                    stock.name.toLowerCase().includes(searchTerm) ||
+                    stock.sector.toLowerCase().includes(searchTerm)
+                );
+            }
+
+            renderStocks(filteredStocks);
+        }
+
+        function updateLastUpdateTime(updateTime) {
+            if (!updateTime) return;
+
+            try {
+                const date = new Date(updateTime);
+                const now = new Date();
+                const diffMs = now - date;
+                const diffMins = Math.floor(diffMs / 60000);
+
+                let timeText;
+                if (diffMins < 1) {
+                    timeText = 'Just now';
+                } else if (diffMins < 60) {
+                    timeText = `${diffMins} minutes ago`;
+                } else if (diffMins < 1440) {
+                    const hours = Math.floor(diffMins / 60);
+                    timeText = `${hours} hours ago`;
+                } else {
+                    timeText = date.toLocaleDateString();
+                }
+
+                document.getElementById('lastUpdate').textContent = timeText;
+                document.getElementById('lastUpdateText').textContent = `Last updated: ${timeText}`;
+            } catch (error) {
+                console.error('Error parsing update time:', error);
+            }
+        }
+
+        function formatTimeAgo(minutes) {
+            if (minutes < 1) return 'Just now';
+            if (minutes < 60) return `${minutes}m ago`;
+            
+            const hours = Math.floor(minutes / 60);
+            if (hours < 24) return `${hours}h ago`;
+            
+            const days = Math.floor(hours / 24);
+            return `${days}d ago`;
+        }
+
+        function toggleTheme() {
+            isDarkMode = !isDarkMode;
+            document.body.classList.toggle('dark-mode', isDarkMode);
+            
+            const button = document.querySelector('.theme-toggle');
+            button.textContent = isDarkMode ? '☀️ Light Mode' : '🌙 Dark Mode';
+        }
+
+        function showError(message) {
+            stocksContainer.innerHTML = `<div class="error">${message}</div>`;
+            newsContainer.innerHTML = `<div class="error">${message}</div>`;
+        }
+
+        // Auto-refresh data every 30 seconds
+        setInterval(() => {
+            console.log('Auto-refreshing data...');
+            loadData();
+        }, 30000);
+
+        // Add some interactive features
+        document.addEventListener('keydown', function(e) {
+            // Ctrl/Cmd + R to refresh data
+            if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
+                e.preventDefault();
+                loadData();
+            }
+        });
+
+        console.log('Dashboard initialized successfully!');
+    </script>
+</body>
+</html>
