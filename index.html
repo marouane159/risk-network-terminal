@@ -342,9 +342,9 @@
         // ============================================
         // CONFIGURATION - MODIFY THIS FOR YOUR GITHUB
         // ============================================
-        const CONFIG = {
-    // Use your Render.com API URL
-    API_BASE_URL: 'https://risk-network-api.onrender.com',  // <-- YOUR RENDER URL
+const CONFIG = {
+    // USE YOUR RENDER URL - NOT GITHUB PAGES
+    API_BASE_URL: 'https://risk-network-terminal.onrender.com',
     
     ENDPOINTS: {
         stocks: '/api/stocks',
@@ -352,11 +352,11 @@
         update: '/api/all'
     },
     
-    REFRESH_INTERVAL: 30000,  // 30 seconds (Render free tier sleeps, so refresh more often)
-    RETRY_INTERVAL: 10000,    // 10 seconds
+    REFRESH_INTERVAL: 30000,  // 30 seconds
+    RETRY_INTERVAL: 10000,    // 10 seconds  
     COUNTDOWN_START: 30,      // 30 seconds
     
-    FALLBACK_TO_STATIC: false,  // NO static fallback - force real data only
+    FALLBACK_TO_STATIC: false,  // NO static data - force real API
     SIMULATE_UPDATES: false,
     SHOW_DEBUG: true
 };
