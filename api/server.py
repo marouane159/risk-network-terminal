@@ -81,23 +81,30 @@ BASE_STOCKS = [
 cache = {"stocks": [], "news": [], "last_update": None}
 
 def scrape_medias24():
+    # Direct feed from Medias24
     url = "https://medias24.com/categorie/leboursier/actus/feed/"
     try:
-        r = requests.get(url, timeout=10)
+        r = requests.get(url, timeout=5)
         root = ET.fromstring(r.content)
         news_items = []
-        for item in root.findall('.//item')[:15]:
+        
+        # Look for <item> tags in the RSS XML
+        for item in root.findall('.//item')[:10]:
             title = item.find('title').text
             link = item.find('link').text
-            pub_date = item.find('pubDate').text
-            desc = item.find('description').text or ""
-            summary = BeautifulSoup(desc, "html.parser").get_text()[:150] + "..."
+            # Use BeautifulSoup to clean up the summary if it has HTML
+            raw_desc = item.find('description').text or ""
+            summary = BeautifulSoup(raw_desc, "html.parser").get_text()[:120] + "..."
+            
             news_items.append({
-                "title": title, "link": link, "date": pub_date, "summary": summary, "source": "Medias24"
+                "title": title,
+                "link": link,
+                "summary": summary,
+                "date": "LIVE"
             })
         return news_items
     except Exception as e:
-        print(f"News Error: {e}")
+        print(f"Feed Error: {e}")
         return []
 
 def scrape_stocks():
