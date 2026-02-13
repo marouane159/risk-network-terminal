@@ -3,664 +3,369 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RISK NETWORK GROUP | Terminal Bourse de Casablanca [LIVE]</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+    <title>RISK NETWORK GROUP | Terminal Bourse [LIVE]</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'JetBrains Mono', monospace;
-            background-color: #000000;
+            background: #000;
             color: #e0e0e0;
-            overflow-x: hidden;
+            font-size: 14px;
+            line-height: 1.4;
         }
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: #000000; border-left: 1px solid #222222; }
-        ::-webkit-scrollbar-thumb { background: #333333; border: 1px solid #ff6600; }
-        ::-webkit-scrollbar-thumb:hover { background: #ff6600; }
-
-        @keyframes flash-alert {
-            0%, 100% { opacity: 1; background-color: #ff6600; color: #000; }
-            50% { opacity: 0.3; background-color: #331a00; color: #ff6600; }
-        }
-        .flash-indicator { animation: flash-alert 1s infinite; font-weight: 800; padding: 2px 6px; font-size: 0.7rem; letter-spacing: 0.1em; }
-        .grid-border { border: 1px solid #222222; }
-        .grid-border-b { border-bottom: 1px solid #222222; }
-        .grid-border-r { border-right: 1px solid #222222; }
-
-        .ascii-divider {
-            color: #444444; font-size: 0.75rem; line-height: 1; letter-spacing: 0.2em;
-            overflow: hidden; white-space: nowrap; user-select: none;
-        }
-        .sparkline { fill: none; stroke-width: 1.5; }
-        .sparkline-up { stroke: #00ff41; }
-        .sparkline-down { stroke: #ff6600; }
-        .price-up { color: #00ff41; }
-        .price-down { color: #ff6600; }
-        .price-neutral { color: #888888; }
-
-        @keyframes blink { 50% { opacity: 0; } }
-        .cursor-blink { animation: blink 1s step-end infinite; }
-        .hover-row:hover { background-color: #1a0f00; cursor: pointer; }
-
-        .terminal-input {
-            background: transparent; border: none; outline: none; color: #ff6600;
-            font-family: 'JetBrains Mono', monospace; width: 100%; caret-color: #ff6600;
-        }
-
-        .ticker-wrap { overflow: hidden; white-space: nowrap; }
-        .ticker { display: inline-block; animation: ticker 40s linear infinite; }
-        @keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
-
-        .status-dot { width: 8px; height: 8px; border-radius: 0; display: inline-block; }
-        .status-live { background-color: #00ff41; box-shadow: 0 0 10px #00ff41; animation: pulse 2s infinite; }
-        .status-closed { background-color: #ff6600; box-shadow: 0 0 10px #ff6600; }
-        .status-pending { background-color: #ffaa00; animation: pulse 1s infinite; }
-        .status-offline { background-color: #ff0000; box-shadow: 0 0 10px #ff0000; }
-
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-
-        .loading-bar { width: 100%; height: 2px; background: #222; position: relative; overflow: hidden; }
-        .loading-progress { position: absolute; height: 100%; background: #ff6600; animation: loading 2s ease-in-out infinite; }
-        @keyframes loading { 0% { left: 0; width: 0; } 50% { width: 30%; } 100% { left: 100%; width: 0; } }
-
-        ::selection { background: #ff6600; color: #000000; }
-
-        .update-flash { animation: flash-update 0.5s ease-out; }
-        @keyframes flash-update { 0% { background-color: #ff6600; } 100% { background-color: transparent; } }
-
-        .sector-badge { font-size: 0.65rem; padding: 1px 4px; border: 1px solid #333; color: #666; }
-
-        /* Ad Banner Styles - Orange Theme */
-        .ad-banner {
-            background: linear-gradient(90deg, #000000 0%, #1a0f00 50%, #000000 100%);
+        .header {
+            background: linear-gradient(90deg, #000 0%, #1a0f00 100%);
             border-bottom: 2px solid #ff6600;
-            position: relative;
-            overflow: hidden;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-        .ad-banner::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,102,0,0.1), transparent);
-            animation: scan 3s infinite;
+        .logo { color: #ff6600; font-weight: 800; font-size: 18px; letter-spacing: 2px; }
+        
+        /* Social Media Links - Terminal Style */
+        .social-bar {
+            display: flex;
+            align-items: center;
+            gap: 15px;
         }
-        @keyframes scan { 0% { left: -100%; } 100% { left: 100%; } }
-
-        .market-status-open { color: #00ff41; text-shadow: 0 0 10px rgba(0,255,65,0.5); }
-        .market-status-closed { color: #ff6600; text-shadow: 0 0 10px rgba(255,102,0,0.5); }
-        .market-status-pending { color: #ffaa00; text-shadow: 0 0 10px rgba(255,170,0,0.5); }
-
-        /* Social Links */
         .social-link {
             color: #666;
             text-decoration: none;
-            font-size: 0.7rem;
-            transition: color 0.3s;
+            font-size: 11px;
             border: 1px solid #333;
-            padding: 2px 6px;
+            padding: 4px 8px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
         }
         .social-link:hover {
             color: #ff6600;
             border-color: #ff6600;
-            background: rgba(255,102,0,0.1);
+            background: rgba(255, 102, 0, 0.1);
         }
-
-        /* Search Highlight */
-        .search-highlight {
-            background-color: rgba(255,102,0,0.3);
-            border-left: 3px solid #ff6600;
+        .social-icon {
+            font-size: 12px;
         }
-
-        /* Data loading placeholder */
-        .loading-text {
-            color: #ff6600;
-            animation: pulse 1.5s infinite;
+        .website-link {
+            color: #000;
+            background: #ff6600;
+            border-color: #ff6600;
+            font-weight: 700;
+        }
+        .website-link:hover {
+            background: #ff8833;
+            color: #000;
+        }
+        
+        .status { display: flex; gap: 20px; font-size: 12px; }
+        .status-item { display: flex; align-items: center; gap: 5px; }
+        .dot { width: 8px; height: 8px; background: #333; display: inline-block; }
+        .dot.live { background: #00ff41; box-shadow: 0 0 8px #00ff41; }
+        .dot.offline { background: #ff0000; }
+        
+        .container { display: grid; grid-template-columns: 1fr 350px; height: calc(100vh - 50px); }
+        
+        /* Mobile responsive for social bar */
+        @media (max-width: 900px) {
+            .header {
+                flex-direction: column;
+                gap: 10px;
+                padding: 10px;
+            }
+            .social-bar {
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 8px;
+            }
+            .social-link {
+                font-size: 10px;
+                padding: 3px 6px;
+            }
+        }
+        
+        /* Stocks Panel */
+        .stocks-panel { border-right: 1px solid #222; overflow: hidden; display: flex; flex-direction: column; }
+        .panel-header {
+            background: #0a0a0a;
+            border-bottom: 1px solid #333;
+            padding: 8px 15px;
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .stock-table { width: 100%; border-collapse: collapse; }
+        .stock-table th {
+            background: #111;
+            color: #666;
+            font-weight: 400;
+            text-align: left;
+            padding: 10px 15px;
+            border-bottom: 1px solid #333;
+            font-size: 12px;
+            position: sticky;
+            top: 0;
+        }
+        .stock-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #1a1a1a;
+            font-size: 14px;
+        }
+        .stock-row:hover { background: #1a0f00; cursor: pointer; }
+        .symbol { color: #fff; font-weight: 700; }
+        .price { text-align: right; color: #fff; font-weight: 700; }
+        .change { text-align: right; font-weight: 700; }
+        .change.up { color: #00ff41; }
+        .change.down { color: #ff6600; }
+        .change.neutral { color: #888; }
+        
+        /* News Panel */
+        .news-panel { background: #050505; overflow: hidden; display: flex; flex-direction: column; }
+        .news-item {
+            padding: 12px 15px;
+            border-bottom: 1px solid #1a1a1a;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+        .news-item:hover { background: #1a0f00; }
+        .news-time { color: #ff6600; font-size: 11px; margin-bottom: 4px; }
+        .news-title { color: #ccc; text-decoration: none; display: block; }
+        .news-title:hover { color: #fff; }
+        .news-source { color: #666; font-size: 10px; margin-top: 4px; }
+        
+        .loading { color: #ff6600; padding: 20px; text-align: center; font-size: 12px; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        
+        .error { color: #ff0000; padding: 10px; font-size: 11px; border-left: 3px solid #ff0000; margin: 10px; background: #1a0000; }
+        
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #000; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #ff6600; }
+        
+        @media (max-width: 900px) {
+            .container { grid-template-columns: 1fr; }
+            .news-panel { border-top: 2px solid #333; height: 300px; }
         }
     </style>
 </head>
-<body class="min-h-screen flex flex-col">
-
-    <!-- ADVERTISEMENT BANNER -->
-    <div class="ad-banner py-3 px-4 flex justify-between items-center relative z-50">
-        <div class="flex items-center gap-4">
-            <div class="text-orange-600 font-bold text-lg tracking-widest animate-pulse">
-                ▶ RISK NETWORK GROUP
-            </div>
-            <div class="h-6 w-px bg-orange-900"></div>
-            <div class="text-xs text-gray-400">
-                PROPRIÉTAIRE OFFICIEL DE CE TERMINAL
-            </div>
-        </div>
-        <div class="flex items-center gap-4">
-            <div class="flex items-center gap-2">
-                <a href="https://x.com/dogofallstreets" target="_blank" class="social-link">X: @dogofallstreets</a>
-                <a href="https://instagram.com/risk.maroc" target="_blank" class="social-link">IG: @risk.maroc</a>
-                <a href="https://tiktok.com/u/@risk.maroc" target="_blank" class="social-link">TK: @risk.maroc</a>
-            </div>
-            <div class="h-6 w-px bg-orange-900 mx-2"></div>
-            <a href="https://www.risk.ma" target="_blank" class="text-xs bg-orange-600 text-black px-4 py-1 font-bold hover:bg-orange-500 transition-colors border border-orange-800">
-                WWW.RISK.MA ↗
+<body>
+    <div class="header">
+        <div class="logo">▶ RISK NETWORK GROUP</div>
+        
+        <!-- Social Media Bar -->
+        <div class="social-bar">
+            <a href="https://risk.ma" target="_blank" class="social-link website-link">
+                <span class="social-icon">+</span> RISK.MA
+            </a>
+            <a href="https://x.com/dogofallstreets" target="_blank" class="social-link">
+                <span class="social-icon">+</span> X
+            </a>
+            <a href="https://tiktok.com/u/@dogofallstreets" target="_blank" class="social-link">
+                <span class="social-icon">+</span> TIKTOK
+            </a>
+            <a href="https://instagram.com/risk.maroc" target="_blank" class="social-link">
+                <span class="social-icon">+</span> IG
+            </a>
+            <a href="https://t.me/boursedecasa" target="_blank" class="social-link">
+                <span class="social-icon">+</span> TG
             </a>
         </div>
-    </div>
 
-    <!-- HEADER -->
-    <header class="grid-border-b flex justify-between items-center p-4 bg-black sticky top-0 z-50">
-        <div class="flex items-center gap-4">
-            <h1 class="text-xl font-bold tracking-tighter text-white">
-                <span class="text-orange-600">[</span>RISK NETWORK GROUP<span class="text-orange-600">]</span>
-            </h1>
-            <span class="text-xs text-gray-500 hidden md:inline">// Marché boursier Marocain</span>
-        </div>
-
-        <div class="flex items-center gap-6 text-sm">
-            <!-- MARKET STATUS DISPLAY -->
-            <div class="flex items-center gap-3 px-4 py-2 border border-[#333] bg-[#0a0a0a]">
-                <span id="marketStatusDot" class="status-dot status-closed"></span>
-                <div class="flex flex-col">
-                    <span class="text-[10px] text-gray-500 uppercase tracking-wider">Marché Casablanca</span>
-                    <span id="marketStatusText" class="text-xs font-bold market-status-closed">FERMÉ</span>
-                </div>
-                <div class="h-8 w-px bg-[#333] mx-2"></div>
-                <div class="flex flex-col text-right">
-                    <span class="text-[10px] text-gray-500">09:30 - 15:40</span>
-                    <span id="marketTimeRemaining" class="text-xs text-gray-300">--:--:--</span>
-                </div>
+        <div class="status">
+            <div class="status-item">
+                <span class="dot" id="apiDot"></span>
+                <span id="apiStatus">CONNECTING...</span>
             </div>
-
-            <div class="flex items-center gap-2">
-                <span class="status-dot status-live" id="syncIndicator"></span>
-                <span class="text-xs text-gray-400">DATA_FEED</span>
-            </div>
-
-            <div class="text-right border-l border-[#333] pl-4">
-                <div id="clock" class="font-bold text-white">00:00:00</div>
-                <div class="text-xs text-gray-500">CASABLANCA (GMT+1)</div>
+            <div class="status-item">
+                <span id="clock">00:00:00</span>
             </div>
         </div>
-    </header>
-
-    <!-- SYNC STATUS BAR -->
-    <div class="loading-bar" id="syncBar" style="opacity: 0.3;">
-        <div class="loading-progress"></div>
     </div>
 
-    <!-- SEARCH BAR - SIMPLIFIED -->
-    <div class="grid-border-b bg-black p-2 flex items-center gap-2 text-sm">
-        <span class="text-orange-600 font-bold">🔍</span>
-        <span class="text-gray-400">RECHERCHE_RAPIDE</span>
-        <input type="text" class="terminal-input" placeholder="TAPEZ_UN_TICKER (ex: IAM, ATW, BCP...) POUR FILTRER" id="searchInput">
-        <span class="cursor-blink text-orange-600">_</span>
-        <button id="clearSearch" class="text-xs text-gray-500 hover:text-orange-600 px-2 hidden">[EFFACER]</button>
+    <div class="container">
+        <!-- Stocks Panel -->
+        <div class="stocks-panel">
+            <div class="panel-header">COURS EN TEMPS RÉEL • MASI ALL SHARES</div>
+            <div style="overflow-y: auto; flex: 1;">
+                <table class="stock-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 25%">TICKER</th>
+                            <th style="width: 35%; text-align: right">DERNIER (MAD)</th>
+                            <th style="width: 40%; text-align: right">VARIATION %</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stockTableBody">
+                        <tr><td colspan="3" class="loading">RÉCUPÉRATION DES DONNÉES...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- News Panel -->
+        <div class="news-panel">
+            <div class="panel-header">◢ RISK NETWORK • RADAR</div>
+            <div style="overflow-y: auto; flex: 1;" id="newsContainer">
+                <div class="loading">CHARGEMENT DES NEWS</div>
+            </div>
+        </div>
     </div>
-
-    <!-- ASCII DIVIDER -->
-    <div class="ascii-divider grid-border-b p-1 bg-black text-center">
-        ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-    </div>
-
-    <!-- MAIN CONTENT GRID -->
-    <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 min-h-0">
-
-        <!-- LEFT PANEL: NEWS FEED (3 cols) -->
-        <aside class="lg:col-span-3 grid-border-r flex flex-col min-h-0 bg-black">
-            <div class="grid-border-b p-3 flex justify-between items-center bg-[#0a0a0a]">
-                <h2 class="text-sm font-bold text-white flex items-center gap-2">
-                    <span class="text-orange-600">◢</span> NEWS
-                </h2>
-                <div class="flex items-center gap-2">
-                    <span class="text-[10px] text-gray-500">SRC: MEDIAS24</span>
-                    <span class="text-[10px] text-orange-500" id="newsCount">[0 NEW]</span>
-                </div>
-            </div>
-
-            <!-- News Ticker -->
-            <div class="grid-border-b bg-[#111] p-2 overflow-hidden">
-                <div class="ticker-wrap">
-                    <div class="ticker text-xs text-gray-400" id="newsTicker">
-                        // CHARGEMENT DU FLUX D'ACTUALITÉS... //
-                    </div>
-                </div>
-            </div>
-
-            <!-- News List -->
-            <div class="flex-1 overflow-y-auto p-0" id="newsContainer">
-                <div class="p-4 text-xs text-gray-500 loading-text">CONNEXION AU SERVEUR...</div>
-            </div>
-
-            <!-- News Footer -->
-            <div class="grid-border-t p-2 bg-[#0a0a0a] text-xs text-gray-600 flex justify-between">
-                <span>LAST_UPDATE: <span id="lastNewsUpdate">--:--:--</span></span>
-                <span>AUTO_REFRESH: 30SEC</span>
-            </div>
-        </aside>
-
-        <!-- CENTER PANEL: MARKET DATA (9 cols) -->
-        <section class="lg:col-span-9 flex flex-col min-h-0 bg-black">
-
-            <!-- Market Header -->
-            <div class="grid-border-b p-3 flex justify-between items-center bg-[#0a0a0a] sticky top-0 z-40">
-                <div class="flex items-center gap-4">
-                    <h2 class="text-sm font-bold text-white flex items-center gap-2">
-                        <span class="text-green-500">◈</span> MASI_ALL_SHARES [<span id="stockCount">0</span> TICKERS]
-                    </h2>
-                    <span class="text-xs text-gray-500">SRC: TRADINGVIEW_MOROCCO</span>
-                </div>
-                <div class="flex gap-6 text-xs">
-                    <div class="flex items-center gap-2">
-                        <span class="w-2 h-2 bg-orange-600"></span>
-                        <span class="text-gray-400">API: <span class="text-white font-bold" id="apiStatus">CONNECTING...</span></span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <span class="w-2 h-2 text-[10px] text-gray-500" id="nextRefresh">30s</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ASCII Divider -->
-            <div class="ascii-divider p-1 bg-black border-b border-[#222] text-[#333]">
-                ┌─────────┬─────────────────────────────────────┬──────────┬──────────┬──────────┬──────────┬──────────────────────────────────────────┐
-            </div>
-
-            <!-- Table Header -->
-            <div class="grid grid-cols-12 gap-0 text-xs font-bold text-gray-500 border-b border-[#222] bg-[#0a0a0a] p-2">
-                <div class="col-span-1">SYMB</div>
-                <div class="col-span-3">NOM_SOCIAL</div>
-                <div class="col-span-1 text-center">SECT</div>
-                <div class="col-span-2 text-right">DERNIER</div>
-                <div class="col-span-2 text-right">VAR %</div>
-                <div class="col-span-2 text-right">VOLUME</div>
-                <div class="col-span-1 text-center">TREND</div>
-            </div>
-
-            <!-- ASCII Divider -->
-            <div class="ascii-divider p-1 bg-black border-b border-[#222] text-[#333]">
-                ├─────────┼─────────────────────────────────────┼──────────┼──────────┼──────────┼──────────┼──────────────────────────────────────────┤
-            </div>
-
-            <!-- Stock List Container -->
-            <div class="flex-1 overflow-y-auto" id="stockContainer">
-                <div class="p-4 text-xs text-gray-500 loading-text">RÉCUPÉRATION DES DONNÉES DE MARCHÉ...</div>
-            </div>
-
-            <!-- ASCII Bottom Border -->
-            <div class="ascii-divider p-1 bg-black border-t border-[#222] text-[#333]">
-                └─────────┴─────────────────────────────────────┴──────────┴──────────┴──────────┴──────────┴──────────────────────────────────────────┘
-            </div>
-
-            <!-- Bottom Status Bar -->
-            <div class="grid-border-t p-2 bg-[#0a0a0a] flex justify-between items-center text-xs">
-                <div class="flex gap-4 text-gray-500">
-                    <span>CONN: <span class="text-green-500" id="connStatus">STABLE</span></span>
-                    <span>LATENCY: <span class="text-green-500" id="latency">--ms</span></span>
-                    <span>NEXT_REFRESH: <span class="text-orange-500" id="countdown">30s</span></span>
-                    <span>DATA_SRC: <span class="text-blue-500">RISK-NETWORK-API</span></span>
-                </div>
-                <div class="text-gray-600">
-                    [F1] AIDE  [F2] EXPORT  [F3] FILTRE_SECTEUR  [F5] RAFRAICHIR  [F9] FORCE_SYNC  [ESC] QUITTER
-                </div>
-            </div>
-        </section>
-    </main>
 
     <script>
-        // API CONFIGURATION
-        const API_BASE = 'https://risk-network-terminal.onrender.com';
-        
-        // Global Data Stores
-        let stocksData = [];
-        let newsData = [];
-        let currentFilter = 'ALL';
-        let searchTerm = '';
-        let countdown = 30;
-        let isOnline = false;
+        // Configuration
+        const API_URL = 'https://risk-network-terminal.onrender.com/api/stocks';
+        const RSS_URL = 'https://medias24.com/categorie/leboursier/actus/feed/';
+        const REFRESH_INTERVAL = 30000; // 30 seconds
 
-        // DOM Elements
-        const searchInput = document.getElementById('searchInput');
-        const clearBtn = document.getElementById('clearSearch');
-
-        // Clock and Market Status Function
-        function updateClockAndMarketStatus() {
+        // Clock
+        function updateClock() {
             const now = new Date();
-            const casablancaTime = new Date(now.toLocaleString("en-US", {timeZone: "Africa/Casablanca"}));
-            
-            const timeStr = casablancaTime.toLocaleTimeString('fr-FR', { hour12: false });
-            document.getElementById('clock').textContent = timeStr;
-            
-            const day = casablancaTime.getDay();
-            const hours = casablancaTime.getHours();
-            const minutes = casablancaTime.getMinutes();
-            const currentTimeInMinutes = hours * 60 + minutes;
-            const openTimeInMinutes = 9 * 60 + 30; // 09:30
-            const closeTimeInMinutes = 15 * 60 + 40; // 15:40
-            
-            const statusDot = document.getElementById('marketStatusDot');
-            const statusText = document.getElementById('marketStatusText');
-            const timeRemaining = document.getElementById('marketTimeRemaining');
-            
-            let isOpen = false;
-            let timeLeft = 0;
-            
-            if ([1,2,3,4,5].includes(day)) { // Monday to Friday
-                if (currentTimeInMinutes >= openTimeInMinutes && currentTimeInMinutes < closeTimeInMinutes) {
-                    isOpen = true;
-                    timeLeft = closeTimeInMinutes - currentTimeInMinutes;
-                } else if (currentTimeInMinutes < openTimeInMinutes) {
-                    timeLeft = openTimeInMinutes - currentTimeInMinutes;
-                } else {
-                    timeLeft = (24 * 60 - currentTimeInMinutes) + openTimeInMinutes;
-                }
-            } else {
-                timeLeft = ((8 - day) % 7) * 24 * 60 + openTimeInMinutes - currentTimeInMinutes;
-            }
-            
-            if (isOpen) {
-                statusDot.className = 'status-dot status-live';
-                statusText.textContent = 'OUVERT';
-                statusText.className = 'text-xs font-bold market-status-open';
-                const hrs = Math.floor(timeLeft / 60);
-                const mins = timeLeft % 60;
-                timeRemaining.textContent = `FERME DANS ${hrs}H${mins.toString().padStart(2, '0')}`;
-                timeRemaining.className = 'text-xs text-green-500';
-            } else {
-                if (day === 0 || day === 6 || currentTimeInMinutes >= closeTimeInMinutes) {
-                    statusDot.className = 'status-dot status-closed';
-                    statusText.textContent = 'FERMÉ';
-                    statusText.className = 'text-xs font-bold market-status-closed';
-                } else {
-                    statusDot.className = 'status-dot status-pending';
-                    statusText.textContent = 'PRÉ-OUVERTURE';
-                    statusText.className = 'text-xs font-bold market-status-pending';
-                }
-                
-                const hrs = Math.floor(timeLeft / 60);
-                const mins = timeLeft % 60;
-                const secs = casablancaTime.getSeconds();
-                
-                if (day === 0 || day === 6) {
-                    timeRemaining.textContent = 'OUVRE LUNDI 09:30';
-                    timeRemaining.className = 'text-xs text-orange-600';
-                } else if (currentTimeInMinutes < openTimeInMinutes) {
-                    timeRemaining.textContent = `OUVRE DANS ${hrs}H${mins.toString().padStart(2, '0')}:${(60-secs).toString().padStart(2, '0')}`;
-                    timeRemaining.className = 'text-xs text-orange-400';
-                } else {
-                    timeRemaining.textContent = 'OUVRE DEMAIN 09:30';
-                    timeRemaining.className = 'text-xs text-orange-600';
-                }
-            }
+            document.getElementById('clock').textContent = now.toLocaleTimeString('fr-FR', {hour12: false});
         }
+        setInterval(updateClock, 1000);
+        updateClock();
 
-        // Generate Sparkline SVG
-        function generateSparkline(data, isPositive) {
-            if (!data || data.length === 0) return '';
-            const width = 80;
-            const height = 25;
-            const min = Math.min(...data);
-            const max = Math.max(...data);
-            const range = max - min || 1;
+        // Fetch Stocks from API
+        async function fetchStocks() {
+            const dot = document.getElementById('apiDot');
+            const status = document.getElementById('apiStatus');
             
-            const points = data.map((val, idx) => {
-                const x = (idx / (data.length - 1)) * width;
-                const y = height - ((val - min) / range) * height;
-                return `${x},${y}`;
-            }).join(' ');
-            
-            const color = isPositive ? '#00ff41' : '#ff6600';
-            const strokeClass = isPositive ? 'sparkline-up' : 'sparkline-down';
-            
-            return `
-                <svg width="80" height="25" class="sparkline ${strokeClass}">
-                    <polyline points="${points}" fill="none" stroke="${color}" stroke-width="1.5"/>
-                    <circle cx="${width}" cy="${height - ((data[data.length-1] - min) / range) * height}" r="2" fill="${color}"/>
-                </svg>
-            `;
-        }
-
-        // Render Stocks
-        function renderStocks(filter = 'ALL', searchQuery = '') {
-            const container = document.getElementById('stockContainer');
-            
-            if (stocksData.length === 0) {
-                container.innerHTML = '<div class="p-4 text-xs text-orange-600">AUCUNE DONNÉE DISPONIBLE - VÉRIFIEZ LA CONNEXION API</div>';
-                return;
-            }
-
-            let filteredData = stocksData;
-
-            // Apply sector filter
-            if (filter !== 'ALL') {
-                filteredData = filteredData.filter(s => s.sector === filter);
-            }
-
-            // Apply search filter
-            if (searchQuery) {
-                filteredData = filteredData.filter(s => 
-                    s.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                    s.name.toLowerCase().includes(searchQuery.toLowerCase())
-                );
-            }
-
-            document.getElementById('stockCount').textContent = filteredData.filter(s => !s.suspended).length;
-            
-            let html = '';
-            filteredData.forEach((stock) => {
-                if (stock.suspended) return;
-                
-                const isUp = stock.change > 0;
-                const isDown = stock.change < 0;
-                const changeClass = isUp ? 'price-up' : isDown ? 'price-down' : 'price-neutral';
-                const changeSign = isUp ? '+' : '';
-                const trendData = stock.trend || [stock.price, stock.price, stock.price, stock.price, stock.price, stock.price, stock.price];
-                const sparkline = generateSparkline(trendData, isUp);
-                const volume = stock.volume || 'N/A';
-                
-                const highlightClass = (searchQuery && stock.symbol.toLowerCase() === searchQuery.toLowerCase()) ? 'search-highlight' : '';
-                
-                html += `
-                    <div class="grid grid-cols-12 gap-0 text-xs border-b border-[#222] hover-row p-2 items-center transition-colors duration-300 ${highlightClass}" id="stock-${stock.symbol}">
-                        <div class="col-span-1 font-bold text-white">${stock.symbol}</div>
-                        <div class="col-span-3 text-gray-400 truncate" title="${stock.name}">${stock.name}</div>
-                        <div class="col-span-1 text-center"><span class="sector-badge">${stock.sector}</span></div>
-                        <div class="col-span-2 text-right font-bold text-white">${stock.price.toFixed(2)} <span class="text-[10px] text-gray-600">MAD</span></div>
-                        <div class="col-span-2 text-right ${changeClass} font-bold">${changeSign}${stock.change.toFixed(2)}%</div>
-                        <div class="col-span-2 text-right text-gray-500">${volume}</div>
-                        <div class="col-span-1 flex justify-center">${sparkline}</div>
-                    </div>
-                `;
-            });
-            
-            container.innerHTML = html;
-        }
-
-        // Render News
-        function renderNews() {
-            const container = document.getElementById('newsContainer');
-            
-            if (newsData.length === 0) {
-                container.innerHTML = '<div class="p-4 text-xs text-gray-600">AUCUNE ACTUALITÉ DISPONIBLE</div>';
-                return;
-            }
-
-            let html = '';
-            const sortedNews = [...newsData].sort((a, b) => a.time - b.time);
-            
-            sortedNews.forEach(news => {
-                const isFlash = news.time < 60;
-                const flashBadge = isFlash ? `<span class="flash-indicator mr-2">FLASH</span>` : `<span class="text-gray-600 mr-2">[${news.time}m]</span>`;
-                
-                html += `
-                    <div class="grid-border-b p-3 hover-row cursor-pointer border-l-2 ${isFlash ? 'border-l-orange-600 bg-[#0a0a0a]' : 'border-l-transparent'}">
-                        <div class="flex items-start gap-2 mb-1">
-                            ${flashBadge}
-                            <span class="text-[10px] text-gray-500 uppercase tracking-wider">${news.category}</span>
-                        </div>
-                        <div class="text-sm text-gray-300 leading-tight pl-1">${news.title}</div>
-                        <div class="text-[10px] text-gray-600 mt-1 pl-1 flex justify-between">
-                            <span>SRC: ${news.source}</span>
-                            <span>${news.date}</span>
-                        </div>
-                    </div>
-                `;
-            });
-            
-            container.innerHTML = html;
-            
-            document.getElementById('lastNewsUpdate').textContent = new Date().toLocaleTimeString('fr-FR', {hour12:false});
-            document.getElementById('newsCount').textContent = `[${sortedNews.filter(n => n.time < 120).length} NEW]`;
-            
-            const tickerText = sortedNews.slice(0, 5).map(n => `// ${n.title} //`).join(' ');
-            document.getElementById('newsTicker').textContent = tickerText + ' ' + tickerText;
-        }
-
-        // Fetch Data from API
-        async function fetchData() {
-            const startTime = performance.now();
-            document.getElementById('syncIndicator').className = 'status-dot status-pending';
-            document.getElementById('syncBar').style.opacity = '1';
-            document.getElementById('apiStatus').textContent = 'SYNC...';
-            document.getElementById('apiStatus').className = 'text-orange-600';
+            dot.className = 'dot';
+            status.textContent = 'SYNC...';
             
             try {
-                const [stocksRes, newsRes] = await Promise.all([
-                    fetch(`${API_BASE}/api/stocks`),
-                    fetch(`${API_BASE}/api/news`)
-                ]);
+                const response = await fetch(API_URL);
+                if (!response.ok) throw new Error('API Error');
                 
-                if (!stocksRes.ok || !newsRes.ok) {
-                    throw new Error('API Error');
-                }
+                const stocks = await response.json();
+                renderStocks(stocks);
                 
-                stocksData = await stocksRes.json();
-                newsData = await newsRes.json();
-                
-                isOnline = true;
-                const latency = Math.round(performance.now() - startTime);
-                document.getElementById('latency').textContent = latency + 'ms';
-                document.getElementById('connStatus').textContent = 'ONLINE';
-                document.getElementById('connStatus').className = 'text-green-500';
-                document.getElementById('apiStatus').textContent = 'LIVE';
-                document.getElementById('apiStatus').className = 'text-green-500';
-                document.getElementById('syncIndicator').className = 'status-dot status-live';
-                
-                renderStocks(currentFilter, searchTerm);
-                renderNews();
-                
+                dot.className = 'dot live';
+                status.textContent = 'LIVE';
             } catch (error) {
-                console.error('Fetch error:', error);
-                isOnline = false;
-                document.getElementById('connStatus').textContent = 'OFFLINE';
-                document.getElementById('connStatus').className = 'text-red-500';
-                document.getElementById('apiStatus').textContent = 'ERROR';
-                document.getElementById('apiStatus').className = 'text-red-500';
-                document.getElementById('syncIndicator').className = 'status-dot status-offline';
+                console.error('Stock fetch error:', error);
+                dot.className = 'dot offline';
+                status.textContent = 'OFFLINE';
+                showStockError();
+            }
+        }
+
+        function renderStocks(stocks) {
+            const tbody = document.getElementById('stockTableBody');
+            if (!stocks || stocks.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" class="error">AUCUNE DONNÉE DISPONIBLE</td></tr>';
+                return;
+            }
+
+            let html = '';
+            stocks.forEach(stock => {
+                const changeClass = stock.change > 0 ? 'up' : stock.change < 0 ? 'down' : 'neutral';
+                const sign = stock.change > 0 ? '+' : '';
                 
-                if (stocksData.length === 0) {
-                    document.getElementById('stockContainer').innerHTML = 
-                        '<div class="p-4 text-xs text-red-600">ERREUR CONNEXION API - SERVEUR INACCESSIBLE</div>';
-                }
-            } finally {
-                document.getElementById('syncBar').style.opacity = '0.3';
-                countdown = 30;
-            }
+                html += `
+                    <tr class="stock-row">
+                        <td class="symbol">${stock.symbol}</td>
+                        <td class="price">${stock.price.toFixed(2)}</td>
+                        <td class="change ${changeClass}">${sign}${stock.change.toFixed(2)}%</td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
         }
 
-        // Countdown Timer
-        function updateCountdown() {
-            countdown--;
-            if (countdown < 0) countdown = 0;
-            const timeStr = countdown + 's';
-            document.getElementById('countdown').textContent = timeStr;
-            document.getElementById('nextRefresh').textContent = timeStr;
-            
-            if (countdown === 0) {
-                fetchData();
-                countdown = 30;
-            }
+        function showStockError() {
+            document.getElementById('stockTableBody').innerHTML = 
+                '<tr><td colspan="3" class="error">ERREUR CONNEXION API<br>Vérifiez que le serveur est en ligne</td></tr>';
         }
 
-        // Search functionality
-        searchInput.addEventListener('input', function(e) {
-            searchTerm = e.target.value.trim();
-            renderStocks(currentFilter, searchTerm);
+        // Fetch News directly from RSS (Client-side)
+        async function fetchNews() {
+            const container = document.getElementById('newsContainer');
             
-            if (searchTerm) {
-                clearBtn.classList.remove('hidden');
-            } else {
-                clearBtn.classList.add('hidden');
-            }
-        });
-
-        searchInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter' && searchTerm) {
-                const stock = stocksData.find(s => s.symbol.toLowerCase() === searchTerm.toLowerCase());
-                if (stock) {
-                    const row = document.getElementById(`stock-${stock.symbol}`);
-                    if (row) {
-                        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        row.style.backgroundColor = 'rgba(255,102,0,0.3)';
-                        setTimeout(() => {
-                            row.style.backgroundColor = '';
-                        }, 2000);
+            try {
+                // Using a CORS proxy since medias24 might block direct browser requests
+                const proxyUrls = [
+                    'https://api.allorigins.win/raw?url=' + encodeURIComponent(RSS_URL),
+                    'https://api.codetabs.com/v1/proxy?quest=' + RSS_URL
+                ];
+                
+                let response = null;
+                
+                for (let url of proxyUrls) {
+                    try {
+                        response = await fetch(url, { 
+                            mode: 'cors',
+                            headers: { 'Accept': 'application/rss+xml, application/xml' }
+                        });
+                        if (response.ok) break;
+                    } catch (e) {
+                        continue;
                     }
                 }
+                
+                if (!response || !response.ok) throw new Error('RSS Fetch Failed');
+                
+                const text = await response.text();
+                parseRSS(text);
+                
+            } catch (error) {
+                console.error('News fetch error:', error);
+                container.innerHTML = `
+                    <div class="error">
+                        ERREUR CHARGEMENT RSS<br>
+                        <button onclick="fetchNews()" style="background:#ff6600;color:#000;border:none;padding:5px 10px;margin-top:10px;cursor:pointer;font-family:inherit;">RÉESSAYER</button>
+                    </div>
+                `;
             }
-        });
+        }
 
-        clearBtn.addEventListener('click', function() {
-            searchInput.value = '';
-            searchTerm = '';
-            renderStocks(currentFilter, '');
-            searchInput.focus();
-        });
+        function parseRSS(xmlText) {
+            const parser = new DOMParser();
+            const xml = parser.parseFromString(xmlText, 'text/xml');
+            const items = xml.querySelectorAll('item');
+            
+            let html = '';
+            let count = 0;
+            
+            items.forEach(item => {
+                if (count >= 15) return;
+                
+                const title = item.querySelector('title')?.textContent || 'Sans titre';
+                const link = item.querySelector('link')?.textContent || '#';
+                const pubDate = item.querySelector('pubDate')?.textContent || '';
+                const category = item.querySelector('category')?.textContent || 'INFO';
+                
+                let timeStr = '';
+                if (pubDate) {
+                    const date = new Date(pubDate);
+                    timeStr = date.toLocaleDateString('fr-FR') + ' ' + date.toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'});
+                }
+                
+                html += `
+                    <div class="news-item">
+                        <div class="news-time">${timeStr} • ${category}</div>
+                        <a href="${link}" target="_blank" class="news-title">${title}</a>
+                        <div class="news-source">Medias24.com</div>
+                    </div>
+                `;
+                count++;
+            });
+            
+            document.getElementById('newsContainer').innerHTML = html;
+        }
 
-        // Keyboard shortcuts
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'F5') {
-                e.preventDefault();
-                fetchData();
-            }
-            if (e.key === 'F9') {
-                e.preventDefault();
-                fetchData();
-            }
-            if (e.key === 'Escape') {
-                if (confirm('Quitter le terminal RISK NETWORK GROUP?')) {
-                    window.close();
-                }
-            }
-            if (e.key === 'F1') {
-                e.preventDefault();
-                alert('RISK NETWORK GROUP - AIDE\n\nF1: Cette aide\nF2: Export CSV\nF3: Filtrer par secteur\nF5: Rafraîchir données\nF9: Force Sync immédiat\nESC: Quitter\n\nRecherche: Tapez directement un ticker (ex: IAM, ATW) dans la barre de recherche');
-            }
-            if (e.key === 'F2') {
-                e.preventDefault();
-                if (stocksData.length > 0) {
-                    alert(`Export CSV initié...\n${stocksData.length} tickers exportés\n\nSYMBOL,NAME,SECTOR,PRICE,CHANGE\n${stocksData.slice(0,3).map(s => `${s.symbol},${s.name},${s.sector},${s.price},${s.change}%`).join('\n')}...`);
-                }
-            }
-            if (e.key === 'F3') {
-                e.preventDefault();
-                const sector = prompt('Entrez le secteur:\nBANK, TELECOM, ASSUR, IMMO, INDUS, MINES, ENERGY, TRANSPORT, SANTE, AGRO, TECH, RETAIL, HOLDING\n\nOu "ALL" pour tout:');
-                if (sector) {
-                    currentFilter = sector.toUpperCase();
-                    renderStocks(currentFilter, searchTerm);
-                }
-            }
-            if (e.key === '/' && document.activeElement !== searchInput) {
-                e.preventDefault();
-                searchInput.focus();
-            }
-        });
-
-        // Initialize
-        setInterval(updateClockAndMarketStatus, 1000);
-        setInterval(updateCountdown, 1000);
-        updateClockAndMarketStatus();
-        fetchData(); // Initial load
+        // Initial load and refresh
+        fetchStocks();
+        fetchNews();
+        
+        setInterval(() => {
+            fetchStocks();
+            fetchNews();
+        }, REFRESH_INTERVAL);
     </script>
 </body>
 </html>
