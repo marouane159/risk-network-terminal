@@ -355,29 +355,52 @@
         }
 
         function renderNews() {
-            const container = document.getElementById('newsContainer');
-            container.innerHTML = '';
-            
-            const sortedNews = [...appState.news].sort((a, b) => a.time - b.time);
-            
-            sortedNews.forEach(news => {
-                const isFlash = news.time < 60;
-                const item = document.createElement('div');
-                item.className = `grid-border-b p-3 hover-row cursor-pointer border-l-2 ${isFlash ? 'border-l-orange-600 bg-[#0a0a0a]' : 'border-l-transparent'}`;
-                item.innerHTML = `
-                    <div class="flex items-start gap-2 mb-1">${isFlash ? '<span class="flash-indicator mr-2">FLASH</span>' : `<span class="text-gray-600 mr-2">[${news.time}m]</span>`}<span class="text-[10px] text-gray-500 uppercase">${news.category}</span></div>
-                    <div class="text-sm text-gray-300 leading-tight">${news.title}</div>
-                    <div class="text-[10px] text-gray-600 mt-1 flex justify-between"><span>SRC: ${news.source}</span><span>${news.date}</span></div>
-                `;
-                container.appendChild(item);
-            });
-            
-            document.getElementById('lastNewsUpdate').textContent = appState.lastSync ? new Date(appState.lastSync).toLocaleTimeString('fr-FR', {hour12:false}) : '--:--:--';
-            document.getElementById('newsCount').textContent = `[${sortedNews.length} NEW]`;
-            
-            const tickerText = sortedNews.slice(0, 5).map(n => `// ${n.title} //`).join(' ');
-            document.getElementById('newsTicker').textContent = tickerText + ' ' + tickerText;
+    const container = document.getElementById('newsContainer');
+    container.innerHTML = '';
+    
+    const sortedNews = [...appState.news].sort((a, b) => {
+        // Sort by date if available, fallback to time
+        const dateA = new Date(a.date) || 0;
+        const dateB = new Date(b.date) || 0;
+        return dateB - dateA;
+    });
+    
+    sortedNews.forEach(news => {
+        const isFlash = news.time < 60;
+        const hasLink = news.link && news.link.length > 0;
+        
+        const item = document.createElement('div');
+        item.className = `grid-border-b p-3 hover-row cursor-pointer border-l-2 ${isFlash ? 'border-l-orange-600 bg-[#0a0a0a]' : 'border-l-transparent'}`;
+        
+        // Make clickable if link exists
+        if (hasLink) {
+            item.onclick = () => window.open(news.link, '_blank');
+            item.title = 'Cliquer pour ouvrir l\'article';
         }
+        
+        item.innerHTML = `
+            <div class="flex items-start gap-2 mb-1">
+                ${isFlash ? '<span class="flash-indicator mr-2">FLASH</span>' : `<span class="text-gray-600 mr-2">[${news.time}m]</span>`}
+                <span class="text-[10px] text-gray-500 uppercase">${news.category}</span>
+                ${hasLink ? '<span class="text-[10px] text-orange-600 ml-auto">↗ LIEN</span>' : ''}
+            </div>
+            <div class="text-sm text-gray-300 leading-tight ${hasLink ? 'hover:text-orange-400 transition-colors' : ''}">${news.title}</div>
+            ${news.summary ? `<div class="text-xs text-gray-500 mt-1 line-clamp-2">${news.summary}</div>` : ''}
+            <div class="text-[10px] text-gray-600 mt-1 flex justify-between">
+                <span>SRC: ${news.source}</span>
+                <span>${news.date}</span>
+            </div>
+        `;
+        container.appendChild(item);
+    });
+    
+    document.getElementById('lastNewsUpdate').textContent = appState.lastSync ? new Date(appState.lastSync).toLocaleTimeString('fr-FR', {hour12:false}) : '--:--:--';
+    document.getElementById('newsCount').textContent = `[${sortedNews.length} NEW]`;
+    
+    // Update ticker with links
+    const tickerText = sortedNews.slice(0, 5).map(n => `// ${n.title} ${n.link ? '[↗]' : ''} //`).join(' ');
+    document.getElementById('newsTicker').textContent = tickerText + ' ' + tickerText;
+}
 
         // ============================================
         // FETCH DATA FROM RENDER API
