@@ -2,6 +2,7 @@ from flask import Flask, jsonify
 from flask_cors import CORS
 import requests
 from bs4 import BeautifulSoup
+import xml.etree.ElementTree as ET
 import json
 import os
 from datetime import datetime
@@ -91,15 +92,19 @@ def print_news_to_terminal(news_items):
         return
     
     print("\n" + "="*80)
-    print("LATEST NEWS FROM BOURSE NEWS (boursenews.ma/espace-investisseurs)")
+    print("LATEST NEWS FROM MEDIAS24 RSS (Le Boursier)")
     print("="*80)
     
     for i, item in enumerate(news_items[:10], 1):  # Show top 10
         print(f"\n{i}. {item.get('title', 'N/A')}")
         print(f"   Date: {item.get('date', 'N/A')}")
         print(f"   Source: {item.get('source', 'N/A')}")
+        print(f"   Category: {item.get('category', 'N/A')}")
+        if item.get('link'):
+            print(f"   Link: {item['link']}")
         if item.get('summary'):
-            print(f"   Summary: {item['summary'][:150]}...")
+            summary = item['summary'][:150] + '...' if len(item['summary']) > 150 else item['summary']
+            print(f"   Summary: {summary}")
         print("-" * 80)
     
     print(f"\nTotal news items fetched: {len(news_items)}")
@@ -180,9 +185,6 @@ def scrape_boursenews():
         # Parse XML
         root = ET.fromstring(response.content)
         
-        # RSS 2.0 namespace
-        ns = {'content': 'http://purl.org/rss/1.0/modules/content/'}
-        
         news = []
         
         # Find all items
@@ -239,30 +241,13 @@ def scrape_boursenews():
                 continue
         
         # Print news to terminal
-        def print_news_to_terminal(news_items):
-    """Print fetched news to terminal with formatting"""
-    if not news_items:
-        print("No news items to display")
-        return
-    
-    print("\n" + "="*80)
-    print("LATEST NEWS FROM MEDIAS24 RSS (Le Boursier)")
-    print("="*80)
-    
-    for i, item in enumerate(news_items[:10], 1):  # Show top 10
-        print(f"\n{i}. {item.get('title', 'N/A')}")
-        print(f"   Date: {item.get('date', 'N/A')}")
-        print(f"   Source: {item.get('source', 'N/A')}")
-        print(f"   Category: {item.get('category', 'N/A')}")
-        if item.get('link'):
-            print(f"   Link: {item['link']}")
-        if item.get('summary'):
-            summary = item['summary'][:150] + '...' if len(item['summary']) > 150 else item['summary']
-            print(f"   Summary: {summary}")
-        print("-" * 80)
-    
-    print(f"\nTotal news items fetched: {len(news_items)}")
-    print("="*80 + "\n")
+        print_news_to_terminal(news)
+        
+        return news
+        
+    except Exception as e:
+        print(f"Error scraping Medias24 RSS: {e}")
+        return []
 
 def get_stock_name(symbol):
     """Get full name from symbol - uses BASE_STOCKS first, then fallback"""
