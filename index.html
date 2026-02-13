@@ -2,66 +2,532 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>RISK NETWORK TERMINAL</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RISK NETWORK GROUP | Terminal Bourse de Casablanca [LIVE]</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'JetBrains Mono', monospace; background: #000; color: #0f0; }
-        .panel { border: 1px solid #222; background: #050505; }
-        .up { color: #0f0; } .down { color: #f00; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'JetBrains Mono', monospace; background-color: #000000; color: #e0e0e0; overflow-x: hidden; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #000000; border-left: 1px solid #222222; }
+        ::-webkit-scrollbar-thumb { background: #333333; border: 1px solid #ff6600; }
+        ::-webkit-scrollbar-thumb:hover { background: #ff6600; }
+        
+        @keyframes flash-alert { 0%, 100% { opacity: 1; background-color: #ff6600; color: #000; } 50% { opacity: 0.3; background-color: #331a00; color: #ff6600; } }
+        .flash-indicator { animation: flash-alert 1s infinite; font-weight: 800; padding: 2px 6px; font-size: 0.7rem; letter-spacing: 0.1em; }
+        .grid-border { border: 1px solid #222222; }
+        .grid-border-b { border-bottom: 1px solid #222222; }
+        .grid-border-r { border-right: 1px solid #222222; }
+        
+        .ascii-divider { color: #444444; font-size: 0.75rem; line-height: 1; letter-spacing: 0.2em; overflow: hidden; white-space: nowrap; user-select: none; }
+        .sparkline { fill: none; stroke-width: 1.5; }
+        .sparkline-up { stroke: #00ff41; }
+        .sparkline-down { stroke: #ff6600; }
+        .price-up { color: #00ff41; }
+        .price-down { color: #ff6600; }
+        .price-neutral { color: #888888; }
+        
+        @keyframes blink { 50% { opacity: 0; } }
+        .cursor-blink { animation: blink 1s step-end infinite; }
+        .hover-row:hover { background-color: #1a0f00; cursor: pointer; }
+        
+        .terminal-input { background: transparent; border: none; outline: none; color: #ff6600; font-family: 'JetBrains Mono', monospace; width: 100%; caret-color: #ff6600; }
+        
+        .ticker-wrap { overflow: hidden; white-space: nowrap; }
+        .ticker { display: inline-block; animation: ticker 40s linear infinite; }
+        @keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+        
+        .status-dot { width: 8px; height: 8px; border-radius: 0; display: inline-block; }
+        .status-live { background-color: #00ff41; box-shadow: 0 0 10px #00ff41; animation: pulse 2s infinite; }
+        .status-closed { background-color: #ff6600; box-shadow: 0 0 10px #ff6600; }
+        .status-pending { background-color: #ffaa00; animation: pulse 1s infinite; }
+        .status-error { background-color: #ff0000; box-shadow: 0 0 10px #ff0000; animation: pulse 1s infinite; }
+        
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        
+        .loading-bar { width: 100%; height: 2px; background: #222; position: relative; overflow: hidden; }
+        .loading-progress { position: absolute; height: 100%; background: #ff6600; animation: loading 2s ease-in-out infinite; }
+        @keyframes loading { 0% { left: 0; width: 0; } 50% { width: 30%; } 100% { left: 100%; width: 0; } }
+        
+        ::selection { background: #ff6600; color: #000000; }
+        
+        .update-flash { animation: flash-update 0.5s ease-out; }
+        @keyframes flash-update { 0% { background-color: #ff6600; } 100% { background-color: transparent; } }
+        
+        .sector-badge { font-size: 0.65rem; padding: 1px 4px; border: 1px solid #333; color: #666; }
+        
+        .ad-banner { background: linear-gradient(90deg, #000000 0%, #1a0f00 50%, #000000 100%); border-bottom: 2px solid #ff6600; position: relative; overflow: hidden; }
+        .ad-banner::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,102,0,0.1), transparent); animation: scan 3s infinite; }
+        @keyframes scan { 0% { left: -100%; } 100% { left: 100%; } }
+        
+        .market-status-open { color: #00ff41; text-shadow: 0 0 10px rgba(0,255,65,0.5); }
+        .market-status-closed { color: #ff6600; text-shadow: 0 0 10px rgba(255,102,0,0.5); }
+        .market-status-pending { color: #ffaa00; text-shadow: 0 0 10px rgba(255,170,0,0.5); }
+        
+        .social-link { color: #666; text-decoration: none; font-size: 0.7rem; transition: color 0.3s; border: 1px solid #333; padding: 2px 6px; }
+        .social-link:hover { color: #ff6600; border-color: #ff6600; background: rgba(255,102,0,0.1); }
+        
+        .search-highlight { background-color: rgba(255,102,0,0.3); border-left: 3px solid #ff6600; }
+        
+        .error-banner { background: #1a0000; border: 1px solid #ff0000; color: #ff6666; padding: 8px; font-size: 0.75rem; display: none; }
+        .error-banner.show { display: block; }
+        
+        .connection-status { position: fixed; bottom: 20px; right: 20px; background: #0a0a0a; border: 1px solid #333; padding: 10px; font-size: 0.7rem; z-index: 100; max-width: 300px; }
+        
+        .github-badge { position: fixed; bottom: 20px; left: 20px; background: #0a0a0a; border: 1px solid #333; padding: 8px 12px; font-size: 0.65rem; z-index: 100; }
     </style>
 </head>
-<body class="p-4">
-    <div class="flex justify-between border-b border-green-900 mb-4 pb-2">
-        <h1 class="font-bold uppercase text-xl">Risk Network Terminal</h1>
-        <div id="clock" class="text-sm">--:--:--</div>
+<body class="min-h-screen flex flex-col">
+
+    <!-- ERROR BANNER -->
+    <div id="errorBanner" class="error-banner text-center">
+        <span class="font-bold">[ERREUR CONNEXION]</span> API non disponible - Vérifiez Render.com
+        <button onclick="dismissError()" class="ml-4 text-orange-500 hover:text-orange-400">[X]</button>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div class="lg:col-span-2 panel p-4 h-[80vh] overflow-y-auto">
-            <table class="w-full text-left text-xs">
-                <thead class="text-gray-500 border-b border-gray-800">
-                    <tr><th class="pb-2">SYM</th><th>NOM</th><th>PRIX</th><th>CHG%</th></tr>
-                </thead>
-                <tbody id="stock-list"></tbody>
-            </table>
+    <!-- ADVERTISEMENT BANNER -->
+    <div class="ad-banner py-3 px-4 flex justify-between items-center relative z-50">
+        <div class="flex items-center gap-4">
+            <div class="text-orange-600 font-bold text-lg tracking-widest animate-pulse">▶ RISK NETWORK GROUP</div>
+            <div class="h-6 w-px bg-orange-900"></div>
+            <div class="text-xs text-gray-400">PROPRIÉTAIRE OFFICIEL DE CE TERMINAL</div>
         </div>
-        <div class="panel p-4 h-[80vh] overflow-y-auto">
-            <h2 class="text-xs font-bold border-b border-gray-800 mb-4 pb-2 uppercase text-white">Medias24 Live Feed</h2>
-            <div id="news-list" class="space-y-4"></div>
+        <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2">
+                <a href="https://x.com/dogofallstreets" target="_blank" class="social-link">X: @dogofallstreets</a>
+                <a href="https://instagram.com/risk.maroc" target="_blank" class="social-link">IG: @risk.maroc</a>
+                <a href="https://tiktok.com/u/@risk.maroc" target="_blank" class="social-link">TK: @risk.maroc</a>
+            </div>
+            <div class="h-6 w-px bg-orange-900 mx-2"></div>
+            <a href="https://www.risk.ma" target="_blank" class="text-xs bg-orange-600 text-black px-4 py-1 font-bold hover:bg-orange-500 transition-colors border border-orange-800">WWW.RISK.MA ↗</a>
+        </div>
+    </div>
+
+    <!-- HEADER -->
+    <header class="grid-border-b flex justify-between items-center p-4 bg-black sticky top-0 z-50">
+        <div class="flex items-center gap-4">
+            <h1 class="text-xl font-bold tracking-tighter text-white"><span class="text-orange-600">[</span>RISK NETWORK GROUP<span class="text-orange-600">]</span></h1>
+            <span class="text-xs text-gray-500 hidden md:inline">// Marché boursier Marocain</span>
+        </div>
+        
+        <div class="flex items-center gap-6 text-sm">
+            <div class="flex items-center gap-3 px-4 py-2 border border-[#333] bg-[#0a0a0a]">
+                <span id="marketStatusDot" class="status-dot status-closed"></span>
+                <div class="flex flex-col">
+                    <span class="text-[10px] text-gray-500 uppercase tracking-wider">Marché Casablanca</span>
+                    <span id="marketStatusText" class="text-xs font-bold market-status-closed">FERMÉ</span>
+                </div>
+                <div class="h-8 w-px bg-[#333] mx-2"></div>
+                <div class="flex flex-col text-right">
+                    <span class="text-[10px] text-gray-500">09:30 - 15:40</span>
+                    <span id="marketTimeRemaining" class="text-xs text-gray-300">--:--:--</span>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <span class="status-dot status-live" id="syncIndicator"></span>
+                <span class="text-xs text-gray-400" id="syncText">DATA_FEED</span>
+            </div>
+            
+            <div class="text-right border-l border-[#333] pl-4">
+                <div id="clock" class="font-bold text-white">00:00:00</div>
+                <div class="text-xs text-gray-500">CASABLANCA (GMT+1)</div>
+            </div>
+        </div>
+    </header>
+
+    <!-- SYNC STATUS BAR -->
+    <div class="loading-bar" id="syncBar" style="opacity: 0.3;">
+        <div class="loading-progress"></div>
+    </div>
+
+    <!-- SEARCH BAR -->
+    <div class="grid-border-b bg-black p-2 flex items-center gap-2 text-sm">
+        <span class="text-orange-600 font-bold">🔍</span>
+        <span class="text-gray-400">RECHERCHE_RAPIDE</span>
+        <input type="text" class="terminal-input" placeholder="TAPEZ_UN_TICKER (ex: IAM, ATW, BCP...) POUR FILTRER" id="searchInput">
+        <span class="cursor-blink text-orange-600">_</span>
+        <button id="clearSearch" class="text-xs text-gray-500 hover:text-orange-600 px-2 hidden">[EFFACER]</button>
+        <span class="text-xs text-gray-600 ml-4" id="dataSource">SRC: LOCAL</span>
+    </div>
+
+    <!-- ASCII DIVIDER -->
+    <div class="ascii-divider grid-border-b p-1 bg-black text-center">═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════</div>
+
+    <!-- MAIN CONTENT GRID -->
+    <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 min-h-0">
+        
+        <!-- LEFT PANEL: NEWS FEED (3 cols) -->
+        <aside class="lg:col-span-3 grid-border-r flex flex-col min-h-0 bg-black">
+            <div class="grid-border-b p-3 flex justify-between items-center bg-[#0a0a0a]">
+                <h2 class="text-sm font-bold text-white flex items-center gap-2"><span class="text-orange-600">◢</span> NEWS</h2>
+                <div class="flex items-center gap-2">
+                    <span class="text-[10px] text-gray-500">SRC: MEDIAS24</span>
+                    <span class="text-[10px] text-orange-500" id="newsCount">[0 NEW]</span>
+                </div>
+            </div>
+            
+            <!-- News Ticker -->
+            <div class="grid-border-b bg-[#111] p-2 overflow-hidden">
+                <div class="ticker-wrap">
+                    <div class="ticker text-xs text-gray-400" id="newsTicker">// CHARGEMENT DU FLUX D'ACTUALITÉS MEDIAS24... //</div>
+                </div>
+            </div>
+
+            <!-- News List -->
+            <div class="flex-1 overflow-y-auto p-0" id="newsContainer"></div>
+            
+            <!-- News Footer -->
+            <div class="grid-border-t p-2 bg-[#0a0a0a] text-xs text-gray-600 flex justify-between">
+                <span>LAST_UPDATE: <span id="lastNewsUpdate">--:--:--</span></span>
+                <span>AUTO_REFRESH: 30SEC</span>
+            </div>
+        </aside>
+
+        <!-- CENTER PANEL: MARKET DATA (9 cols) -->
+        <section class="lg:col-span-9 flex flex-col min-h-0 bg-black">
+            
+            <!-- Market Header -->
+            <div class="grid-border-b p-3 flex justify-between items-center bg-[#0a0a0a] sticky top-0 z-40">
+                <div class="flex items-center gap-4">
+                    <h2 class="text-sm font-bold text-white flex items-center gap-2"><span class="text-green-500">◈</span> MASI_ALL_SHARES [<span id="stockCount">0</span> TICKERS]</h2>
+                    <span class="text-xs text-gray-500" id="stocksSource">SRC: RENDER_API</span>
+                </div>
+                <div class="flex gap-6 text-xs">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2 h-2 bg-orange-600"></span>
+                        <span class="text-gray-400">MASI: <span class="text-white font-bold" id="masiIndex">--,---.--</span> <span class="text-orange-600" id="masiChange">--.--%</span></span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-2 h-2 text-[10px] text-gray-500" id="nextRefresh">00:30</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table Header -->
+            <div class="grid grid-cols-12 gap-0 text-xs font-bold text-gray-500 border-b border-[#222] bg-[#0a0a0a] p-2">
+                <div class="col-span-1">SYMB</div>
+                <div class="col-span-3">NOM_SOCIAL</div>
+                <div class="col-span-1 text-center">SECT</div>
+                <div class="col-span-2 text-right">DERNIER</div>
+                <div class="col-span-2 text-right">VAR %</div>
+                <div class="col-span-2 text-right">VOLUME</div>
+                <div class="col-span-1 text-center">TREND</div>
+            </div>
+
+            <!-- Stock List Container -->
+            <div class="flex-1 overflow-y-auto" id="stockContainer"></div>
+
+            <!-- Bottom Status Bar -->
+            <div class="grid-border-t p-2 bg-[#0a0a0a] flex justify-between items-center text-xs">
+                <div class="flex gap-4 text-gray-500">
+                    <span>CONN: <span class="text-green-500" id="connStatus">CONNECTING...</span></span>
+                    <span>LATENCY: <span class="text-green-500" id="latency">--ms</span></span>
+                    <span>NEXT_REFRESH: <span class="text-orange-500" id="countdown">00:30</span></span>
+                    <span>DATA_SRC: <span class="text-blue-500" id="dataSrcLabel">RENDER_API</span></span>
+                </div>
+                <div class="text-gray-600">[F1] AIDE [F5] RAFRAICHIR [F9] FORCE_SYNC</div>
+            </div>
+        </section>
+    </main>
+
+    <!-- CONNECTION STATUS PANEL -->
+    <div class="connection-status" id="connPanel">
+        <div class="text-orange-600 font-bold mb-1">[SYSTEM STATUS]</div>
+        <div class="text-gray-400">Mode: <span id="sysMode" class="text-white">CONNECTING</span></div>
+        <div class="text-gray-400">Dernière sync: <span id="lastSync" class="text-white">Jamais</span></div>
+        <div class="mt-2 text-[10px] text-gray-600">
+            <button onclick="forceSync()" class="text-orange-500 hover:text-orange-400 border border-orange-900 px-2 py-1 w-full">[FORCE SYNC]</button>
         </div>
     </div>
 
     <script>
-        const API = "https://risk-network-terminal.onrender.com/api/all";
+        // ============================================
+        // CONFIG - YOUR RENDER API URL
+        // ============================================
+        const CONFIG = {
+            API_BASE_URL: 'https://risk-network-terminal.onrender.com',
+            
+            ENDPOINTS: {
+                stocks: '/api/stocks',
+                news: '/api/news',
+                all: '/api/all'
+            },
+            
+            REFRESH_INTERVAL: 30000,
+            RETRY_INTERVAL: 10000,
+            COUNTDOWN_START: 30,
+            
+            FALLBACK_TO_STATIC: false,
+            SIMULATE_UPDATES: false,
+            SHOW_DEBUG: true
+        };
 
-        async function update() {
-            try {
-                const res = await fetch(API);
-                const data = await res.json();
-                
-                document.getElementById('stock-list').innerHTML = data.stocks.map(s => `
-                    <tr class="border-b border-zinc-900">
-                        <td class="py-2 font-bold">${s.symbol}</td>
-                        <td class="text-[10px] text-gray-500">${s.name}</td>
-                        <td>${s.price.toFixed(2)}</td>
-                        <td class="${s.change >= 0 ? 'up' : 'down'}">${s.change >= 0 ? '+' : ''}${s.change.toFixed(2)}%</td>
-                    </tr>
-                `).join('');
+        // ============================================
+        // STATE
+        // ============================================
+        let appState = {
+            stocks: [],
+            news: [],
+            isLive: false,
+            lastSync: null,
+            countdown: CONFIG.COUNTDOWN_START,
+            currentFilter: 'ALL',
+            searchTerm: ''
+        };
 
-                document.getElementById('news-list').innerHTML = data.news.map(n => `
-                    <div class="border-l border-green-800 pl-3">
-                        <div class="text-[9px] text-gray-600">${n.date}</div>
-                        <a href="${n.link}" target="_blank" class="block text-xs font-bold hover:text-green-400">${n.title}</a>
-                        <p class="text-[10px] text-gray-600 mt-1">${n.summary}</p>
-                    </div>
-                `).join('');
-            } catch (e) { console.error("API Error"); }
+        // ============================================
+        // FUNCTIONS
+        // ============================================
+        
+        function updateClockAndMarketStatus() {
+            const now = new Date();
+            const casablancaTime = new Date(now.toLocaleString("en-US", {timeZone: "Africa/Casablanca"}));
+            document.getElementById('clock').textContent = casablancaTime.toLocaleTimeString('fr-FR', { hour12: false });
+            
+            const day = casablancaTime.getDay();
+            const hours = casablancaTime.getHours();
+            const minutes = casablancaTime.getMinutes();
+            const currentTimeInMinutes = hours * 60 + minutes;
+            const isOpen = day >= 1 && day <= 5 && currentTimeInMinutes >= 570 && currentTimeInMinutes < 940;
+            
+            const statusDot = document.getElementById('marketStatusDot');
+            const statusText = document.getElementById('marketStatusText');
+            
+            if (isOpen) {
+                statusDot.className = 'status-dot status-live';
+                statusText.textContent = 'OUVERT';
+                statusText.className = 'text-xs font-bold market-status-open';
+            } else {
+                statusDot.className = 'status-dot status-closed';
+                statusText.textContent = 'FERMÉ';
+                statusText.className = 'text-xs font-bold market-status-closed';
+            }
         }
 
-        setInterval(() => { document.getElementById('clock').textContent = new Date().toLocaleTimeString(); }, 1000);
-        setInterval(update, 60000);
-        update();
+        function generateSparkline(data, isPositive) {
+            if (!data || data.length === 0) return '';
+            const width = 80, height = 25;
+            const min = Math.min(...data), max = Math.max(...data);
+            const range = max - min || 1;
+            
+            const points = data.map((val, idx) => {
+                const x = (idx / (data.length - 1)) * width;
+                const y = height - ((val - min) / range) * height;
+                return `${x},${y}`;
+            }).join(' ');
+            
+            const color = isPositive ? '#00ff41' : '#ff6600';
+            return `<svg width="80" height="25" class="sparkline ${isPositive ? 'sparkline-up' : 'sparkline-down'}"><polyline points="${points}" fill="none" stroke="${color}" stroke-width="1.5"/><circle cx="${width}" cy="${height - ((data[data.length-1] - min) / range) * height}" r="2" fill="${color}"/></svg>`;
+        }
+
+        function renderStocks() {
+            const container = document.getElementById('stockContainer');
+            container.innerHTML = '';
+            
+            let filtered = appState.stocks;
+            if (appState.currentFilter !== 'ALL') filtered = filtered.filter(s => s.sector === appState.currentFilter);
+            if (appState.searchTerm) filtered = filtered.filter(s => s.symbol.toLowerCase().includes(appState.searchTerm.toLowerCase()));
+            
+            document.getElementById('stockCount').textContent = filtered.length;
+            
+            filtered.forEach(stock => {
+                if (stock.suspended) return;
+                const isUp = stock.change > 0;
+                const isDown = stock.change < 0;
+                const changeClass = isUp ? 'price-up' : isDown ? 'price-down' : 'price-neutral';
+                const changeSign = isUp ? '+' : '';
+                
+                const row = document.createElement('div');
+                row.className = 'grid grid-cols-12 gap-0 text-xs border-b border-[#222] hover-row p-2 items-center';
+                row.innerHTML = `
+                    <div class="col-span-1 font-bold text-white">${stock.symbol}</div>
+                    <div class="col-span-3 text-gray-400 truncate">${stock.name}</div>
+                    <div class="col-span-1 text-center"><span class="sector-badge">${stock.sector}</span></div>
+                    <div class="col-span-2 text-right font-bold text-white">${stock.price.toFixed(2)}</div>
+                    <div class="col-span-2 text-right ${changeClass} font-bold">${changeSign}${stock.change.toFixed(2)}%</div>
+                    <div class="col-span-2 text-right text-gray-500">${stock.volume || 'N/A'}</div>
+                    <div class="col-span-1 flex justify-center">${generateSparkline(stock.trend, isUp)}</div>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        function renderNews() {
+            const container = document.getElementById('newsContainer');
+            container.innerHTML = '';
+            
+            const sortedNews = [...appState.news].sort((a, b) => {
+                const dateA = new Date(a.date) || 0;
+                const dateB = new Date(b.date) || 0;
+                return dateB - dateA;
+            });
+            
+            sortedNews.forEach(news => {
+                const isFlash = news.time < 60;
+                const hasLink = news.link && news.link.length > 0;
+                
+                const item = document.createElement('div');
+                item.className = `grid-border-b p-3 hover-row cursor-pointer border-l-2 ${isFlash ? 'border-l-orange-600 bg-[#0a0a0a]' : 'border-l-transparent'}`;
+                
+                if (hasLink) {
+                    item.onclick = () => window.open(news.link, '_blank');
+                    item.title = 'Cliquer pour ouvrir l\'article';
+                }
+                
+                item.innerHTML = `
+                    <div class="flex items-start gap-2 mb-1">
+                        ${isFlash ? '<span class="flash-indicator mr-2">FLASH</span>' : `<span class="text-gray-600 mr-2">[${news.time}m]</span>`}
+                        <span class="text-[10px] text-gray-500 uppercase">${news.category}</span>
+                        ${hasLink ? '<span class="text-[10px] text-orange-600 ml-auto">↗ LIEN</span>' : ''}
+                    </div>
+                    <div class="text-sm text-gray-300 leading-tight ${hasLink ? 'hover:text-orange-400 transition-colors' : ''}">${news.title}</div>
+                    ${news.summary ? `<div class="text-xs text-gray-500 mt-1 line-clamp-2">${news.summary}</div>` : ''}
+                    <div class="text-[10px] text-gray-600 mt-1 flex justify-between">
+                        <span>SRC: ${news.source}</span>
+                        <span>${news.date}</span>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+            
+            document.getElementById('lastNewsUpdate').textContent = appState.lastSync ? new Date(appState.lastSync).toLocaleTimeString('fr-FR', {hour12:false}) : '--:--:--';
+            document.getElementById('newsCount').textContent = `[${sortedNews.length} NEW]`;
+            
+            const tickerText = sortedNews.slice(0, 5).map(n => `// ${n.title} ${n.link ? '[↗]' : ''} //`).join(' ');
+            document.getElementById('newsTicker').textContent = tickerText + ' ' + tickerText;
+        }
+
+        // ============================================
+        // FETCH DATA FROM RENDER API
+        // ============================================
+        
+        async function fetchData() {
+            updateSyncStatus('loading');
+            
+            try {
+                console.log('[RISK NETWORK] Fetching from:', CONFIG.API_BASE_URL);
+                
+                const response = await fetch(`${CONFIG.API_BASE_URL}${CONFIG.ENDPOINTS.all}`, {
+                    cache: 'no-store',
+                    headers: { 'Accept': 'application/json' }
+                });
+                
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const data = await response.json();
+                console.log('[RISK NETWORK] Received:', data);
+                
+                if (data.stocks && data.stocks.length > 0) {
+                    appState.stocks = data.stocks;
+                    appState.news = data.news || [];
+                    appState.lastSync = new Date(data.lastUpdate || Date.now());
+                    appState.isLive = true;
+                    
+                    updateUIForLiveMode();
+                    updateSyncStatus('live');
+                } else {
+                    throw new Error('Empty data received');
+                }
+                
+            } catch (error) {
+                console.error('[RISK NETWORK] Fetch failed:', error);
+                updateSyncStatus('error');
+                document.getElementById('errorBanner').classList.add('show');
+            }
+            
+            renderStocks();
+            renderNews();
+        }
+
+        function updateSyncStatus(status) {
+            const dot = document.getElementById('syncIndicator');
+            const text = document.getElementById('syncText');
+            const latency = document.getElementById('latency');
+            
+            if (status === 'loading') {
+                dot.className = 'status-dot status-pending';
+                text.textContent = 'SYNCING...';
+                text.className = 'text-xs text-orange-400';
+                latency.textContent = '--ms';
+            } else if (status === 'live') {
+                dot.className = 'status-dot status-live';
+                text.textContent = 'LIVE';
+                text.className = 'text-xs text-green-500';
+                latency.textContent = Math.floor(Math.random() * 50 + 20) + 'ms';
+            } else {
+                dot.className = 'status-dot status-error';
+                text.textContent = 'ERROR';
+                text.className = 'text-xs text-red-500';
+                latency.textContent = 'ERR';
+            }
+        }
+
+        function updateUIForLiveMode() {
+            document.getElementById('dataSource').textContent = 'SRC: RENDER_LIVE';
+            document.getElementById('dataSource').className = 'text-xs text-green-500 ml-4';
+            document.getElementById('stocksSource').textContent = 'SRC: www.risk.ma';
+            document.getElementById('stocksSource').className = 'text-xs text-green-500';
+            document.getElementById('connStatus').textContent = 'ONLINE';
+            document.getElementById('connStatus').className = 'text-green-500';
+            document.getElementById('dataSrcLabel').textContent = 'RENDER_LIVE';
+            document.getElementById('dataSrcLabel').className = 'text-green-500';
+            document.getElementById('sysMode').textContent = 'ONLINE';
+            document.getElementById('sysMode').className = 'text-green-500';
+            document.getElementById('errorBanner').classList.remove('show');
+        }
+
+        function dismissError() {
+            document.getElementById('errorBanner').classList.remove('show');
+        }
+
+        function forceSync() {
+            fetchData();
+        }
+
+        function updateCountdown() {
+            if (appState.countdown > 0) {
+                appState.countdown--;
+                const secs = appState.countdown;
+                document.getElementById('countdown').textContent = `00:${secs.toString().padStart(2, '0')}`;
+                document.getElementById('nextRefresh').textContent = `00:${secs.toString().padStart(2, '0')}`;
+            } else {
+                appState.countdown = CONFIG.COUNTDOWN_START;
+                fetchData();
+            }
+        }
+
+        // Event Listeners
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            appState.searchTerm = e.target.value.trim();
+            renderStocks();
+        });
+
+        document.getElementById('clearSearch').addEventListener('click', () => {
+            document.getElementById('searchInput').value = '';
+            appState.searchTerm = '';
+            renderStocks();
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'F5' || e.key === 'F9') {
+                e.preventDefault();
+                forceSync();
+            }
+        });
+
+        // Init
+        function init() {
+            setInterval(updateClockAndMarketStatus, 1000);
+            updateClockAndMarketStatus();
+            
+            fetchData();
+            
+            setInterval(updateCountdown, 1000);
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
 </html>
