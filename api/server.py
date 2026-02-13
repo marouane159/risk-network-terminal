@@ -166,93 +166,103 @@ def scrape_tradingview():
         return []
 
 def scrape_boursenews():
-    """Scrape BourseNews from espace-investisseurs"""
+    """Scrape news from Medias24 RSS feed"""
     try:
-        url = "https://boursenews.ma/espace-investisseurs"
+        url = "https://medias24.com/categorie/leboursier/actus/feed/"
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            'Accept-Language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
         
-        print(f"Fetching news from {url}...")
+        print(f"Fetching RSS feed from {url}...")
         response = requests.get(url, headers=headers, timeout=30)
-        soup = BeautifulSoup(response.text, 'html.parser')
+        response.encoding = 'utf-8'  # Ensure proper encoding for French text
+        
+        # Parse XML
+        root = ET.fromstring(response.content)
+        
+        # RSS 2.0 namespace
+        ns = {'content': 'http://purl.org/rss/1.0/modules/content/'}
         
         news = []
         
-        # Try multiple selectors to find articles
-        selectors = [
-            'article.news-item',
-            '.news-item',
-            'article',
-            '.post',
-            '.entry',
-            '[class*="news"]',
-            '.item'
-        ]
+        # Find all items
+        items = root.findall('.//item')
+        print(f"Found {len(items)} items in RSS feed")
         
-        articles = []
-        for selector in selectors:
-            articles = soup.select(selector)
-            if articles:
-                print(f"Found {len(articles)} articles with selector: {selector}")
-                break
-        
-        if not articles:
-            # Fallback: look for any link with news-like structure
-            articles = soup.find_all('a', href=lambda x: x and ('actualite' in x or 'news' in x or 'article' in x))
-            print(f"Fallback found {len(articles)} articles")
-        
-        for i, article in enumerate(articles[:20]):
+        for i, item in enumerate(items[:20]):  # Get top 20
             try:
                 # Extract title
-                title_elem = article.find(['h1', 'h2', 'h3', 'h4', '.title', '.entry-title'])
-                if not title_elem:
-                    title_elem = article
-                
-                title = title_elem.get_text(strip=True)
-                if not title or len(title) < 10:
-                    continue
+                title_elem = item.find('title')
+                title = title_elem.text if title_elem is not None else 'N/A'
                 
                 # Extract link
-                link = article.get('href', '')
-                if not link:
-                    link_elem = article.find('a')
-                    if link_elem:
-                        link = link_elem.get('href', '')
+                link_elem = item.find('link')
+                link = link_elem.text if link_elem is not None else ''
                 
-                if link and not link.startswith('http'):
-                    link = 'https://boursenews.ma' + link
+                # Extract pub date
+                date_elem = item.find('pubDate')
+                if date_elem is not None:
+                    date_str = date_elem.text
+                    # Parse RSS date format
+                    try:
+                        date_obj = datetime.strptime(date_str, '%a, %d %b %Y %H:%M:%S %z')
+                        date = date_obj.strftime('%Y-%m-%d %H:%M')
+                    except:
+                        date = date_str
+                else:
+                    date = datetime.now().strftime('%Y-%m-%d')
                 
-                # Extract date
-                date_elem = article.find(['time', '.date', '.entry-date', '[class*="date"]'])
-                date = date_elem.get_text(strip=True) if date_elem else datetime.now().strftime('%Y-%m-%d')
+                # Extract description/summary
+                desc_elem = item.find('description')
+                summary = desc_elem.text if desc_elem is not None else None
                 
-                # Extract summary
-                summary_elem = article.find(['p', '.summary', '.excerpt', '.description'])
-                summary = summary_elem.get_text(strip=True) if summary_elem else None
+                # Clean up HTML from description if present
+                if summary:
+                    summary = BeautifulSoup(summary, 'html.parser').get_text(strip=True)
+                
+                # Extract category if available
+                cat_elem = item.find('category')
+                category = cat_elem.text if cat_elem is not None else 'INFO'
                 
                 news.append({
                     'time': i * 5,
                     'title': title,
                     'link': link,
-                    'category': 'INFO',
-                    'source': 'BourseNews.ma',
+                    'category': category.upper(),
+                    'source': 'Medias24.com',
                     'date': date,
                     'summary': summary
                 })
+                
             except Exception as e:
-                print(f"Error parsing article {i}: {e}")
+                print(f"Error parsing RSS item {i}: {e}")
                 continue
         
         # Print news to terminal
-        print_news_to_terminal(news)
-        
-        return news
-    except Exception as e:
-        print(f"Error scraping BourseNews: {e}")
-        return []
+        def print_news_to_terminal(news_items):
+    """Print fetched news to terminal with formatting"""
+    if not news_items:
+        print("No news items to display")
+        return
+    
+    print("\n" + "="*80)
+    print("LATEST NEWS FROM MEDIAS24 RSS (Le Boursier)")
+    print("="*80)
+    
+    for i, item in enumerate(news_items[:10], 1):  # Show top 10
+        print(f"\n{i}. {item.get('title', 'N/A')}")
+        print(f"   Date: {item.get('date', 'N/A')}")
+        print(f"   Source: {item.get('source', 'N/A')}")
+        print(f"   Category: {item.get('category', 'N/A')}")
+        if item.get('link'):
+            print(f"   Link: {item['link']}")
+        if item.get('summary'):
+            summary = item['summary'][:150] + '...' if len(item['summary']) > 150 else item['summary']
+            print(f"   Summary: {summary}")
+        print("-" * 80)
+    
+    print(f"\nTotal news items fetched: {len(news_items)}")
+    print("="*80 + "\n")
 
 def get_stock_name(symbol):
     """Get full name from symbol - uses BASE_STOCKS first, then fallback"""
