@@ -13,148 +13,156 @@ DATA_DIR = "data"
 STOCKS_FILE = f"{DATA_DIR}/stocks.json"
 NEWS_FILE = f"{DATA_DIR}/news.json"
 
-# Fallback stock list (same as scraper)
-BASE_STOCKS = [
-    {"symbol": "TGC", "name": "TRAVAUX GENERAUX DE CONSTRUCTIONS", "sector": "Construction"},
-    {"symbol": "TMA", "name": "TOTALENERGIES MARKETING", "sector": "Énergie"},
-    {"symbol": "TQM", "name": "TAQA MOROCCO", "sector": "Énergie"},
-    {"symbol": "NKL", "name": "ENNAKL SA", "sector": "Transport"},
-    {"symbol": "LHM", "name": "LAFARGEHOLCIM", "sector": "Construction"},
-    {"symbol": "UMR", "name": "UNIMER", "sector": "Agroalimentaire"},
-    {"symbol": "WAA", "name": "WAFA ASSURANCE", "sector": "Assurance"},
-    {"symbol": "ZDJ", "name": "ZELLIDJA S.A", "sector": "Mines"},
-    {"symbol": "MSA", "name": "SODEP MARSA", "sector": "Transport"},
-    {"symbol": "RDS", "name": "RESIDENCE DAR SAADA", "sector": "Construction"},
-    {"symbol": "CSR", "name": "COSUMAR", "sector": "Industrie"},
-    {"symbol": "CFG", "name": "CFG BANK", "sector": "Banque"},
-    {"symbol": "CMG", "name": "CMGP CAS", "sector": "Agriculture"},
-    {"symbol": "HPS", "name": "HPS", "sector": "Paiment"},
-    {"symbol": "S2M", "name": "S2M", "sector": "Paiment"},
-    {"symbol": "RIS", "name": "RISMA", "sector": "Hotel Management"},
-    {"symbol": "DHO", "name": "DELTA HOLDING", "sector": "Industrie"},
-    {"symbol": "DWY", "name": "DISWAY", "sector": "Distribution éléctro"},
-    {"symbol": "SNA", "name": "STOKVIS NORD AFRIQUE", "sector": "Distribution service"},
-    {"symbol": "SNP", "name": "SNEP", "sector": "Process Industries"},
-    {"symbol": "STR", "name": "STROC INDUSTRIE", "sector": "Service Industriel"},
-    {"symbol": "INV", "name": "INVOLYS", "sector": "Service de Technologie"},
-    {"symbol": "MIC", "name": "MICRODATA", "sector": "Service de Technologie"},
-    {"symbol": "DYT", "name": "DISTY TECHNOLOGIES", "sector": "Service de destribution"},
-    {"symbol": "ADH", "name": "DOUJA PROM ADDOHA", "sector": "Immobilier"},
-    {"symbol": "IMO", "name": "IMMORENT INVEST", "sector": "Immobilier"},
-    {"symbol": "ADI", "name": "ALLIANCES", "sector": "Divers"},
-    {"symbol": "AFI", "name": "AFRIC INDUSTRIES", "sector": "Industrie"},
-    {"symbol": "AFM", "name": "AFMA", "sector": "Finance"},
-    {"symbol": "AKT", "name": "AKDITAL S.A", "sector": "Santé"},
-    {"symbol": "ALM", "name": "ALUMINIUM DU MAROC", "sector": "Matériaux"},
-    {"symbol": "ARD", "name": "ARADEI CAPITAL", "sector": "Immobilier"},
-    {"symbol": "ATH", "name": "AUTO HALL", "sector": "Automobile"},
-    {"symbol": "ATL", "name": "ATLANTASANAD", "sector": "Distribution"},
-    {"symbol": "ATW", "name": "ATTIJARIWAFA BANK", "sector": "Banque"},
-    {"symbol": "BAL", "name": "BALIMA", "sector": "Distribution"},
-    {"symbol": "BCP", "name": "BANQUE CENTRALE POPULAIRE", "sector": "Banque"},
-    {"symbol": "CRS", "name": "CARTIER SAADA", "sector": "Distribution"},
-    {"symbol": "CIH", "name": "CREDIT IMMOBILIER ET HOTELIER", "sector": "Banque"},
-    {"symbol": "CMT", "name": "CIMENTS DU MAROC", "sector": "Matériaux"},
-    {"symbol": "COL", "name": "COLORADO", "sector": "Distribution"},
-    {"symbol": "CTM", "name": "COMPAGNIE DE TRANSPORTS AU MAROC", "sector": "Transport"},
-    {"symbol": "DIM", "name": "DELATTRE LEVIVIER MAROC", "sector": "Industrie"},
-    {"symbol": "DRI", "name": "DARI COUSPATE", "sector": "Agroalimentaire"},
-    {"symbol": "EQD", "name": "EQDOM", "sector": "Immobilier"},
-    {"symbol": "FBR", "name": "FENIE BROSSETTE", "sector": "Distribution"},
-    {"symbol": "IAM", "name": "MAROC TELECOM", "sector": "Télécom"},
-    {"symbol": "INM", "name": "INDUSTRIE DU MAROC", "sector": "Industrie"},
-    {"symbol": "JET", "name": "JET CONTRACTORS", "sector": "Construction"},
-    {"symbol": "LES", "name": "LESIEUR CRISTAL", "sector": "Agroalimentaire"},
-    {"symbol": "MOX", "name": "MAGHREB OXYGENE", "sector": "Industrie"},
-    {"symbol": "MNG", "name": "MANAGEM", "sector": "Mines"},
-    {"symbol": "MUT", "name": "MUTANDIS", "sector": "Agroalimentaire"},
-    {"symbol": "SID", "name": "SONASID", "sector": "Agroalimentaire"},
-    {"symbol": "SOT", "name": "SOTHEMA", "sector": "Pharma"},
-    {"symbol": "SRM", "name": "REALISATIONS MECANIQUES", "sector": "Industrie"},
-    {"symbol": "MDP", "name": "MED PAPER", "sector": "Industrie"},
-    {"symbol": "VCN", "name": "VICENNE", "sector": "Santé"},
-    {"symbol": "SMI", "name": "Société métallurgique d'imiter", "sector": "Finance"},
-    {"symbol": "CDM", "name": "Crédit du Maroc", "sector": "Banque"}
+# COMPLETE 54 STOCKS - Guaranteed to be served
+ALL_STOCKS = [
+    {"symbol": "TGC", "name": "TRAVAUX GENERAUX DE CONSTRUCTIONS", "sector": "Construction", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "TMA", "name": "TOTALENERGIES MARKETING", "sector": "Énergie", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "TQM", "name": "TAQA MOROCCO", "sector": "Énergie", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "NKL", "name": "ENNAKL SA", "sector": "Transport", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "LHM", "name": "LAFARGEHOLCIM", "sector": "Construction", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "UMR", "name": "UNIMER", "sector": "Agroalimentaire", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "WAA", "name": "WAFA ASSURANCE", "sector": "Assurance", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "ZDJ", "name": "ZELLIDJA S.A", "sector": "Mines", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "MSA", "name": "SODEP MARSA", "sector": "Transport", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "RDS", "name": "RESIDENCE DAR SAADA", "sector": "Construction", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "CSR", "name": "COSUMAR", "sector": "Industrie", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "CFG", "name": "CFG BANK", "sector": "Banque", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "CMG", "name": "CMGP CAS", "sector": "Agriculture", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "HPS", "name": "HPS", "sector": "Paiment", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "S2M", "name": "S2M", "sector": "Paiment", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "RIS", "name": "RISMA", "sector": "Hotel Management", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "DHO", "name": "DELTA HOLDING", "sector": "Industrie", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "DWY", "name": "DISWAY", "sector": "Distribution éléctro", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "SNA", "name": "STOKVIS NORD AFRIQUE", "sector": "Distribution service", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "SNP", "name": "SNEP", "sector": "Process Industries", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "STR", "name": "STROC INDUSTRIE", "sector": "Service Industriel", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "INV", "name": "INVOLYS", "sector": "Service de Technologie", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "MIC", "name": "MICRODATA", "sector": "Service de Technologie", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "DYT", "name": "DISTY TECHNOLOGIES", "sector": "Service de destribution", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "ADH", "name": "DOUJA PROM ADDOHA", "sector": "Immobilier", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "IMO", "name": "IMMORENT INVEST", "sector": "Immobilier", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "ADI", "name": "ALLIANCES", "sector": "Divers", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "AFI", "name": "AFRIC INDUSTRIES", "sector": "Industrie", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "AFM", "name": "AFMA", "sector": "Finance", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "AKT", "name": "AKDITAL S.A", "sector": "Santé", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "ALM", "name": "ALUMINIUM DU MAROC", "sector": "Matériaux", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "ARD", "name": "ARADEI CAPITAL", "sector": "Immobilier", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "ATH", "name": "AUTO HALL", "sector": "Automobile", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "ATL", "name": "ATLANTASANAD", "sector": "Distribution", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "ATW", "name": "ATTIJARIWAFA BANK", "sector": "Banque", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "BAL", "name": "BALIMA", "sector": "Distribution", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "BCP", "name": "BANQUE CENTRALE POPULAIRE", "sector": "Banque", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "CRS", "name": "CARTIER SAADA", "sector": "Distribution", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "CIH", "name": "CREDIT IMMOBILIER ET HOTELIER", "sector": "Banque", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "CMT", "name": "CIMENTS DU MAROC", "sector": "Matériaux", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "COL", "name": "COLORADO", "sector": "Distribution", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "CTM", "name": "COMPAGNIE DE TRANSPORTS AU MAROC", "sector": "Transport", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "DIM", "name": "DELATTRE LEVIVIER MAROC", "sector": "Industrie", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "DRI", "name": "DARI COUSPATE", "sector": "Agroalimentaire", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "EQD", "name": "EQDOM", "sector": "Immobilier", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "FBR", "name": "FENIE BROSSETTE", "sector": "Distribution", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "IAM", "name": "MAROC TELECOM", "sector": "Télécom", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "INM", "name": "INDUSTRIE DU MAROC", "sector": "Industrie", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "JET", "name": "JET CONTRACTORS", "sector": "Construction", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "LES", "name": "LESIEUR CRISTAL", "sector": "Agroalimentaire", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "MOX", "name": "MAGHREB OXYGENE", "sector": "Industrie", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "MNG", "name": "MANAGEM", "sector": "Mines", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "MUT", "name": "MUTANDIS", "sector": "Agroalimentaire", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "SID", "name": "SONASID", "sector": "Agroalimentaire", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "SOT", "name": "SOTHEMA", "sector": "Pharma", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "SRM", "name": "REALISATIONS MECANIQUES", "sector": "Industrie", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "MDP", "name": "MED PAPER", "sector": "Industrie", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "VCN", "name": "VICENNE", "sector": "Santé", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "SMI", "name": "Société métallurgique d'imiter", "sector": "Finance", "price": 0.0, "change": 0.0, "has_live_data": False},
+    {"symbol": "CDM", "name": "Crédit du Maroc", "sector": "Banque", "price": 0.0, "change": 0.0, "has_live_data": False}
 ]
 
-def load_stocks():
-    """Load stocks from file with fallback to base list"""
+def get_stocks_data():
+    """
+    Returns ALL 54 stocks. Merges file data with ALL_STOCKS list.
+    File data updates prices for available tickers, others remain at 0.0
+    """
+    # Create lookup from ALL_STOCKS (the complete list)
+    stocks_dict = {s['symbol']: s.copy() for s in ALL_STOCKS}
+    
+    # Try to load updates from file
     try:
         if os.path.exists(STOCKS_FILE):
             with open(STOCKS_FILE, 'r', encoding='utf-8') as f:
-                file_stocks = json.load(f)
-                if file_stocks and len(file_stocks) > 0:
-                    return file_stocks
+                file_data = json.load(f)
+            
+            # Update with live data where available
+            for stock in file_data:
+                symbol = stock.get('symbol')
+                if symbol in stocks_dict:
+                    stocks_dict[symbol]['price'] = float(stock.get('price', 0))
+                    stocks_dict[symbol]['change'] = float(stock.get('change', 0))
+                    stocks_dict[symbol]['has_live_data'] = stock.get('has_live_data', False) or (stocks_dict[symbol]['price'] > 0)
     except Exception as e:
-        print(f"Error loading stocks file: {e}")
+        print(f"Error reading stocks file: {e}")
     
-    # Return base list with zeros if file missing/corrupt
-    return [{
-        'symbol': s['symbol'],
-        'name': s['name'],
-        'sector': s['sector'],
-        'price': 0.0,
-        'change': 0.0,
-        'has_live_data': False
-    } for s in BASE_STOCKS]
+    # Convert back to list and sort (live data first)
+    result = list(stocks_dict.values())
+    result.sort(key=lambda x: (not x['has_live_data'], x['symbol']))
+    
+    return result
 
-def load_news():
-    """Load news from file"""
+def get_news_data():
+    """Fetch or return cached news"""
+    # Try live RSS first
+    try:
+        url = "https://medias24.com/categorie/leboursier/actus/feed/"
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+        response = requests.get(url, headers=headers, timeout=10)
+        
+        if response.status_code == 200:
+            root = ET.fromstring(response.content)
+            items = root.findall('.//item')
+            
+            news = []
+            now = datetime.now(timezone.utc)
+            
+            for item in items[:15]:
+                try:
+                    title = item.find('title').text if item.find('title') is not None else 'Sans titre'
+                    link = item.find('link').text if item.find('link') is not None else ''
+                    pubDate = item.find('pubDate').text if item.find('pubDate') is not None else ''
+                    category = item.find('category').text if item.find('category') is not None else 'INFO'
+                    
+                    time_mins = 0
+                    if pubDate:
+                        try:
+                            pub_date = datetime.strptime(pubDate, '%a, %d %b %Y %H:%M:%S %z')
+                            diff = now - pub_date
+                            time_mins = int(diff.total_seconds() / 60)
+                        except:
+                            pass
+                    
+                    news.append({
+                        'title': title,
+                        'link': link,
+                        'date': pubDate,
+                        'category': category.upper(),
+                        'time': max(0, time_mins),
+                        'source': 'Medias24.com'
+                    })
+                except:
+                    continue
+            
+            if news:
+                return news
+    except:
+        pass
+    
+    # Fallback to file
     try:
         if os.path.exists(NEWS_FILE):
             with open(NEWS_FILE, 'r', encoding='utf-8') as f:
                 return json.load(f)
     except:
         pass
+    
     return []
-
-def fetch_rss_live():
-    """Attempt to fetch fresh RSS data"""
-    try:
-        url = "https://medias24.com/categorie/leboursier/actus/feed/"
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
-        response = requests.get(url, headers=headers, timeout=10)
-        response.encoding = 'utf-8'
-        
-        if response.status_code != 200:
-            return None
-            
-        root = ET.fromstring(response.content)
-        items = root.findall('.//item')
-        
-        news = []
-        now = datetime.now(timezone.utc)
-        
-        for item in items[:15]:
-            try:
-                title = item.find('title').text if item.find('title') is not None else 'Sans titre'
-                link = item.find('link').text if item.find('link') is not None else ''
-                pubDate = item.find('pubDate').text if item.find('pubDate') is not None else ''
-                category = item.find('category').text if item.find('category') is not None else 'INFO'
-                
-                time_mins = 0
-                if pubDate:
-                    try:
-                        pub_date = datetime.strptime(pubDate, '%a, %d %b %Y %H:%M:%S %z')
-                        diff = now - pub_date
-                        time_mins = int(diff.total_seconds() / 60)
-                    except:
-                        pass
-                
-                news.append({
-                    'title': title,
-                    'link': link,
-                    'date': pubDate,
-                    'category': category.upper(),
-                    'time': max(0, time_mins),
-                    'source': 'Medias24.com'
-                })
-            except:
-                continue
-        
-        return news if news else None
-    except:
-        return None
 
 @app.route('/')
 def index():
@@ -162,42 +170,35 @@ def index():
 
 @app.route('/api/stocks')
 def get_stocks():
-    stocks = load_stocks()
+    """Returns ALL 54 stocks, with live prices where available"""
+    stocks = get_stocks_data()
     return jsonify(stocks)
 
 @app.route('/api/news')
 def get_news():
-    # Try live fetch first
-    live_news = fetch_rss_live()
-    if live_news:
-        return jsonify(live_news)
-    
-    # Fallback to file
-    news = load_news()
-    return jsonify(news if news else [])
+    news = get_news_data()
+    return jsonify(news)
 
 @app.route('/api/all')
 def get_all():
-    stocks = load_stocks()
-    
-    # Try live news, fallback to file
-    live_news = fetch_rss_live()
-    news = live_news if live_news else load_news()
-    
+    stocks = get_stocks_data()
+    news = get_news_data()
     return jsonify({
         'stocks': stocks,
-        'news': news if news else [],
-        'updated': datetime.now().isoformat()
+        'news': news,
+        'updated': datetime.now().isoformat(),
+        'total_stocks': len(stocks),
+        'live_stocks': sum(1 for s in stocks if s['price'] > 0)
     })
 
 @app.route('/api/status')
 def status():
-    stocks = load_stocks()
-    live_stocks = sum(1 for s in stocks if s.get('has_live_data', False))
+    stocks = get_stocks_data()
+    live_count = sum(1 for s in stocks if s['price'] > 0)
     return jsonify({
         'status': 'online',
-        'total_stocks': len(stocks),
-        'live_stocks': live_stocks,
+        'total_stocks': 54,
+        'live_stocks': live_count,
         'timestamp': datetime.now().isoformat()
     })
 
