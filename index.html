@@ -82,6 +82,7 @@
         .change.up { color: #00ff41; }
         .change.down { color: #ff6600; }
         .change.neutral { color: #888; }
+        .no-data { color: #444; font-style: italic; }
         
         .news-panel { 
             background: #050505; 
@@ -228,7 +229,6 @@
             status.textContent = 'SYNC...';
             
             try {
-                // Fetch both stocks and news
                 const response = await fetch(`${API_BASE}/api/all`);
                 if (!response.ok) throw new Error('API Error');
                 
@@ -262,18 +262,30 @@
 
             let html = '';
             stocks.forEach(stock => {
-                if (stock.price === 0 && stock.change === 0) return; // Skip empty stocks
+                // Check if has live data
+                const hasData = stock.has_live_data && stock.price > 0;
                 
-                const changeClass = stock.change > 0 ? 'up' : stock.change < 0 ? 'down' : 'neutral';
-                const sign = stock.change > 0 ? '+' : '';
-                
-                html += `
-                    <tr class="stock-row">
-                        <td class="symbol">${stock.symbol}</td>
-                        <td class="price">${stock.price.toFixed(2)}</td>
-                        <td class="change ${changeClass}">${sign}${stock.change.toFixed(2)}%</td>
-                    </tr>
-                `;
+                if (hasData) {
+                    const changeClass = stock.change > 0 ? 'up' : stock.change < 0 ? 'down' : 'neutral';
+                    const sign = stock.change > 0 ? '+' : '';
+                    
+                    html += `
+                        <tr class="stock-row">
+                            <td class="symbol">${stock.symbol}</td>
+                            <td class="price">${stock.price.toFixed(2)}</td>
+                            <td class="change ${changeClass}">${sign}${stock.change.toFixed(2)}%</td>
+                        </tr>
+                    `;
+                } else {
+                    // Show stock even with no data (greyed out)
+                    html += `
+                        <tr class="stock-row">
+                            <td class="symbol">${stock.symbol}</td>
+                            <td class="price no-data">--</td>
+                            <td class="change neutral no-data">--</td>
+                        </tr>
+                    `;
+                }
             });
             tbody.innerHTML = html;
         }
