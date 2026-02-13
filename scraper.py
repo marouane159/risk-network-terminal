@@ -10,7 +10,8 @@ import json
 import random
 import os
 import sys
-from datetime import datetime
+import re
+from datetime import datetime, timezone
 from bs4 import BeautifulSoup
 
 # Configuration
@@ -217,6 +218,7 @@ def fetch_medias24_news():
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
+        # FIXED: Removed trailing space from URL
         url = "https://medias24.com/categorie/leboursier/actus/feed/"
         response = requests.get(url, headers=headers, timeout=30)
         response.encoding = 'utf-8'
@@ -229,8 +231,13 @@ def fetch_medias24_news():
         root = ET.fromstring(response.content)
         news = []
         
-        # Find all items
-        items = root.findall('.//item')
+        # FIXED: RSS items are under channel, not root directly
+        channel = root.find('channel')
+        if channel is None:
+            log("No channel found in RSS", "ERROR")
+            return []
+        
+        items = channel.findall('item')
         log(f"Found {len(items)} items in RSS feed")
         
         for i, item in enumerate(items[:15]):
@@ -248,70 +255,77 @@ def fetch_medias24_news():
                 if date_elem is not None:
                     date_str = date_elem.text
                     try:
-                        # Parse RSS date format: Mon, 13 Feb 2025 10:30:00 +0000
-                        from datetime import timezone
+                        # Parse RSS date format: Thu, 12 Feb 2026 16:13:22 +0000
                         date_obj = datetime.strptime(date_str, '%a, %d %b %Y %H:%M:%S %z')
                         date = date_obj.strftime('%Y-%m-%d %H:%M')
                         # Calculate minutes ago
                         now = datetime.now(timezone.utc)
                         diff = (now - date_obj).total_seconds() / 60
                         time_mins = int(diff) if diff > 0 else 0
-                    except:
+                    except Exception as e:
+                        log(f"Date parse error for '{date_str}': {e}", "WARNING")
                         date = datetime.now().strftime('%Y-%m-%d')
                         time_mins = i * 5
                 else:
                     date = datetime.now().strftime('%Y-%m-%d')
                     time_mins = i * 5
                 
-                # Extract description/summary
+                # Extract description/summary - remove HTML
                 desc_elem = item.find('description')
                 summary = ''
                 if desc_elem is not None and desc_elem.text:
                     # Clean HTML from description
                     soup = BeautifulSoup(desc_elem.text, 'html.parser')
-                    summary = soup.get_text(strip=True)[:200]  # Limit to 200 chars
+                    summary = soup.get_text(strip=True)
+                    # Remove "The post ... appeared first on ..." text
+                    if "appeared first on" in summary:
+                        summary = summary.split("appeared first on")[0].strip()
+                    summary = summary[:200]  # Limit to 200 chars
                 
-                # Extract category if available
+                # Extract category - get first one
                 cat_elem = item.find('category')
-                category = cat_elem.text if cat_elem is not None else detect_category(title)
+                category = 'INFO'
+                if cat_elem is not None and cat_elem.text:
+                    category = cat_elem.text.upper()
+                else:
+                    category = detect_category(title)
                 
                 news.append({
                     'time': time_mins,
                     'title': title,
                     'link': link,
-                    'category': category.upper(),
+                    'category': category,
                     'source': 'Medias24.com',
                     'date': date,
                     'summary': summary
                 })
                 
-                log(f"News: {title[:50]}... [{category}]")
+                log(f"News {i+1}: {title[:40]}... [{category}]")
                 
             except Exception as e:
                 log(f"Error parsing RSS item {i}: {e}", "WARNING")
                 continue
         
-        log(f"Got {len(news)} news items from Medias24")
+        log(f"Successfully parsed {len(news)} news items from Medias24")
+        
+        # FIXED: Added terminal output to verify news is working
+        print("\n" + "="*70)
+        print("NEWS FETCHED FROM MEDIAS24 RSS:")
+        print("="*70)
+        for n in news[:5]:
+            print(f"\n• {n['title'][:60]}...")
+            print(f"  Link: {n['link'][:70]}")
+            print(f"  Time: {n['time']}m ago | Category: {n['category']} | Date: {n['date']}")
+        print(f"\nTotal: {len(news)} news items")
+        print("="*70 + "\n")
+        
         return news
         
     except Exception as e:
         log(f"Medias24 RSS error: {e}", "ERROR")
+        import traceback
+        traceback.print_exc()
         return []
-
-def parse_time(time_str):
-    """Parse relative time"""
-    try:
-        if 'min' in time_str.lower():
-            import re
-            match = re.search(r'(\d+)', time_str)
-            return int(match.group(1)) if match else 0
-        if 'h' in time_str.lower():
-            import re
-            match = re.search(r'(\d+)', time_str)
-            return int(match.group(1)) * 60 if match else 0
-        return random.randint(10, 120)
-    except:
-        return random.randint(10, 120)
 
 def detect_category(title):
     """Detect news category"""
@@ -351,7 +365,7 @@ def main():
     # Fetch stocks using YOUR working method
     stocks = get_moroccan_stocks()
     
-    # Fetch news
+    # Fetch news from Medias24 RSS
     news = fetch_medias24_news()
     
     # If stocks failed, we can't proceed
@@ -369,7 +383,7 @@ def main():
     save_data(stocks, news)
     
     log("=" * 60)
-    log("Scraper finished")
+    log(f"Scraper finished - {len(stocks)} stocks, {len(news)} news")
     log("=" * 60)
 
 if __name__ == '__main__':
