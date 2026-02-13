@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RISK NETWORK GROUP - Market Dashboard</title>
     <style>
+        /* [Previous styles remain the same] */
         * {
             margin: 0;
             padding: 0;
@@ -82,6 +83,24 @@
             font-size: 1.1rem;
         }
 
+        .api-status {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .api-status.online {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+
+        .api-status.offline {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
         .stats-bar {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -147,7 +166,7 @@
             color: var(--dark-text);
         }
 
-        .theme-toggle {
+        .theme-toggle, .refresh-btn {
             padding: 0.75rem 1.5rem;
             background: var(--secondary-color);
             color: white;
@@ -156,10 +175,16 @@
             cursor: pointer;
             font-size: 0.9rem;
             transition: background 0.3s ease;
+            margin-left: 0.5rem;
         }
 
-        .theme-toggle:hover {
+        .theme-toggle:hover, .refresh-btn:hover {
             background: var(--primary-color);
+        }
+
+        .refresh-btn:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
         }
 
         .last-update {
@@ -305,6 +330,7 @@
             font-size: 0.9rem;
             opacity: 0.7;
             margin-bottom: 0.5rem;
+            flex-wrap: wrap;
         }
 
         .news-summary {
@@ -359,6 +385,20 @@
             color: #ef4444;
         }
 
+        .retry-btn {
+            padding: 0.75rem 1.5rem;
+            background: var(--danger-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 1rem;
+        }
+
+        .retry-btn:hover {
+            background: #dc2626;
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 10px;
@@ -389,6 +429,11 @@
             .stats-bar {
                 grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
             }
+
+            .news-meta {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
         }
 
         .trend-indicator {
@@ -418,6 +463,9 @@
         <div class="header">
             <h1>RISK NETWORK GROUP</h1>
             <p>Moroccan Stock Market Dashboard - Real-time Data from TradingView & Medias24</p>
+            <div class="api-status" id="apiStatus">
+                <span id="apiStatusText">Connecting to API...</span>
+            </div>
         </div>
 
         <!-- Stats Bar -->
@@ -443,7 +491,10 @@
         <!-- Controls -->
         <div class="controls">
             <input type="text" class="search-box" id="searchBox" placeholder="Search stocks by symbol, name, or sector...">
-            <button class="theme-toggle" onclick="toggleTheme()">🌙 Dark Mode</button>
+            <div>
+                <button class="refresh-btn" id="refreshBtn" onclick="refreshData()">🔄 Refresh</button>
+                <button class="theme-toggle" onclick="toggleTheme()">🌙 Dark Mode</button>
+            </div>
             <div class="last-update" id="lastUpdateText">Loading...</div>
         </div>
 
@@ -477,21 +528,33 @@
     </div>
 
     <script>
+        // Configuration - Auto-detect environment
+        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const API_BASE = isLocal ? 'http://localhost:5000' : 'https://risk-network-terminal.onrender.com';
+        
         // Global variables
         let allStocks = [];
         let allNews = [];
         let filteredStocks = [];
         let isDarkMode = false;
+        let refreshTimer = null;
 
         // DOM elements
         const stocksContainer = document.getElementById('stocksContainer');
         const newsContainer = document.getElementById('newsContainer');
         const searchBox = document.getElementById('searchBox');
+        const apiStatus = document.getElementById('apiStatus');
+        const apiStatusText = document.getElementById('apiStatusText');
+        const refreshBtn = document.getElementById('refreshBtn');
 
         // Initialize dashboard
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('Dashboard initializing...');
+            console.log(`Environment: ${isLocal ? 'Local' : 'Production'}`);
+            console.log(`API Base: ${API_BASE}`);
             loadData();
             setupEventListeners();
+            startAutoRefresh();
         });
 
         function setupEventListeners() {
@@ -500,22 +563,62 @@
 
         async function loadData() {
             try {
+                setApiStatus('Loading...', 'connecting');
+                refreshBtn.disabled = true;
+                
                 console.log('Loading data...');
                 
-                // Load stocks and news data
-                const [stocksResponse, newsResponse, updateResponse] = await Promise.all([
-                    fetch('./data/stocks.json'),
-                    fetch('./data/news.json'),
-                    fetch('./data/last_update.txt')
-                ]);
+                // Try to load from API first, fallback to local files
+                let stocksData = null;
+                let newsData = null;
+                
+                try {
+                    // Try API first
+                    const [stocksResponse, newsResponse] = await Promise.all([
+                        fetch(`${API_BASE}/api/stocks`),
+                        fetch(`${API_BASE}/api/news`)
+                    ]);
 
-                if (!stocksResponse.ok || !newsResponse.ok) {
-                    throw new Error('Failed to load data files');
+                    if (stocksResponse.ok && newsResponse.ok) {
+                        stocksData = await stocksResponse.json();
+                        newsData = await newsResponse.json();
+                        console.log('Loaded data from API');
+                        setApiStatus('Online (API)', 'online');
+                    }
+                } catch (apiError) {
+                    console.log('API not available, trying local files...', apiError);
+                }
+                
+                // Fallback to local files if API fails
+                if (!stocksData || !newsData) {
+                    try {
+                        const [stocksResponse, newsResponse, updateResponse] = await Promise.all([
+                            fetch('./data/stocks.json'),
+                            fetch('./data/news.json'),
+                            fetch('./data/last_update.txt')
+                        ]);
+
+                        if (stocksResponse.ok && newsResponse.ok) {
+                            stocksData = await stocksResponse.json();
+                            newsData = await newsResponse.json();
+                            const updateTime = await updateResponse.text();
+                            console.log('Loaded data from local files');
+                            setApiStatus('Online (Local)', 'online');
+                            if (updateTime) {
+                                updateLastUpdateTime(updateTime);
+                            }
+                        }
+                    } catch (fileError) {
+                        console.log('Local files not available', fileError);
+                    }
+                }
+                
+                if (!stocksData || !newsData) {
+                    throw new Error('No data source available');
                 }
 
-                allStocks = await stocksResponse.json();
-                allNews = await newsResponse.json();
-                const updateTime = await updateResponse.text();
+                allStocks = stocksData;
+                allNews = newsData;
 
                 console.log(`Loaded ${allStocks.length} stocks and ${allNews.length} news items`);
 
@@ -523,15 +626,39 @@
                 updateStats();
                 renderStocks(allStocks);
                 renderNews(allNews);
-                updateLastUpdateTime(updateTime);
 
                 // Set initial filtered stocks
                 filteredStocks = [...allStocks];
 
+                refreshBtn.disabled = false;
+                
             } catch (error) {
                 console.error('Error loading data:', error);
-                showError('Failed to load data. Make sure you have run the scraper first.');
+                setApiStatus('Offline', 'offline');
+                showError('Failed to load data. Please check your connection or run the scraper manually.');
+                refreshBtn.disabled = false;
             }
+        }
+
+        async function refreshData() {
+            console.log('Manual refresh triggered...');
+            // Try API refresh endpoint first
+            try {
+                const response = await fetch(`${API_BASE}/api/refresh`);
+                if (response.ok) {
+                    console.log('API refresh successful');
+                }
+            } catch (error) {
+                console.log('API refresh not available');
+            }
+            
+            // Reload data
+            await loadData();
+        }
+
+        function setApiStatus(message, status) {
+            apiStatusText.textContent = message;
+            apiStatus.className = `api-status ${status}`;
         }
 
         function updateStats() {
@@ -695,26 +822,60 @@
         }
 
         function showError(message) {
-            stocksContainer.innerHTML = `<div class="error">${message}</div>`;
-            newsContainer.innerHTML = `<div class="error">${message}</div>`;
+            stocksContainer.innerHTML = `
+                <div class="error">
+                    ${message}
+                    <br>
+                    <button class="retry-btn" onclick="refreshData()">Try Again</button>
+                </div>
+            `;
+            newsContainer.innerHTML = `
+                <div class="error">
+                    ${message}
+                    <br>
+                    <button class="retry-btn" onclick="refreshData()">Try Again</button>
+                </div>
+            `;
         }
 
-        // Auto-refresh data every 30 seconds
-        setInterval(() => {
-            console.log('Auto-refreshing data...');
-            loadData();
-        }, 30000);
+        function startAutoRefresh() {
+            // Clear existing timer
+            if (refreshTimer) {
+                clearInterval(refreshTimer);
+            }
+            
+            // Set new timer for 30 seconds
+            refreshTimer = setInterval(() => {
+                console.log('Auto-refreshing data...');
+                loadData();
+            }, 30000);
+        }
 
         // Add some interactive features
         document.addEventListener('keydown', function(e) {
             // Ctrl/Cmd + R to refresh data
             if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
                 e.preventDefault();
+                refreshData();
+            }
+        });
+
+        // Handle page visibility change to pause/resume auto-refresh
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                // Page is hidden, clear timer
+                if (refreshTimer) {
+                    clearInterval(refreshTimer);
+                }
+            } else {
+                // Page is visible, restart timer and refresh data
+                startAutoRefresh();
                 loadData();
             }
         });
 
         console.log('Dashboard initialized successfully!');
+        console.log(`API Base URL: ${API_BASE}`);
     </script>
 </body>
 </html>
