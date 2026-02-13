@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: risk-network-terminal
+    runtime: python
+    pythonVersion: 3.11.0  # Use stable version, not 3.14
+    buildCommand: "pip install --no-cache-dir -r requirements.txt"
+    startCommand: "python server.py"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
