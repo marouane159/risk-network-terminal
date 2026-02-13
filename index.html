@@ -82,7 +82,7 @@
         .change.up { color: #00ff41; }
         .change.down { color: #ff6600; }
         .change.neutral { color: #888; }
-        .no-data { color: #444; font-style: italic; }
+        .no-data { color: #555; }
         
         .news-panel { 
             background: #050505; 
@@ -248,7 +248,7 @@
                 document.getElementById('stockTableBody').innerHTML = 
                     '<tr><td colspan="3" class="error">ERREUR: SERVEUR INACCESSIBLE<br>Vérifiez votre connexion</td></tr>';
                 document.getElementById('newsContainer').innerHTML = 
-                    '<div class="error">ERREUR DE CHARGEMENT</div>';
+                    '<div class="error">ERREUR DE CHARGEMENT<br><button onclick="fetchData()" class="refresh-btn">RÉESSAYER</button></div>';
             }
         }
 
@@ -262,13 +262,11 @@
 
             let html = '';
             stocks.forEach(stock => {
-                // Check if has live data
                 const hasData = stock.has_live_data && stock.price > 0;
+                const changeClass = stock.change > 0 ? 'up' : stock.change < 0 ? 'down' : 'neutral';
+                const sign = stock.change > 0 ? '+' : '';
                 
                 if (hasData) {
-                    const changeClass = stock.change > 0 ? 'up' : stock.change < 0 ? 'down' : 'neutral';
-                    const sign = stock.change > 0 ? '+' : '';
-                    
                     html += `
                         <tr class="stock-row">
                             <td class="symbol">${stock.symbol}</td>
@@ -277,12 +275,12 @@
                         </tr>
                     `;
                 } else {
-                    // Show stock even with no data (greyed out)
+                    // Show stock with 0.00 instead of --
                     html += `
                         <tr class="stock-row">
                             <td class="symbol">${stock.symbol}</td>
-                            <td class="price no-data">--</td>
-                            <td class="change neutral no-data">--</td>
+                            <td class="price no-data">0.00</td>
+                            <td class="change neutral no-data">0.00%</td>
                         </tr>
                     `;
                 }
@@ -294,7 +292,7 @@
             const container = document.getElementById('newsContainer');
             
             if (!news || news.length === 0) {
-                container.innerHTML = '<div class="loading">AUCUNE ACTUALITÉ</div>';
+                container.innerHTML = '<div class="loading">AUCUNE ACTUALITÉ DISPONIBLE</div>';
                 return;
             }
 
