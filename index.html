@@ -23,6 +23,43 @@
             align-items: center;
         }
         .logo { color: #ff6600; font-weight: 800; font-size: 18px; letter-spacing: 2px; }
+        
+        /* Social Media Links - Terminal Style */
+        .social-bar {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .social-link {
+            color: #666;
+            text-decoration: none;
+            font-size: 11px;
+            border: 1px solid #333;
+            padding: 4px 8px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .social-link:hover {
+            color: #ff6600;
+            border-color: #ff6600;
+            background: rgba(255, 102, 0, 0.1);
+        }
+        .social-icon {
+            font-size: 12px;
+        }
+        .website-link {
+            color: #000;
+            background: #ff6600;
+            border-color: #ff6600;
+            font-weight: 700;
+        }
+        .website-link:hover {
+            background: #ff8833;
+            color: #000;
+        }
+        
         .status { display: flex; gap: 20px; font-size: 12px; }
         .status-item { display: flex; align-items: center; gap: 5px; }
         .dot { width: 8px; height: 8px; background: #333; display: inline-block; }
@@ -30,6 +67,24 @@
         .dot.offline { background: #ff0000; }
         
         .container { display: grid; grid-template-columns: 1fr 350px; height: calc(100vh - 50px); }
+        
+        /* Mobile responsive for social bar */
+        @media (max-width: 900px) {
+            .header {
+                flex-direction: column;
+                gap: 10px;
+                padding: 10px;
+            }
+            .social-bar {
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 8px;
+            }
+            .social-link {
+                font-size: 10px;
+                padding: 3px 6px;
+            }
+        }
         
         /* Stocks Panel */
         .stocks-panel { border-right: 1px solid #222; overflow: hidden; display: flex; flex-direction: column; }
@@ -100,6 +155,26 @@
 <body>
     <div class="header">
         <div class="logo">▶ RISK NETWORK GROUP</div>
+        
+        <!-- Social Media Bar -->
+        <div class="social-bar">
+            <a href="https://risk.ma" target="_blank" class="social-link website-link">
+                <span class="social-icon">🌐</span> RISK.MA
+            </a>
+            <a href="https://x.com/dogofallstreets" target="_blank" class="social-link">
+                <span class="social-icon">𝕏</span> X
+            </a>
+            <a href="https://tiktok.com/u/@dogofallstreets" target="_blank" class="social-link">
+                <span class="social-icon">🎵</span> TIKTOK
+            </a>
+            <a href="https://instagram.com/risk.maroc" target="_blank" class="social-link">
+                <span class="social-icon">📷</span> IG
+            </a>
+            <a href="https://t.me/boursedecasa" target="_blank" class="social-link">
+                <span class="social-icon">✈️</span> TG
+            </a>
+        </div>
+
         <div class="status">
             <div class="status-item">
                 <span class="dot" id="apiDot"></span>
@@ -213,17 +288,13 @@
             
             try {
                 // Using a CORS proxy since medias24 might block direct browser requests
-                // If this fails, we'll try direct or show error
                 const proxyUrls = [
                     'https://api.allorigins.win/raw?url=' + encodeURIComponent(RSS_URL),
-                    'https://api.codetabs.com/v1/proxy?quest=' + RSS_URL,
-                    RSS_URL // Try direct first
+                    'https://api.codetabs.com/v1/proxy?quest=' + RSS_URL
                 ];
                 
                 let response = null;
-                let lastError = null;
                 
-                // Try direct first, then proxies
                 for (let url of proxyUrls) {
                     try {
                         response = await fetch(url, { 
@@ -232,7 +303,6 @@
                         });
                         if (response.ok) break;
                     } catch (e) {
-                        lastError = e;
                         continue;
                     }
                 }
@@ -262,14 +332,13 @@
             let count = 0;
             
             items.forEach(item => {
-                if (count >= 15) return; // Limit to 15 items
+                if (count >= 15) return;
                 
                 const title = item.querySelector('title')?.textContent || 'Sans titre';
                 const link = item.querySelector('link')?.textContent || '#';
                 const pubDate = item.querySelector('pubDate')?.textContent || '';
                 const category = item.querySelector('category')?.textContent || 'INFO';
                 
-                // Parse date
                 let timeStr = '';
                 if (pubDate) {
                     const date = new Date(pubDate);
