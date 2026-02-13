@@ -5,7 +5,9 @@ from bs4 import BeautifulSoup
 import xml.etree.ElementTree as ET
 import json
 import os
+import re
 from datetime import datetime, timezone
+from urllib.parse import urljoin
 
 app = Flask(__name__)
 CORS(app)
@@ -79,31 +81,109 @@ STOCK_SECTORS = {s["symbol"]: s["sector"] for s in BASE_STOCKS}
 
 cache = {'stocks': [], 'news': [], 'last_update': None}
 
+def clean_html_text(html_text):
+    """Clean HTML tags from text and normalize whitespace"""
+    if not html_text:
+        return ''
+    
+    # Remove HTML tags
+    soup = BeautifulSoup(html_text, 'html.parser')
+    text = soup.get_text()
+    
+    # Clean up whitespace and special characters
+    text = re.sub(r'\s+', ' ', text)  # Multiple spaces to single
+    text = re.sub(r'\n+', ' ', text)  # Newlines to spaces
+    text = text.strip()
+    
+    return text
+
+def parse_rss_date(date_str):
+    """Parse various RSS date formats with robust error handling"""
+    if not date_str:
+        return None, 0
+    
+    # Common RSS/Atom date formats
+    date_formats = [
+        '%a, %d %b %Y %H:%M:%S %z',     # Wed, 15 Jun 2024 10:00:00 +0000
+        '%a, %d %b %Y %H:%M:%S %Z',     # Wed, 15 Jun 2024 10:00:00 GMT
+        '%d %b %Y %H:%M:%S %z',         # 15 Jun 2024 10:00:00 +0000
+        '%Y-%m-%dT%H:%M:%S%z',          # 2024-06-15T10:00:00+00:00
+        '%Y-%m-%d %H:%M:%S',            # 2024-06-15 10:00:00
+        '%Y-%m-%d'                      # 2024-06-15
+    ]
+    
+    date_str = date_str.strip()
+    
+    for fmt in date_formats:
+        try:
+            date_obj = datetime.strptime(date_str, fmt)
+            return date_obj.strftime('%Y-%m-%d %H:%M'), 0
+        except ValueError:
+            continue
+    
+    # If no format matches, try to extract time difference
+    now = datetime.now(timezone.utc)
+    
+    # Try to parse relative times like "2 hours ago"
+    time_patterns = [
+        (r'(\d+)\s*hour', lambda m: now.timestamp() - int(m.group(1)) * 3600),
+        (r'(\d+)\s*min', lambda m: now.timestamp() - int(m.group(1)) * 60),
+        (r'(\d+)\s*sec', lambda m: now.timestamp() - int(m.group(1))),
+    ]
+    
+    for pattern, calc_func in time_patterns:
+        match = re.search(pattern, date_str.lower())
+        if match:
+            timestamp = calc_func(match)
+            pub_date = datetime.fromtimestamp(timestamp, timezone.utc)
+            return pub_date.strftime('%Y-%m-%d %H:%M'), 0
+    
+    # If all parsing fails, return current time
+    return now.strftime('%Y-%m-%d %H:%M'), 0
+
 def scrape_tradingview():
     """Scrape TradingView and merge with ALL 54 BASE_STOCKS"""
     try:
         url = "https://www.tradingview.com/markets/stocks-morocco/market-movers-all-stocks/"
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'DNT': '1',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1'
+        }
         
         print(f"Fetching TradingView...")
         response = requests.get(url, headers=headers, timeout=30)
+        response.raise_for_status()  # Raise exception for bad status codes
         soup = BeautifulSoup(response.text, 'html.parser')
         
         tv_data = {}
         table = soup.find('table')
         
         if table:
-            for row in table.find_all('tr')[1:]:
+            for row in table.find_all('tr')[1:]:  # Skip header
                 cells = row.find_all('td')
                 if len(cells) >= 3:
                     symbol_elem = cells[0].find('a')
                     if symbol_elem:
                         symbol = symbol_elem.text.strip()
                         try:
-                            price = float(cells[1].text.strip().replace('MAD', '').replace(',', ''))
-                            change = float(cells[2].text.strip().replace('%', '').replace('(', '-').replace(')', ''))
+                            price_text = cells[1].text.strip()
+                            change_text = cells[2].text.strip()
+                            
+                            # Clean and parse price
+                            price = float(price_text.replace('MAD', '').replace(',', '').strip())
+                            
+                            # Clean and parse change (handle various formats)
+                            change_text = change_text.replace('%', '').replace('(', '-').replace(')', '').strip()
+                            change = float(change_text)
+                            
                             tv_data[symbol] = {'price': price, 'change': change}
-                        except:
+                        except (ValueError, AttributeError) as e:
+                            print(f"  Warning: Failed to parse row for {symbol}: {e}")
                             continue
         
         print(f"TradingView returned {len(tv_data)} stocks")
@@ -121,6 +201,7 @@ def scrape_tradingview():
                 change = 0.0
                 has_data = False
             
+            # Generate trend data
             trend = []
             if has_data and change != 0:
                 base = price / (1 + (change / 100))
@@ -145,80 +226,138 @@ def scrape_tradingview():
                 'has_live_data': has_data
             })
         
+        # Sort stocks: those with live data first, then alphabetically
         all_stocks.sort(key=lambda x: (not x['has_live_data'], x['symbol']))
         
         print(f"Returning ALL {len(all_stocks)} stocks ({len(tv_data)} with live data)")
         return all_stocks
         
+    except requests.exceptions.RequestException as e:
+        print(f"Network error fetching TradingView: {e}")
+        return fallback_stocks()
     except Exception as e:
-        print(f"Error: {e}")
-        return [{
-            'symbol': s['symbol'],
-            'name': s['name'],
-            'sector': s['sector'],
-            'price': 0.0,
-            'change': 0.0,
-            'volume': 'N/A',
-            'trend': [100.0] * 7,
-            'has_live_data': False
-        } for s in BASE_STOCKS]
+        print(f"Error scraping TradingView: {e}")
+        return fallback_stocks()
+
+def fallback_stocks():
+    """Return fallback stock data when scraping fails"""
+    print("Using fallback stock data...")
+    return [{
+        'symbol': stock['symbol'],
+        'name': stock['name'],
+        'sector': stock['sector'],
+        'price': 0.0,
+        'change': 0.0,
+        'volume': 'N/A',
+        'trend': [100.0] * 7,
+        'has_live_data': False
+    } for stock in BASE_STOCKS]
 
 def scrape_medias24_rss():
-    """Scrape news from Medias24 RSS"""
+    """Scrape news from Medias24 RSS feed with robust parsing"""
     try:
         url = "https://medias24.com/categorie/leboursier/actus/feed/"
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'application/rss+xml, application/xml, text/xml',
+            'Accept-Language': 'fr-FR,fr;q=0.9,en;q=0.8'
+        }
         
-        print(f"Fetching RSS...")
+        print(f"Fetching RSS from {url}...")
         response = requests.get(url, headers=headers, timeout=30)
+        response.raise_for_status()
         response.encoding = 'utf-8'
         
-        if response.status_code != 200:
-            print(f"RSS failed: {response.status_code}")
+        # Parse XML with error handling
+        try:
+            root = ET.fromstring(response.content)
+        except ET.ParseError as e:
+            print(f"XML parsing error: {e}")
+            # Try to fix encoding issues
+            content = response.content.decode('utf-8', errors='ignore')
+            root = ET.fromstring(content)
+        
+        # Find items - handle both RSS and Atom feeds
+        items = root.findall('.//item') or root.findall('.//entry')
+        
+        if not items:
+            print("No items found in RSS feed")
             return []
         
-        root = ET.fromstring(response.content)
-        channel = root.find('channel')
-        if channel is None:
-            print("No channel in RSS")
-            return []
-        
-        items = channel.findall('item')
         print(f"Found {len(items)} RSS items")
         
         news = []
-        for i, item in enumerate(items[:20]):
+        now = datetime.now(timezone.utc)
+        
+        for i, item in enumerate(items[:20]):  # Limit to 20 items
             try:
-                title = item.find('title').text if item.find('title') is not None else 'N/A'
-                link = item.find('link').text if item.find('link') is not None else ''
+                # Extract title
+                title_elem = item.find('title')
+                title = clean_html_text(title_elem.text) if title_elem is not None and title_elem.text else 'N/A'
                 
+                # Extract link
+                link = ''
+                link_elem = item.find('link')
+                if link_elem is not None:
+                    if link_elem.text:
+                        link = link_elem.text.strip()
+                    else:
+                        # Handle link as attribute (Atom feeds)
+                        link = link_elem.get('href', '')
+                
+                # Ensure link is absolute
+                if link and not link.startswith('http'):
+                    link = urljoin('https://medias24.com', link)
+                
+                # Extract and parse pub date
+                date_elem = (item.find('pubDate') or 
+                           item.find('published') or 
+                           item.find('updated') or
+                           item.find('dc:date'))
+                
+                date_str = datetime.now().strftime('%Y-%m-%d %H:%M')
                 time_mins = i * 5
-                date_str = datetime.now().strftime('%Y-%m-%d')
-                date_elem = item.find('pubDate')
                 
-                if date_elem and date_elem.text:
-                    try:
-                        pub_date = datetime.strptime(date_elem.text, '%a, %d %b %Y %H:%M:%S %z')
-                        date_str = pub_date.strftime('%Y-%m-%d %H:%M')
-                        now = datetime.now(timezone.utc)
-                        diff = (now - pub_date).total_seconds() / 60
-                        time_mins = int(diff) if diff > 0 else 0
-                    except:
-                        pass
+                if date_elem is not None and date_elem.text:
+                    parsed_date, _ = parse_rss_date(date_elem.text)
+                    if parsed_date:
+                        date_str = parsed_date
+                        try:
+                            pub_date = datetime.strptime(parsed_date, '%Y-%m-%d %H:%M')
+                            diff = (now - pub_date.replace(tzinfo=timezone.utc)).total_seconds() / 60
+                            time_mins = int(max(0, diff))
+                        except:
+                            pass
                 
+                # Extract summary/description
                 summary = ''
-                desc = item.find('description')
-                if desc and desc.text:
-                    soup = BeautifulSoup(desc.text, 'html.parser')
-                    summary = soup.get_text(strip=True)
-                    if "appeared first on" in summary:
-                        summary = summary.split("appeared first on")[0].strip()
+                desc_selectors = ['description', 'summary', 'content', 'content:encoded']
+                for selector in desc_selectors:
+                    desc_elem = item.find(selector)
+                    if desc_elem is not None:
+                        if desc_elem.text:
+                            summary = clean_html_text(desc_elem.text)
+                            break
+                        elif 'encoded' in desc_elem.attrib:
+                            summary = clean_html_text(desc_elem.attrib['encoded'])
+                            break
+                
+                # Clean up summary
+                if summary:
+                    # Remove "appeared first on" text
+                    if "appeared first on" in summary.lower():
+                        summary = re.split(r"appeared first on", summary, flags=re.IGNORECASE)[0].strip()
+                    
+                    # Limit summary length
                     summary = summary[:200]
                 
-                cat = item.find('category')
-                category = cat.text.upper() if cat and cat.text else 'INFO'
+                # Extract category
+                category = 'INFO'
+                cat_elem = item.find('category')
+                if cat_elem is not None and cat_elem.text:
+                    category = clean_html_text(cat_elem.text).upper()
                 
-                news.append({
+                news_item = {
                     'time': time_mins,
                     'title': title,
                     'link': link,
@@ -226,18 +365,23 @@ def scrape_medias24_rss():
                     'source': 'Medias24.com',
                     'date': date_str,
                     'summary': summary
-                })
+                }
+                
+                news.append(news_item)
                 print(f"  News {i+1}: {title[:40]}... ({time_mins}m)")
                 
             except Exception as e:
-                print(f"  Error item {i}: {e}")
+                print(f"  Error parsing item {i}: {e}")
                 continue
         
-        print(f"Parsed {len(news)} news items")
+        print(f"Successfully parsed {len(news)} news items")
         return news
         
+    except requests.exceptions.RequestException as e:
+        print(f"Network error fetching RSS: {e}")
+        return []
     except Exception as e:
-        print(f"RSS error: {e}")
+        print(f"RSS scraping error: {e}")
         return []
 
 @app.route('/')
@@ -300,4 +444,4 @@ if __name__ == '__main__':
     print(f"\nReady: {len(cache['stocks'])} stocks ({live_count} live), {len(cache['news'])} news")
     
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=port, debug=True)
