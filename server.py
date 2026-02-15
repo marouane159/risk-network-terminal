@@ -81,7 +81,9 @@ BASE_STOCKS = [
     {"symbol": "MDP", "name": "MED PAPER", "sector": "Industrie"},
     {"symbol": "VCN", "name": "VICENNE", "sector": "Santé"},
     {"symbol": "SMI", "name": "Société métallurgique d'imiter", "sector": "Finance"},
-    {"symbol": "CDM", "name": "Crédit du Maroc", "sector": "Banque"}
+    {"symbol": "CDM", "name": "Crédit du Maroc", "sector": "Banque"},
+    {"symbol": "CAP", "name": "Cash Plus", "sector": "Finance"},
+    {"symbol": "GTM", "name": "SGTM", "sector": "BTP"}
 ]
 
 def scrape_tradingview():
