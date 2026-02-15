@@ -1,241 +1,300 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RISK NETWORK GROUP | Terminal Bourse [LIVE]</title>
-    <style>
-        :root {
-            --bg-color: #ffffff;
-            --text-color: #000000;
-            --accent-color: #007bff;
-            --table-border: #dee2e6;
-            --positive: #28a745;
-            --negative: #dc3545;
-        }
-        body.dark {
-            --bg-color: #121212;
-            --text-color: #ffffff;
-            --accent-color: #0d6efd;
-            --table-border: #444444;
-            --positive: #198754;
-            --negative: #dc3545;
-        }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            margin: 0;
-            padding: 20px;
-            transition: background-color 0.3s, color 0.3s;
-        }
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        h1 {
-            margin: 0;
-        }
-        .controls {
-            display: flex;
-            gap: 10px;
-        }
-        select, button {
-            padding: 5px 10px;
-            border: 1px solid var(--table-border);
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            cursor: pointer;
-        }
-        #masi {
-            font-size: 1.5em;
-            margin-bottom: 10px;
-        }
-        #market-status {
-            margin-bottom: 20px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 40px;
-        }
-        th, td {
-            padding: 10px;
-            text-align: left;
-            border-bottom: 1px solid var(--table-border);
-        }
-        th {
-            background-color: var(--accent-color);
-            color: white;
-        }
-        .positive {
-            color: var(--positive);
-        }
-        .negative {
-            color: var(--negative);
-        }
-        #news ul {
-            list-style: none;
-            padding: 0;
-        }
-        #news li {
-            margin-bottom: 10px;
-        }
-        #news a {
-            color: var(--accent-color);
-            text-decoration: none;
-        }
-        #news a:hover {
-            text-decoration: underline;
-        }
-        .rtl {
-            direction: rtl;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>RISK NETWORK TERMINAL – Casablanca Stock Exchange</title>
+  <style>
+    :root {
+      --bg: #f8f9fa;
+      --text: #212529;
+      --card-bg: #ffffff;
+      --border: #dee2e6;
+      --accent: #0d6efd;
+      --positive: #198754;
+      --negative: #dc3545;
+      --muted: #6c757d;
+    }
+    body.dark {
+      --bg: #121212;
+      --text: #e0e0e0;
+      --card-bg: #1e1e1e;
+      --border: #333;
+      --accent: #4da6ff;
+      --positive: #4caf50;
+      --negative: #f44336;
+      --muted: #aaa;
+    }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      transition: background 0.4s, color 0.4s;
+    }
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 1.5rem;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    h1 {
+      margin: 0;
+      font-size: 1.8rem;
+    }
+    .controls {
+      display: flex;
+      gap: 0.8rem;
+    }
+    select, button {
+      padding: 0.5rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--card-bg);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 0.95rem;
+    }
+    button:hover { opacity: 0.9; }
+
+    #masi-box {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.2rem;
+      margin-bottom: 1.5rem;
+      font-size: 1.4rem;
+      font-weight: 600;
+    }
+    #status {
+      font-size: 1rem;
+      color: var(--muted);
+      margin-top: 0.4rem;
+    }
+    .green  { color: var(--positive); }
+    .red    { color: var(--negative); }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 2.5rem;
+    }
+    th, td {
+      padding: 0.9rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      background: var(--accent);
+      color: white;
+      font-weight: 600;
+    }
+    tr:hover { background: rgba(0,0,0,0.03); }
+    .dark tr:hover { background: rgba(255,255,255,0.04); }
+
+    #news-section h2 { margin-top: 2.5rem; }
+    #news-list {
+      list-style: none;
+      padding: 0;
+    }
+    #news-list li {
+      margin: 1rem 0;
+      padding: 1rem;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    #news-list a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 500;
+    }
+    #news-list a:hover { text-decoration: underline; }
+    .news-date { color: var(--muted); font-size: 0.9rem; }
+
+    .rtl { direction: rtl; text-align: right; }
+
+    @media (max-width: 768px) {
+      table, thead, tbody, th, td, tr { display: block; }
+      thead tr { position: absolute; top: -9999px; left: -9999px; }
+      tr { border: 1px solid var(--border); margin-bottom: 1rem; border-radius: 8px; }
+      td { border: none; border-bottom: 1px solid var(--border); position: relative; padding-left: 50%; }
+      td:before {
+        position: absolute; top: 0.9rem; left: 1rem; width: 45%; padding-right: 1rem;
+        white-space: nowrap; font-weight: bold; color: var(--muted);
+      }
+      td:nth-of-type(1):before { content: "Symbol"; }
+      td:nth-of-type(2):before { content: "Market Cap"; }
+      td:nth-of-type(3):before { content: "Sector"; }
+      td:nth-of-type(4):before { content: "Price"; }
+      td:nth-of-type(5):before { content: "Change %"; }
+      td:nth-of-type(6):before { content: "P/E"; }
+      td:nth-of-type(7):before { content: "Rating"; }
+    }
+  </style>
 </head>
 <body>
-    <header>
-        <h1 data-en="RISK NETWORK GROUP | Terminal Bourse [LIVE]" data-fr="GROUPE RISK NETWORK | Terminal Bourse [LIVE]" data-ar="مجموعة RISK NETWORK | محطة البورصة [مباشر]">RISK NETWORK GROUP | Terminal Bourse [LIVE]</h1>
-        <div class="controls">
-            <select id="language">
-                <option value="en">English</option>
-                <option value="fr">Français</option>
-                <option value="ar">العربية</option>
-            </select>
-            <button id="theme-toggle">🌙</button>
-        </div>
-    </header>
-    <div id="masi"></div>
-    <div id="market-status"></div>
-    <h2 data-en="All Stocks" data-fr="Toutes les Actions" data-ar="جميع الأسهم">All Stocks</h2>
-    <table id="stocks-table">
-        <thead>
-            <tr>
-                <th data-en="Symbol" data-fr="Symbole" data-ar="الرمز">Symbol</th>
-                <th data-en="Market Cap" data-fr="Capitalisation Boursière" data-ar="القيمة السوقية">Market Cap</th>
-                <th data-en="Sector" data-fr="Secteur" data-ar="القطاع">Sector</th>
-                <th data-en="Price" data-fr="Prix" data-ar="السعر">Price</th>
-                <th data-en="Change %" data-fr="Changement %" data-ar="التغيير %">Change %</th>
-                <th data-en="P/E" data-fr="P/E" data-ar="P/E">P/E</th>
-                <th data-en="Analyst Rating" data-fr="Note des Analystes" data-ar="تقييم المحللين">Analyst Rating</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
-    <h2 data-en="News" data-fr="Actualités" data-ar="الأخبار">News</h2>
-    <div id="news">
-        <ul></ul>
+
+<div class="container">
+  <header>
+    <h1 data-en="RISK NETWORK TERMINAL" data-fr="TERMINAL RISK NETWORK" data-ar="محطة RISK NETWORK">RISK NETWORK TERMINAL</h1>
+    <div class="controls">
+      <select id="lang-select">
+        <option value="en">English</option>
+        <option value="fr">Français</option>
+        <option value="ar">العربية</option>
+      </select>
+      <button id="theme-btn">🌙 Dark</button>
     </div>
-    <script>
-        const langTexts = document.querySelectorAll('[data-en]');
-        let currentLang = 'en';
+  </header>
 
-        function updateLanguage(lang) {
-            currentLang = lang;
-            langTexts.forEach(el => {
-                el.textContent = el.getAttribute(`data-${lang}`) || el.getAttribute('data-en');
-            });
-            document.body.classList.toggle('rtl', lang === 'ar');
-            document.documentElement.setAttribute('lang', lang);
-        }
+  <div id="masi-box">
+    <div id="masi-value">MASI: —</div>
+    <div id="status">Market status: Loading...</div>
+  </div>
 
-        document.getElementById('language').addEventListener('change', (e) => {
-            updateLanguage(e.target.value);
-        });
+  <h2 data-en="All Stocks" data-fr="Toutes les actions" data-ar="جميع الأسهم">All Stocks</h2>
+  <table id="stocks-table">
+    <thead>
+      <tr>
+        <th data-en="Symbol"      data-fr="Symbole"       data-ar="الرمز">Symbol</th>
+        <th data-en="Market Cap"  data-fr="Cap. boursière" data-ar="القيمة السوقية">Market Cap</th>
+        <th data-en="Sector"      data-fr="Secteur"        data-ar="القطاع">Sector</th>
+        <th data-en="Price"       data-fr="Prix"           data-ar="السعر">Price</th>
+        <th data-en="Change %"    data-fr="Var. %"         data-ar="التغيير %">Change %</th>
+        <th data-en="P/E"         data-fr="P/E"            data-ar="م.الربح/السهم">P/E</th>
+        <th data-en="Analyst Rating" data-fr="Note analystes" data-ar="تقييم المحللين">Analyst Rating</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 
-        const themeToggle = document.getElementById('theme-toggle');
-        themeToggle.addEventListener('click', () => {
-            document.body.classList.toggle('dark');
-            themeToggle.textContent = document.body.classList.contains('dark') ? '☀️' : '🌙';
-        });
+  <div id="news-section">
+    <h2 data-en="Latest News" data-fr="Dernières actualités" data-ar="آخر الأخبار">Latest News</h2>
+    <ul id="news-list"></ul>
+  </div>
+</div>
 
-        function formatMarketCap(value) {
-            if (value === '—' || value === null) return '—';
-            if (value >= 1e9) return (value / 1e9).toFixed(2) + 'B';
-            if (value >= 1e6) return (value / 1e6).toFixed(2) + 'M';
-            return value.toFixed(2);
-        }
+<script>
+const langElements = document.querySelectorAll('[data-en]');
+const langSelect   = document.getElementById('lang-select');
+const themeBtn     = document.getElementById('theme-btn');
 
-        function formatChange(value) {
-            if (value === '—') return '—';
-            const sign = value > 0 ? '+' : '';
-            return `${sign}${value.toFixed(2)}%`;
-        }
+let currentLang = 'en';
 
-        function formatPrice(value) {
-            return value !== '—' ? value.toFixed(2) : '—';
-        }
+function setLanguage(lang) {
+  currentLang = lang;
+  langElements.forEach(el => {
+    el.textContent = el.getAttribute(`data-${lang}`) || el.getAttribute('data-en');
+  });
+  document.body.classList.toggle('rtl', lang === 'ar');
+  document.documentElement.lang = lang;
+}
 
-        function formatPE(value) {
-            return value !== '—' ? value.toFixed(2) : '—';
-        }
+langSelect.addEventListener('change', e => setLanguage(e.target.value));
 
-        function updateMasi(data) {
-            const changeClass = data.change_percent > 0 ? 'positive' : data.change_percent < 0 ? 'negative' : '';
-            document.getElementById('masi').innerHTML = `MASI: ${data.price.toFixed(2)} <span class="${changeClass}">${formatChange(data.change_percent)}</span>`;
-        }
+themeBtn.addEventListener('click', () => {
+  document.body.classList.toggle('dark');
+  themeBtn.textContent = document.body.classList.contains('dark') ? '☀️ Light' : '🌙 Dark';
+});
 
-        function updateMarketStatus(data) {
-            const status = data.is_open ? 'Open' : 'Closed';
-            document.getElementById('market-status').innerHTML = `Market Status: ${status} | Hours: ${data.open_time} - ${data.close_time} (Mon-Fri) | Next Open: ${data.next_open}`;
-        }
+function formatNumber(n) {
+  if (typeof n !== 'number' || isNaN(n)) return '—';
+  if (n >= 1e9) return (n / 1e9).toFixed(2) + 'B';
+  if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M';
+  return n.toLocaleString('en-US', {maximumFractionDigits: 2});
+}
 
-        function updateStocks(stocks) {
-            const tbody = document.querySelector('#stocks-table tbody');
-            tbody.innerHTML = '';
-            stocks.forEach(stock => {
-                const row = document.createElement('tr');
-                const changeClass = stock.change > 0 ? 'positive' : stock.change < 0 ? 'negative' : '';
-                row.innerHTML = `
-                    <td>${stock.symbol}</td>
-                    <td>${formatMarketCap(stock.market_cap)}</td>
-                    <td>${stock.sector}</td>
-                    <td>${formatPrice(stock.price)}</td>
-                    <td class="${changeClass}">${formatChange(stock.change)}</td>
-                    <td>${formatPE(stock.pe)}</td>
-                    <td>${stock.rating}</td>
-                `;
-                tbody.appendChild(row);
-            });
-        }
+function formatPrice(n)   { return typeof n === 'number' ? n.toFixed(2) : '—'; }
+function formatChange(n)  {
+  if (typeof n !== 'number') return '—';
+  const sign = n > 0 ? '+' : '';
+  return `<span class="${n>0?'green':n<0?'red':''}">${sign}${n.toFixed(2)}%</span>`;
+}
 
-        function updateNews(news) {
-            const ul = document.querySelector('#news ul');
-            ul.innerHTML = '';
-            news.forEach(item => {
-                const li = document.createElement('li');
-                li.innerHTML = `<a href="${item.link}" target="_blank">${item.title}</a> (${item.pub_date})`;
-                ul.appendChild(li);
-            });
-        }
+function updateMASI(data) {
+  const chgClass = data.change_percent > 0 ? 'green' : data.change_percent < 0 ? 'red' : '';
+  document.getElementById('masi-value').innerHTML =
+    `MASI: ${formatPrice(data.price)} <span class="${chgClass}">${formatChange(data.change_percent)}</span>`;
+}
 
-        async function fetchData() {
-            try {
-                const [masi, stocks, news, status] = await Promise.all([
-                    fetch('/api/masi').then(res => res.json()),
-                    fetch('/api/stocks').then(res => res.json()),
-                    fetch('/api/news').then(res => res.json()),
-                    fetch('/api/market_status').then(res => res.json())
-                ]);
-                updateMasi(masi);
-                updateStocks(stocks);
-                updateNews(news);
-                updateMarketStatus(status);
-            } catch (error) {
-                console.error('Error fetching data:', error);
-            }
-        }
+function updateStatus(data) {
+  const statusText = data.is_open
+    ? '<span class="green">OPEN</span>'
+    : '<span class="red">CLOSED</span>';
+  document.getElementById('status').innerHTML =
+    `Market: ${statusText} • ${data.open_time} – ${data.close_time} (Mon–Fri) • ${data.next_open ? 'Next open: ' + data.next_open : ''}`;
+}
 
-        // Initial fetch
-        fetchData();
+function updateStocks(stocks) {
+  const tbody = document.querySelector('#stocks-table tbody');
+  tbody.innerHTML = '';
+  stocks.forEach(s => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${s.symbol}</td>
+      <td>${formatNumber(s.market_cap)}</td>
+      <td>${s.sector || '—'}</td>
+      <td>${formatPrice(s.price)}</td>
+      <td>${formatChange(s.change)}</td>
+      <td>${formatPrice(s.pe)}</td>
+      <td>${s.rating || '—'}</td>
+    `;
+    tbody.appendChild(row);
+  });
+}
 
-        // Auto refresh every 10 minutes
-        setInterval(fetchData, 600000);
+function updateNews(items) {
+  const ul = document.getElementById('news-list');
+  ul.innerHTML = '';
+  items.forEach(item => {
+    const li = document.createElement('li');
+    li.innerHTML = `
+      <a href="${item.link}" target="_blank">${item.title}</a>
+      <div class="news-date">${item.pub_date || ''}</div>
+    `;
+    ul.appendChild(li);
+  });
+}
 
-        // Initial language
-        updateLanguage('en');
-    </script>
+async function loadData() {
+  try {
+    const [masi, status, stocks, news] = await Promise.all([
+      fetch('/api/masi').then(r => r.json()),
+      fetch('/api/market_status').then(r => r.json()),
+      fetch('/api/stocks').then(r => r.json()),
+      fetch('/api/news').then(r => r.json())
+    ]);
+
+    updateMASI(masi);
+    updateStatus(status);
+    updateStocks(stocks);
+    updateNews(news);
+  } catch (err) {
+    console.error('Data fetch error:', err);
+    // Optional: show error message on page
+  }
+}
+
+// Initial load
+loadData();
+
+// Refresh every 10 minutes
+setInterval(loadData, 600_000);
+
+// Set initial language
+setLanguage('en');
+</script>
 </body>
 </html>
