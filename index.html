@@ -573,8 +573,9 @@
     </div>
 
     <script>
-        // FIXED: API Configuration - Using the deployed Render URL
+        // API Configuration
         const API_BASE = 'https://risk-network-terminal.onrender.com';
+        let useCORSProxy = false; // Will be set to true if direct fetch fails
         
         // Translations
         const translations = {
@@ -689,10 +690,7 @@
             
             document.getElementById('themeBtn').addEventListener('click', toggleTheme);
             
-            // FIXED: Initial fetch with retry logic
             fetchAllData();
-            
-            // FIXED: Auto refresh every 2 minutes (more frequent)
             setInterval(fetchAllData, 120000);
         });
         
@@ -729,7 +727,37 @@
             }
         }
         
-        // FIXED: Improved fetch with better error handling and timeout
+        // FIXED: Smart fetch with CORS proxy fallback
+        async function smartFetch(url) {
+            const fullURL = `${url}?_=${Date.now()}`;
+            
+            // Try direct fetch first (works if hosted on same domain or server has CORS)
+            if (!useCORSProxy) {
+                try {
+                    const response = await fetch(fullURL, {
+                        headers: { 'Accept': 'application/json' },
+                        mode: 'cors',
+                        timeout: 10000
+                    });
+                    if (response.ok) return response;
+                } catch (e) {
+                    console.log('Direct fetch failed, switching to CORS proxy...');
+                    useCORSProxy = true;
+                }
+            }
+            
+            // Fallback to CORS proxy
+            const proxyURL = `https://api.allorigins.win/get?url=${encodeURIComponent(fullURL)}`;
+            const proxyResponse = await fetch(proxyURL);
+            const proxyData = await proxyResponse.json();
+            
+            // Create a response-like object
+            return {
+                ok: true,
+                json: () => Promise.resolve(JSON.parse(proxyData.contents))
+            };
+        }
+        
         async function fetchAllData() {
             if (isLoading) return;
             isLoading = true;
@@ -739,31 +767,10 @@
             refreshBtn.disabled = true;
             
             try {
-                // FIXED: Add timeout and cache-busting
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
-                
-                const response = await fetch(`${API_BASE}/api/all?_=${Date.now()}`, {
-                    signal: controller.signal,
-                    headers: {
-                        'Accept': 'application/json',
-                        'Cache-Control': 'no-cache'
-                    }
-                });
-                
-                clearTimeout(timeoutId);
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-                
+                const response = await smartFetch(`${API_BASE}/api/all`);
                 const data = await response.json();
-                console.log('Data received:', data); // Debug log
                 
-                // FIXED: Validate data structure
-                if (!data || typeof data !== 'object') {
-                    throw new Error('Invalid data format received');
-                }
+                console.log('Data received:', data);
                 
                 stocksData = Array.isArray(data.stocks) ? data.stocks : [];
                 newsData = Array.isArray(data.news) ? data.news : [];
@@ -790,18 +797,8 @@
                 setStatus('offline');
                 
                 const t = translations[currentLang];
-                let errorMsg = t.offline;
-                
-                if (error.name === 'AbortError') {
-                    errorMsg = 'Request timeout - server is slow';
-                } else if (error.message.includes('Failed to fetch')) {
-                    errorMsg = 'Cannot connect to server - CORS or network issue';
-                } else {
-                    errorMsg = `${t.offline}: ${error.message}`;
-                }
-                
                 document.getElementById('stockTableBody').innerHTML = 
-                    `<tr><td colspan="7" class="error">${errorMsg}<br><small>Check console for details</small></td></tr>`;
+                    `<tr><td colspan="7" class="error">${t.offline}: ${error.message}<br><small>Server may be starting up (takes 30-60s on Render free tier)</small></td></tr>`;
             } finally {
                 isLoading = false;
                 refreshBtn.disabled = false;
@@ -869,7 +866,7 @@
             const t = translations[currentLang];
             
             if (stocksData.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="no-data">No stock data available</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" class="no-data">No stock data available - Market may be closed or scraper still running</td></tr>`;
                 return;
             }
             
