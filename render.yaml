@@ -2,9 +2,9 @@ services:
   - type: web
     name: risk-network-terminal
     runtime: python
-    pythonVersion: 3.11.0  # Use stable version, not 3.14
-    buildCommand: "pip install --no-cache-dir -r requirements.txt"
-    startCommand: "python server.py"
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn server:app --bind 0.0.0.0:$PORT --workers 1 --threads 4
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
+    autoDeploy: true
