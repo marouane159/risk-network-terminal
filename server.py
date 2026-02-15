@@ -1,644 +1,957 @@
-from flask import Flask, jsonify, send_from_directory
-from flask_cors import CORS
-import requests
-import xml.etree.ElementTree as ET
-import json
-import os
-import threading
-import time
-from datetime import datetime, timezone, timedelta
-from bs4 import BeautifulSoup
-import re
-
-app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}})
-
-DATA_DIR = "data"
-os.makedirs(DATA_DIR, exist_ok=True)
-
-STOCKS_FILE = f"{DATA_DIR}/stocks.json"
-NEWS_FILE = f"{DATA_DIR}/news.json"
-MASI_FILE = f"{DATA_DIR}/masi.json"
-LAST_UPDATE_FILE = f"{DATA_DIR}/last_update.json"
-
-# Complete list of Moroccan stocks with sectors
-ALL_STOCKS = {
-    "TGC": {"name": "TRAVAUX GENERAUX DE CONSTRUCTIONS", "sector": "Construction"},
-    "TMA": {"name": "TOTALENERGIES MARKETING", "sector": "Énergie"},
-    "TQM": {"name": "TAQA MOROCCO", "sector": "Énergie"},
-    "NKL": {"name": "ENNAKL SA", "sector": "Transport"},
-    "LHM": {"name": "LAFARGEHOLCIM", "sector": "Construction"},
-    "UMR": {"name": "UNIMER", "sector": "Agroalimentaire"},
-    "WAA": {"name": "WAFA ASSURANCE", "sector": "Assurance"},
-    "ZDJ": {"name": "ZELLIDJA S.A", "sector": "Mines"},
-    "MSA": {"name": "SODEP MARSA", "sector": "Transport"},
-    "RDS": {"name": "RESIDENCE DAR SAADA", "sector": "Immobilier"},
-    "CSR": {"name": "COSUMAR", "sector": "Agroalimentaire"},
-    "CFG": {"name": "CFG BANK", "sector": "Banque"},
-    "CMG": {"name": "CMGP CAS", "sector": "Agriculture"},
-    "HPS": {"name": "HPS", "sector": "Technologie"},
-    "S2M": {"name": "S2M", "sector": "Technologie"},
-    "RIS": {"name": "RISMA", "sector": "Hôtellerie"},
-    "DHO": {"name": "DELTA HOLDING", "sector": "Industrie"},
-    "DWY": {"name": "DISWAY", "sector": "Distribution"},
-    "SNA": {"name": "STOKVIS NORD AFRIQUE", "sector": "Distribution"},
-    "SNP": {"name": "SNEP", "sector": "Industrie"},
-    "STR": {"name": "STROC INDUSTRIE", "sector": "Industrie"},
-    "INV": {"name": "INVOLYS", "sector": "Technologie"},
-    "MIC": {"name": "MICRODATA", "sector": "Technologie"},
-    "DYT": {"name": "DISTY TECHNOLOGIES", "sector": "Distribution"},
-    "ADH": {"name": "DOUJA PROM ADDOHA", "sector": "Immobilier"},
-    "IMO": {"name": "IMMORENT INVEST", "sector": "Immobilier"},
-    "ADI": {"name": "ALLIANCES", "sector": "Divers"},
-    "AFI": {"name": "AFRIC INDUSTRIES", "sector": "Industrie"},
-    "AFM": {"name": "AFMA", "sector": "Finance"},
-    "AKT": {"name": "AKDITAL S.A", "sector": "Santé"},
-    "ALM": {"name": "ALUMINIUM DU MAROC", "sector": "Matériaux"},
-    "ARD": {"name": "ARADEI CAPITAL", "sector": "Immobilier"},
-    "ATH": {"name": "AUTO HALL", "sector": "Automobile"},
-    "ATL": {"name": "ATLANTASANAD", "sector": "Assurance"},
-    "ATW": {"name": "ATTIJARIWAFA BANK", "sector": "Banque"},
-    "BAL": {"name": "BALIMA", "sector": "Distribution"},
-    "BCP": {"name": "BANQUE CENTRALE POPULAIRE", "sector": "Banque"},
-    "CRS": {"name": "CARTIER SAADA", "sector": "Distribution"},
-    "CIH": {"name": "CREDIT IMMOBILIER ET HOTELIER", "sector": "Banque"},
-    "CMT": {"name": "CIMENTS DU MAROC", "sector": "Matériaux"},
-    "COL": {"name": "COLORADO", "sector": "Distribution"},
-    "CTM": {"name": "COMPAGNIE DE TRANSPORTS AU MAROC", "sector": "Transport"},
-    "DIM": {"name": "DELATTRE LEVIVIER MAROC", "sector": "Industrie"},
-    "DRI": {"name": "DARI COUSPATE", "sector": "Agroalimentaire"},
-    "EQD": {"name": "EQDOM", "sector": "Immobilier"},
-    "FBR": {"name": "FENIE BROSSETTE", "sector": "Distribution"},
-    "IAM": {"name": "MAROC TELECOM", "sector": "Télécom"},
-    "INM": {"name": "INDUSTRIE DU MAROC", "sector": "Industrie"},
-    "JET": {"name": "JET CONTRACTORS", "sector": "Construction"},
-    "LES": {"name": "LESIEUR CRISTAL", "sector": "Agroalimentaire"},
-    "MOX": {"name": "MAGHREB OXYGENE", "sector": "Industrie"},
-    "MNG": {"name": "MANAGEM", "sector": "Mines"},
-    "MUT": {"name": "MUTANDIS", "sector": "Agroalimentaire"},
-    "SID": {"name": "SONASID", "sector": "Sidérurgie"},
-    "SOT": {"name": "SOTHEMA", "sector": "Pharmacie"},
-    "SRM": {"name": "REALISATIONS MECANIQUES", "sector": "Industrie"},
-    "MDP": {"name": "MED PAPER", "sector": "Industrie"},
-    "VCN": {"name": "VICENNE", "sector": "Santé"},
-    "SMI": {"name": "SMI", "sector": "Finance"},
-    "CDM": {"name": "Crédit du Maroc", "sector": "Banque"},
-    "GTM": {"name": "SGTM", "sector": "BTP"},
-    "CAP": {"name": "Cash Plus", "sector": "Finance"}
-}
-
-def get_market_status():
-    """Check if Moroccan stock market is open"""
-    now = datetime.now(timezone(timedelta(hours=1)))  # Morocco time (UTC+1)
-    weekday = now.weekday()
-    hour = now.hour
-    minute = now.minute
-    current_time = hour * 60 + minute
-    
-    # Market hours: 09:30 - 15:40 (Monday to Friday)
-    open_time = 9 * 60 + 30   # 09:30
-    close_time = 15 * 60 + 40  # 15:40
-    
-    is_weekday = weekday < 5  # 0-4 = Monday-Friday
-    is_open_hours = open_time <= current_time <= close_time
-    
-    return {
-        "is_open": is_weekday and is_open_hours,
-        "open_time": "09:30",
-        "close_time": "15:40",
-        "current_time": now.strftime("%H:%M"),
-        "day_of_week": weekday,
-        "next_open": get_next_market_open(now)
-    }
-
-def get_next_market_open(current_time):
-    """Calculate next market open time"""
-    weekday = current_time.weekday()
-    hour = current_time.hour
-    minute = current_time.minute
-    current_minutes = hour * 60 + minute
-    
-    if weekday >= 5:  # Weekend
-        days_until_monday = 7 - weekday
-        next_open = current_time + timedelta(days=days_until_monday)
-        return next_open.replace(hour=9, minute=30, second=0).strftime("%Y-%m-%d %H:%M")
-    elif current_minutes > 15 * 60 + 40:  # After market close
-        next_open = current_time + timedelta(days=1)
-        if next_open.weekday() >= 5:
-            days_until_monday = 7 - next_open.weekday()
-            next_open = next_open + timedelta(days=days_until_monday)
-        return next_open.replace(hour=9, minute=30, second=0).strftime("%Y-%m-%d %H:%M")
-    else:
-        return "Today 09:30"
-
-def scrape_masi_index():
-    """Scrape MASI index data from TradingView"""
-    print(f"[{datetime.now()}] Scraping MASI index...")
-    
-    try:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            'Accept-Language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7'
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RISK NETWORK GROUP | Terminal Bourse [LIVE]</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --bg-primary: #000000;
+            --bg-secondary: #0a0a0a;
+            --bg-tertiary: #111111;
+            --text-primary: #e0e0e0;
+            --text-secondary: #888888;
+            --text-muted: #555555;
+            --accent: #ff6600;
+            --accent-light: #ff8833;
+            --up: #00ff41;
+            --down: #ff4444;
+            --border: #222222;
         }
         
-        url = "https://fr.tradingview.com/symbols/CSEMA-MASI/"
-        response = requests.get(url, headers=headers, timeout=30)
-        
-        if response.status_code != 200:
-            print(f"Failed to fetch MASI: {response.status_code}")
-            return None
-        
-        soup = BeautifulSoup(response.text, 'html.parser')
-        
-        # Extract price
-        price_elem = soup.find('span', {'class': re.compile('last-price')}) or \
-                     soup.find('span', class_=lambda x: x and 'price' in x.lower())
-        
-        # Try multiple selectors for price
-        price = None
-        change = None
-        change_percent = None
-        
-        # Look for price in script data
-        scripts = soup.find_all('script')
-        for script in scripts:
-            if script.string and 'MASI' in script.string:
-                # Try to extract from JSON data
-                try:
-                    match = re.search(r'"last":\s*([\d.]+)', script.string)
-                    if match:
-                        price = float(match.group(1))
-                    match = re.search(r'"change":\s*([\d.-]+)', script.string)
-                    if match:
-                        change = float(match.group(1))
-                    match = re.search(r'"change_percent":\s*([\d.-]+)', script.string)
-                    if match:
-                        change_percent = float(match.group(1))
-                except:
-                    pass
-        
-        # Fallback to HTML parsing
-        if price is None:
-            # Look for the main price display
-            price_spans = soup.find_all('span', class_=lambda x: x and any(c in str(x).lower() for c in ['price', 'value', 'last']))
-            for span in price_spans:
-                text = span.get_text().strip().replace(',', '.')
-                try:
-                    val = float(text)
-                    if 9000 < val < 15000:  # MASI range
-                        price = val
-                        break
-                except:
-                    continue
-        
-        # Get change from page
-        if change is None:
-            change_spans = soup.find_all('span', class_=lambda x: x and 'change' in str(x).lower())
-            for span in change_spans:
-                text = span.get_text().strip().replace(',', '.').replace('%', '').replace('+', '')
-                try:
-                    val = float(text)
-                    if -10 < val < 10:
-                        change_percent = val
-                        break
-                except:
-                    continue
-        
-        masi_data = {
-            "symbol": "MASI",
-            "name": "Morocco All Shares Index",
-            "price": price or 11000.0,
-            "change": change or 0.0,
-            "change_percent": change_percent or 0.0,
-            "currency": "MAD",
-            "last_update": datetime.now().isoformat()
+        [data-theme="light"] {
+            --bg-primary: #f5f5f5;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #eeeeee;
+            --text-primary: #1a1a1a;
+            --text-secondary: #555555;
+            --text-muted: #888888;
+            --accent: #e55a00;
+            --accent-light: #ff6b1a;
+            --up: #00aa00;
+            --down: #cc0000;
+            --border: #dddddd;
         }
         
-        with open(MASI_FILE, 'w') as f:
-            json.dump(masi_data, f, ensure_ascii=False, indent=2)
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: 12px;
+            line-height: 1.4;
+            height: 100vh;
+            overflow: hidden;
+            transition: background 0.3s, color 0.3s;
+        }
         
-        print(f"MASI data saved: {masi_data['price']} ({masi_data['change_percent']}%)")
-        return masi_data
+        /* Header */
+        .header {
+            background: linear-gradient(90deg, var(--bg-primary) 0%, rgba(255,102,0,0.1) 100%);
+            border-bottom: 2px solid var(--accent);
+            padding: 8px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 50px;
+        }
         
-    except Exception as e:
-        print(f"Error scraping MASI: {e}")
-        import traceback
-        traceback.print_exc()
-        return None
-
-def scrape_tradingview():
-    """
-    Scrape ALL stocks from TradingView Morocco with all required columns:
-    Symbol, Market Cap, Sector, Price, Change %, P/E, Analyst Rating
-    """
-    print(f"[{datetime.now()}] Scraping TradingView Morocco...")
+        .logo {
+            color: var(--accent);
+            font-weight: 800;
+            font-size: 14px;
+            letter-spacing: 1px;
+        }
+        
+        .header-center {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .masi-display {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 4px 12px;
+            background: var(--bg-secondary);
+            border-radius: 4px;
+            border: 1px solid var(--border);
+        }
+        
+        .masi-label {
+            color: var(--text-muted);
+            font-size: 10px;
+        }
+        
+        .masi-value {
+            font-weight: 700;
+            font-size: 13px;
+        }
+        
+        .masi-change {
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        .market-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+        
+        .market-open {
+            background: rgba(0, 255, 65, 0.1);
+            color: var(--up);
+            border: 1px solid rgba(0, 255, 65, 0.3);
+        }
+        
+        .market-closed {
+            background: rgba(255, 68, 68, 0.1);
+            color: var(--down);
+            border: 1px solid rgba(255, 68, 68, 0.3);
+        }
+        
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .control-btn {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 11px;
+            transition: all 0.2s;
+        }
+        
+        .control-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 10px;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+        
+        .status-live { background: var(--up); box-shadow: 0 0 8px var(--up); }
+        .status-sync { background: #ffaa00; animation: pulse 1s infinite; }
+        .status-offline { background: var(--down); }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .clock {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+        
+        /* Main Container */
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            height: calc(100vh - 50px);
+        }
+        
+        /* Stocks Panel */
+        .stocks-panel {
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .panel-header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 8px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .panel-title {
+            color: var(--accent);
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .panel-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .last-update {
+            color: var(--text-muted);
+            font-size: 10px;
+        }
+        
+        .refresh-btn {
+            background: var(--accent);
+            color: #000;
+            border: none;
+            padding: 4px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 10px;
+            font-weight: 600;
+        }
+        
+        .refresh-btn:hover {
+            background: var(--accent-light);
+        }
+        
+        .refresh-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        /* Table */
+        .table-container {
+            flex: 1;
+            overflow: auto;
+        }
+        
+        .stock-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+        
+        .stock-table th {
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            font-weight: 500;
+            text-align: left;
+            padding: 10px 8px;
+            border-bottom: 1px solid var(--border);
+            font-size: 10px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .stock-table th:nth-child(3),
+        .stock-table th:nth-child(4),
+        .stock-table th:nth-child(5),
+        .stock-table th:nth-child(6) {
+            text-align: right;
+        }
+        
+        .stock-table th:nth-child(7) {
+            text-align: center;
+        }
+        
+        .stock-table td {
+            padding: 8px;
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .stock-table td:nth-child(3),
+        .stock-table td:nth-child(4),
+        .stock-table td:nth-child(5),
+        .stock-table td:nth-child(6) {
+            text-align: right;
+        }
+        
+        .stock-table td:nth-child(7) {
+            text-align: center;
+        }
+        
+        .stock-row:hover {
+            background: rgba(255, 102, 0, 0.05);
+        }
+        
+        .stock-row.inactive {
+            opacity: 0.4;
+        }
+        
+        .symbol {
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        
+        .sector {
+            color: var(--text-secondary);
+            font-size: 11px;
+        }
+        
+        .capital {
+            color: var(--text-secondary);
+            font-size: 11px;
+        }
+        
+        .price {
+            font-weight: 700;
+        }
+        
+        .change {
+            font-weight: 600;
+        }
+        
+        .change.up { color: var(--up); }
+        .change.down { color: var(--down); }
+        .change.neutral { color: var(--text-muted); }
+        
+        .pe {
+            color: var(--text-secondary);
+        }
+        
+        .rating {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        
+        .rating-strong-buy { background: var(--up); color: #000; }
+        .rating-buy { background: #90ee90; color: #000; }
+        .rating-neutral { background: var(--text-muted); color: #fff; }
+        .rating-hold { background: #888; color: #fff; }
+        .rating-sell { background: #ff8844; color: #000; }
+        .rating-strong-sell { background: var(--down); color: #fff; }
+        .rating-none { background: transparent; border: 1px solid var(--border); color: var(--text-muted); }
+        
+        /* News Panel */
+        .news-panel {
+            background: var(--bg-secondary);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .news-list {
+            flex: 1;
+            overflow: auto;
+            padding: 8px;
+        }
+        
+        .news-item {
+            padding: 10px;
+            border-bottom: 1px solid var(--border);
+            transition: background 0.2s;
+        }
+        
+        .news-item:hover {
+            background: rgba(255, 102, 0, 0.05);
+        }
+        
+        .news-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+        
+        .news-time {
+            color: var(--accent);
+            font-size: 10px;
+        }
+        
+        .news-category {
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 9px;
+        }
+        
+        .news-title {
+            color: var(--text-primary);
+            text-decoration: none;
+            font-size: 11px;
+            line-height: 1.5;
+            display: block;
+        }
+        
+        .news-title:hover {
+            color: var(--accent);
+        }
+        
+        /* Market Info Footer */
+        .market-info {
+            background: var(--bg-tertiary);
+            border-top: 1px solid var(--border);
+            padding: 10px 12px;
+            font-size: 10px;
+        }
+        
+        .market-info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+        }
+        
+        .market-info-label {
+            color: var(--text-secondary);
+        }
+        
+        .market-info-value {
+            color: var(--accent);
+        }
+        
+        /* Loading & Error States */
+        .loading {
+            padding: 40px;
+            text-align: center;
+            color: var(--accent);
+        }
+        
+        .error {
+            padding: 20px;
+            margin: 20px;
+            background: rgba(255, 68, 68, 0.1);
+            border-left: 3px solid var(--down);
+            color: var(--down);
+        }
+        
+        .no-data {
+            padding: 40px;
+            text-align: center;
+            color: var(--text-muted);
+        }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent);
+        }
+        
+        /* Responsive */
+        @media (max-width: 900px) {
+            .container {
+                grid-template-columns: 1fr;
+                grid-template-rows: 1fr 250px;
+            }
+            
+            .header-center {
+                display: none;
+            }
+            
+            .stocks-panel {
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+            }
+        }
+        
+        /* RTL Support */
+        [dir="rtl"] .stock-table th,
+        [dir="rtl"] .stock-table td {
+            text-align: right !important;
+        }
+        
+        [dir="rtl"] .stock-table th:nth-child(3),
+        [dir="rtl"] .stock-table th:nth-child(4),
+        [dir="rtl"] .stock-table th:nth-child(5),
+        [dir="rtl"] .stock-table th:nth-child(6),
+        [dir="rtl"] .stock-table td:nth-child(3),
+        [dir="rtl"] .stock-table td:nth-child(4),
+        [dir="rtl"] .stock-table td:nth-child(5),
+        [dir="rtl"] .stock-table td:nth-child(6) {
+            text-align: left !important;
+        }
+    </style>
+<base target="_blank">
+</head>
+<body>
+    <header class="header">
+        <div class="logo">▶ RISK NETWORK GROUP</div>
+        
+        <div class="header-center">
+            <div class="masi-display" id="masiDisplay" style="display: none;">
+                <span class="masi-label">MASI</span>
+                <span class="masi-value" id="masiPrice">--</span>
+                <span class="masi-change" id="masiChange">--</span>
+            </div>
+            
+            <div class="market-status" id="marketStatus">
+                <span id="marketDot">●</span>
+                <span id="marketText">--</span>
+            </div>
+        </div>
+        
+        <div class="header-controls">
+            <select class="control-btn" id="langSelect">
+                <option value="fr">FR</option>
+                <option value="en">EN</option>
+                <option value="ar">AR</option>
+            </select>
+            
+            <button class="control-btn" id="themeBtn">☀️</button>
+            
+            <div class="status-indicator">
+                <span class="status-dot status-sync" id="statusDot"></span>
+                <span id="statusText">SYNC</span>
+            </div>
+            
+            <span class="clock" id="clock">00:00:00</span>
+        </div>
+    </header>
     
-    try:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-            'Accept-Language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7',
-            'Accept-Encoding': 'gzip, deflate, br',
-            'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1'
+    <div class="container" id="mainContainer">
+        <!-- Stocks Panel -->
+        <div class="stocks-panel">
+            <div class="panel-header">
+                <span class="panel-title" id="stocksTitle">◈ MASI ALL SHARES</span>
+                <div class="panel-actions">
+                    <span class="last-update" id="lastUpdate"></span>
+                    <button class="refresh-btn" id="refreshBtn" onclick="fetchAllData()">↻</button>
+                </div>
+            </div>
+            
+            <div class="table-container">
+                <table class="stock-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 10%" id="colSymbol">SYMBOL</th>
+                            <th style="width: 18%" id="colSector">SECTOR</th>
+                            <th style="width: 14%" id="colCap">MARKET CAP</th>
+                            <th style="width: 12%" id="colPrice">PRICE</th>
+                            <th style="width: 10%" id="colChange">CHANGE %</th>
+                            <th style="width: 8%" id="colPE">P/E</th>
+                            <th style="width: 14%" id="colRating">RATING</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stockTableBody">
+                        <tr><td colspan="7" class="loading" id="loadingMsg">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- News Panel -->
+        <div class="news-panel">
+            <div class="panel-header">
+                <span class="panel-title">◢ MEDIAS24</span>
+            </div>
+            
+            <div class="news-list" id="newsList">
+                <div class="loading" id="newsLoading">Loading...</div>
+            </div>
+            
+            <div class="market-info">
+                <div class="market-info-row">
+                    <span class="market-info-label" id="hoursLabel">Market Hours:</span>
+                    <span>09:30 - 15:40</span>
+                </div>
+                <div class="market-info-row">
+                    <span class="market-info-label" id="daysLabel">Mon-Fri</span>
+                    <span id="nextOpen"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_BASE = window.location.origin;
+        
+        // Translations
+        const translations = {
+            fr: {
+                stocksTitle: '◈ MASI ALL SHARES',
+                symbol: 'SYMBOL',
+                sector: 'SECTEUR',
+                cap: 'CAP. BOURSIÈRE',
+                price: 'COURS',
+                change: 'VAR %',
+                pe: 'P/E',
+                rating: 'NOTATION',
+                marketOpen: 'MARCHÉ OUVERT',
+                marketClosed: 'MARCHÉ FERMÉ',
+                hours: 'Horaires:',
+                days: 'Lun-Ven',
+                nextOpen: 'Prochain:',
+                loading: 'Chargement...',
+                live: 'DIRECT',
+                offline: 'HORS LIGNE',
+                sync: 'SYNC',
+                refresh: '↻',
+                minutes: 'min',
+                hours_ago: 'h',
+                days_ago: 'j',
+                strongBuy: 'ACHAT FORT',
+                buy: 'ACHAT',
+                neutral: 'NEUTRE',
+                hold: 'CONSERVER',
+                sell: 'VENTE',
+                strongSell: 'VENTE FORTE'
+            },
+            en: {
+                stocksTitle: '◈ MASI ALL SHARES',
+                symbol: 'SYMBOL',
+                sector: 'SECTOR',
+                cap: 'MARKET CAP',
+                price: 'PRICE',
+                change: 'CHANGE %',
+                pe: 'P/E',
+                rating: 'RATING',
+                marketOpen: 'MARKET OPEN',
+                marketClosed: 'MARKET CLOSED',
+                hours: 'Hours:',
+                days: 'Mon-Fri',
+                nextOpen: 'Next:',
+                loading: 'Loading...',
+                live: 'LIVE',
+                offline: 'OFFLINE',
+                sync: 'SYNC',
+                refresh: '↻',
+                minutes: 'min',
+                hours_ago: 'h',
+                days_ago: 'd',
+                strongBuy: 'STRONG BUY',
+                buy: 'BUY',
+                neutral: 'NEUTRAL',
+                hold: 'HOLD',
+                sell: 'SELL',
+                strongSell: 'STRONG SELL'
+            },
+            ar: {
+                stocksTitle: '◈ جميع أسهم ماسي',
+                symbol: 'الرمز',
+                sector: 'القطاع',
+                cap: 'القيمة السوقية',
+                price: 'السعر',
+                change: 'التغيير %',
+                pe: 'P/E',
+                rating: 'التقييم',
+                marketOpen: 'السوق مفتوح',
+                marketClosed: 'السوق مغلق',
+                hours: 'الساعات:',
+                days: 'الإثنين-الجمعة',
+                nextOpen: 'القادم:',
+                loading: 'جاري التحميل...',
+                live: 'مباشر',
+                offline: 'غير متصل',
+                sync: 'مزامنة',
+                refresh: '↻',
+                minutes: 'د',
+                hours_ago: 'س',
+                days_ago: 'ي',
+                strongBuy: 'شراء قوي',
+                buy: 'شراء',
+                neutral: 'محايد',
+                hold: 'احتفاظ',
+                sell: 'بيع',
+                strongSell: 'بيع قوي'
+            }
+        };
+        
+        // State
+        let currentLang = 'fr';
+        let currentTheme = 'dark';
+        let stocksData = [];
+        let newsData = [];
+        let masiData = null;
+        let marketStatusData = null;
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateClock();
+            setInterval(updateClock, 1000);
+            
+            // Language selector
+            document.getElementById('langSelect').addEventListener('change', function(e) {
+                currentLang = e.target.value;
+                document.getElementById('mainContainer').dir = currentLang === 'ar' ? 'rtl' : 'ltr';
+                updateTranslations();
+                renderStocks();
+                renderNews();
+            });
+            
+            // Theme toggle
+            document.getElementById('themeBtn').addEventListener('click', toggleTheme);
+            
+            // Initial fetch
+            fetchAllData();
+            
+            // Auto refresh every 10 minutes
+            setInterval(fetchAllData, 600000);
+        });
+        
+        function updateClock() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString(currentLang === 'ar' ? 'ar-MA' : currentLang === 'fr' ? 'fr-FR' : 'en-US', { hour12: false });
+            document.getElementById('clock').textContent = timeString;
         }
         
-        url = "https://www.tradingview.com/markets/stocks-morocco/market-movers-all-stocks/"
-        response = requests.get(url, headers=headers, timeout=45)
+        function toggleTheme() {
+            currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.body.setAttribute('data-theme', currentTheme);
+            document.getElementById('themeBtn').textContent = currentTheme === 'dark' ? '☀️' : '🌙';
+        }
         
-        if response.status_code != 200:
-            print(f"Failed to fetch: {response.status_code}")
-            return None
+        function updateTranslations() {
+            const t = translations[currentLang];
+            document.getElementById('stocksTitle').textContent = t.stocksTitle;
+            document.getElementById('colSymbol').textContent = t.symbol;
+            document.getElementById('colSector').textContent = t.sector;
+            document.getElementById('colCap').textContent = t.cap;
+            document.getElementById('colPrice').textContent = t.price;
+            document.getElementById('colChange').textContent = t.change;
+            document.getElementById('colPE').textContent = t.pe;
+            document.getElementById('colRating').textContent = t.rating;
+            document.getElementById('hoursLabel').textContent = t.hours;
+            document.getElementById('daysLabel').textContent = t.days;
+            document.getElementById('refreshBtn').textContent = t.refresh;
+            
+            if (marketStatusData) {
+                updateMarketStatus(marketStatusData);
+            }
+        }
         
-        soup = BeautifulSoup(response.text, 'html.parser')
-        
-        # Find the table - TradingView uses dynamic classes
-        table = None
-        
-        # Try multiple selectors
-        selectors = [
-            'table.table-Ngq2xrcG',
-            'table[data-field="change"]',
-            'table[class*="table"]',
-            'table',
-        ]
-        
-        for selector in selectors:
-            if selector == 'table':
-                tables = soup.find_all('table')
-                for t in tables:
-                    if t.find('th') and 'symbol' in str(t).lower() or 'ticker' in str(t).lower():
-                        table = t
-                        break
-            else:
-                table = soup.select_one(selector)
-            if table:
-                break
-        
-        if not table:
-            print("No table found on page")
-            # Try to extract from script/json data
-            return extract_from_scripts(soup)
-        
-        tv_data = {}
-        rows = table.find_all('tr')
-        print(f"Found {len(rows)} rows in table")
-        
-        for i, row in enumerate(rows[1:], 1):  # Skip header
-            try:
-                cells = row.find_all(['td', 'th'])
-                if len(cells) < 5:
-                    continue
+        async function fetchAllData() {
+            setStatus('sync');
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/all`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 
-                # Extract symbol (usually first column)
-                symbol = None
-                symbol_cell = cells[0].find('a') or cells[0]
-                symbol = symbol_cell.get_text().strip()
+                const data = await response.json();
                 
-                if not symbol or symbol not in ALL_STOCKS:
-                    continue
+                stocksData = data.stocks || [];
+                newsData = data.news || [];
+                masiData = data.masi;
+                marketStatusData = data.market_status;
                 
-                # Extract all available data
-                data = {
-                    'symbol': symbol,
-                    'price': 0.0,
-                    'change': 0.0,
-                    'capital': '—',
-                    'pe': None,
-                    'sector': ALL_STOCKS.get(symbol, {}).get('sector', 'N/A'),
-                    'rating': '—'
+                renderStocks();
+                renderNews();
+                renderMasi();
+                updateMarketStatus(marketStatusData);
+                
+                if (data.last_update) {
+                    const date = new Date(data.last_update);
+                    document.getElementById('lastUpdate').textContent = date.toLocaleTimeString();
                 }
                 
-                # Try to extract from each cell
-                for j, cell in enumerate(cells):
-                    text = cell.get_text().strip()
-                    
-                    # Price (usually has MAD or is a number around 10-1000)
-                    if j == 1 or ('MAD' in text and j < 3):
-                        try:
-                            price_text = text.replace('MAD', '').replace(',', '').replace(' ', '').replace('€', '').replace('$', '')
-                            price = float(price_text)
-                            if 0 < price < 10000:
-                                data['price'] = price
-                        except:
-                            pass
-                    
-                    # Change % (has % sign)
-                    if '%' in text:
-                        try:
-                            change_text = text.replace('%', '').replace('(', '-').replace(')', '').replace('+', '').replace(',', '.')
-                            change = float(change_text)
-                            if -50 < change < 50:
-                                data['change'] = change
-                        except:
-                            pass
-                    
-                    # Market Cap (has B, M, K or is a large number)
-                    if any(x in text for x in ['B', 'M', 'Md', 'MM']) and j > 2:
-                        data['capital'] = text
-                    
-                    # P/E (usually a small number)
-                    if j >= 5:
-                        try:
-                            pe_text = text.replace(',', '.')
-                            pe = float(pe_text)
-                            if 0 < pe < 200:
-                                data['pe'] = pe
-                        except:
-                            pass
-                    
-                    # Rating (text like Buy, Sell, Hold, Strong Buy)
-                    rating_keywords = ['buy', 'sell', 'hold', 'neutral', 'strong', 'achat', 'vente', 'conserver']
-                    if any(kw in text.lower() for kw in rating_keywords) and len(text) < 20:
-                        data['rating'] = text
+                setStatus('live');
+            } catch (error) {
+                console.error('Fetch error:', error);
+                setStatus('offline');
                 
-                tv_data[symbol] = data
-                
-                if i <= 5:
-                    print(f"  {symbol}: Price={data['price']}, Change={data['change']}%, Cap={data['capital']}, PE={data['pe']}, Rating={data['rating']}")
-                
-            except Exception as e:
-                if i < 10:
-                    print(f"  Error row {i}: {e}")
-                continue
-        
-        print(f"\nTotal scraped: {len(tv_data)} stocks")
-        
-        # Build complete result
-        result = []
-        for symbol, info in ALL_STOCKS.items():
-            if symbol in tv_data:
-                data = tv_data[symbol]
-                result.append({
-                    'symbol': symbol,
-                    'name': info['name'],
-                    'sector': data['sector'] or info['sector'],
-                    'capital': data['capital'],
-                    'price': data['price'],
-                    'change': data['change'],
-                    'pe': data['pe'],
-                    'rating': data['rating'],
-                    'has_live_data': data['price'] > 0
-                })
-            else:
-                result.append({
-                    'symbol': symbol,
-                    'name': info['name'],
-                    'sector': info['sector'],
-                    'capital': '—',
-                    'price': 0.0,
-                    'change': 0.0,
-                    'pe': None,
-                    'rating': '—',
-                    'has_live_data': False
-                })
-        
-        # Sort: live data first, then by symbol
-        result.sort(key=lambda x: (not x['has_live_data'], x['symbol']))
-        
-        # Save to file
-        with open(STOCKS_FILE, 'w') as f:
-            json.dump(result, f, ensure_ascii=False, indent=2)
-        
-        live_count = sum(1 for r in result if r['has_live_data'])
-        print(f"Saved {len(result)} stocks ({live_count} with live data)")
-        
-        # Save last update time
-        with open(LAST_UPDATE_FILE, 'w') as f:
-            json.dump({
-                'last_update': datetime.now().isoformat(),
-                'stocks_count': len(result),
-                'live_count': live_count
-            }, f)
-        
-        return result
-        
-    except Exception as e:
-        print(f"Error scraping TradingView: {e}")
-        import traceback
-        traceback.print_exc()
-        return None
-
-def extract_from_scripts(soup):
-    """Try to extract stock data from embedded scripts"""
-    try:
-        scripts = soup.find_all('script')
-        for script in scripts:
-            if script.string and ('stocks' in script.string.lower() or 'symbols' in script.string.lower()):
-                # Look for JSON data
-                try:
-                    # Try to find JSON array of stocks
-                    match = re.search(r'\[\s*{\s*"symbol"[^\]]+\]', script.string)
-                    if match:
-                        data = json.loads(match.group(0))
-                        print(f"Found {len(data)} stocks in script data")
-                        return process_script_data(data)
-                except:
-                    pass
-        return None
-    except:
-        return None
-
-def process_script_data(data):
-    """Process data extracted from scripts"""
-    result = []
-    for item in data:
-        symbol = item.get('symbol', '')
-        if symbol in ALL_STOCKS:
-            result.append({
-                'symbol': symbol,
-                'name': ALL_STOCKS[symbol]['name'],
-                'sector': item.get('sector', ALL_STOCKS[symbol]['sector']),
-                'capital': item.get('market_cap', '—'),
-                'price': float(item.get('price', 0)),
-                'change': float(item.get('change', 0)),
-                'pe': float(item.get('pe', 0)) if item.get('pe') else None,
-                'rating': item.get('rating', '—'),
-                'has_live_data': float(item.get('price', 0)) > 0
-            })
-    return result
-
-def get_news():
-    """Fetch news from Medias24 RSS feed"""
-    try:
-        url = "https://medias24.com/categorie/leboursier/actus/feed/"
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                // Try individual endpoints as fallback
+                try {
+                    const [stocksRes, newsRes, masiRes, marketRes] = await Promise.all([
+                        fetch(`${API_BASE}/api/stocks`),
+                        fetch(`${API_BASE}/api/news`),
+                        fetch(`${API_BASE}/api/masi`),
+                        fetch(`${API_BASE}/api/market-status`)
+                    ]);
+                    
+                    if (stocksRes.ok) {
+                        stocksData = await stocksRes.json();
+                        renderStocks();
+                    }
+                    if (newsRes.ok) {
+                        newsData = await newsRes.json();
+                        renderNews();
+                    }
+                    if (masiRes.ok) {
+                        masiData = await masiRes.json();
+                        renderMasi();
+                    }
+                    if (marketRes.ok) {
+                        marketStatusData = await marketRes.json();
+                        updateMarketStatus(marketStatusData);
+                    }
+                    
+                    setStatus('live');
+                } catch (e) {
+                    console.error('Fallback error:', e);
+                }
+            }
         }
-        response = requests.get(url, headers=headers, timeout=15)
         
-        if response.status_code == 200:
-            root = ET.fromstring(response.content)
-            items = root.findall('.//item')
+        function setStatus(status) {
+            const dot = document.getElementById('statusDot');
+            const text = document.getElementById('statusText');
+            const t = translations[currentLang];
             
-            news = []
-            now = datetime.now(timezone.utc)
+            dot.className = 'status-dot';
             
-            for item in items[:10]:  # Get 10 latest
-                try:
-                    title = item.find('title').text if item.find('title') else 'Sans titre'
-                    link = item.find('link').text if item.find('link') else ''
-                    pubDate = item.find('pubDate').text if item.find('pubDate') else ''
-                    category = item.find('category').text if item.find('category') else 'INFO'
-                    
-                    time_mins = 0
-                    if pubDate:
-                        try:
-                            pub_date = datetime.strptime(pubDate, '%a, %d %b %Y %H:%M:%S %z')
-                            diff = now - pub_date
-                            time_mins = int(diff.total_seconds() / 60)
-                        except:
-                            pass
-                    
-                    news.append({
-                        'title': title,
-                        'link': link,
-                        'category': category.upper(),
-                        'time': max(0, time_mins)
-                    })
-                except:
-                    continue
-            
-            # Save to file
-            with open(NEWS_FILE, 'w') as f:
-                json.dump(news, f, ensure_ascii=False, indent=2)
-            
-            return news
-    except Exception as e:
-        print(f"Error fetching news: {e}")
-    
-    # Try to load from file
-    try:
-        if os.path.exists(NEWS_FILE):
-            with open(NEWS_FILE, 'r') as f:
-                return json.load(f)
-    except:
-        pass
-    
-    return []
-
-def get_stocks():
-    """Get stocks data - try live first, then cached"""
-    live = scrape_tradingview()
-    if live:
-        return live
-    
-    try:
-        if os.path.exists(STOCKS_FILE):
-            with open(STOCKS_FILE, 'r') as f:
-                return json.load(f)
-    except:
-        pass
-    
-    # Fallback to static data
-    return [{
-        'symbol': s,
-        'name': info['name'],
-        'sector': info['sector'],
-        'capital': '—',
-        'price': 0.0,
-        'change': 0.0,
-        'pe': None,
-        'rating': '—',
-        'has_live_data': False
-    } for s, info in ALL_STOCKS.items()]
-
-def get_masi():
-    """Get MASI index data"""
-    live = scrape_masi_index()
-    if live:
-        return live
-    
-    try:
-        if os.path.exists(MASI_FILE):
-            with open(MASI_FILE, 'r') as f:
-                return json.load(f)
-    except:
-        pass
-    
-    return {
-        "symbol": "MASI",
-        "name": "Morocco All Shares Index",
-        "price": 11000.0,
-        "change": 0.0,
-        "change_percent": 0.0,
-        "currency": "MAD",
-        "last_update": datetime.now().isoformat()
-    }
-
-def background_refresh():
-    """Background thread to refresh data every 10 minutes"""
-    while True:
-        try:
-            print(f"[{datetime.now()}] Background refresh starting...")
-            scrape_tradingview()
-            scrape_masi_index()
-            get_news()
-            print(f"[{datetime.now()}] Background refresh completed")
-        except Exception as e:
-            print(f"Background refresh error: {e}")
+            if (status === 'live') {
+                dot.classList.add('status-live');
+                text.textContent = t.live;
+            } else if (status === 'sync') {
+                dot.classList.add('status-sync');
+                text.textContent = t.sync;
+            } else {
+                dot.classList.add('status-offline');
+                text.textContent = t.offline;
+            }
+        }
         
-        # Sleep for 10 minutes
-        time.sleep(600)
-
-# API Routes
-@app.route('/')
-def index():
-    return send_from_directory('.', 'index.html')
-
-@app.route('/api/stocks')
-def api_stocks():
-    return jsonify(get_stocks())
-
-@app.route('/api/news')
-def api_news():
-    return jsonify(get_news())
-
-@app.route('/api/masi')
-def api_masi():
-    return jsonify(get_masi())
-
-@app.route('/api/market-status')
-def api_market_status():
-    return jsonify(get_market_status())
-
-@app.route('/api/all')
-def api_all():
-    return jsonify({
-        'stocks': get_stocks(),
-        'news': get_news(),
-        'masi': get_masi(),
-        'market_status': get_market_status(),
-        'last_update': datetime.now().isoformat()
-    })
-
-@app.route('/api/refresh', methods=['POST'])
-def api_refresh():
-    """Manual refresh endpoint"""
-    stocks = scrape_tradingview()
-    masi = scrape_masi_index()
-    news = get_news()
-    return jsonify({
-        'success': True,
-        'stocks': stocks,
-        'masi': masi,
-        'news': news,
-        'market_status': get_market_status(),
-        'last_update': datetime.now().isoformat()
-    })
-
-if __name__ == '__main__':
-    # Initial scrape
-    print("Starting initial data scrape...")
-    scrape_tradingview()
-    scrape_masi_index()
-    get_news()
-    
-    # Start background refresh thread
-    refresh_thread = threading.Thread(target=background_refresh, daemon=True)
-    refresh_thread.start()
-    
-    port = int(os.environ.get('PORT', 5000))
-    print(f"Server starting on port {port}...")
-    app.run(host='0.0.0.0', port=port, threaded=True)
+        function renderMasi() {
+            if (!masiData) return;
+            
+            const display = document.getElementById('masiDisplay');
+            const price = document.getElementById('masiPrice');
+            const change = document.getElementById('masiChange');
+            
+            display.style.display = 'flex';
+            price.textContent = masiData.price.toFixed(2);
+            
+            const changeValue = masiData.change_percent;
+            const sign = changeValue >= 0 ? '+' : '';
+            change.textContent = `${sign}${changeValue.toFixed(2)}%`;
+            change.style.color = changeValue >= 0 ? 'var(--up)' : 'var(--down)';
+        }
+        
+        function updateMarketStatus(status) {
+            const t = translations[currentLang];
+            const dot = document.getElementById('marketDot');
+            const text = document.getElementById('marketText');
+            const container = document.getElementById('marketStatus');
+            const nextOpen = document.getElementById('nextOpen');
+            
+            if (status.is_open) {
+                container.className = 'market-status market-open';
+                text.textContent = t.marketOpen;
+                nextOpen.textContent = '';
+            } else {
+                container.className = 'market-status market-closed';
+                text.textContent = t.marketClosed;
+                nextOpen.textContent = `${t.nextOpen} ${status.next_open}`;
+            }
+        }
+        
+        function renderStocks() {
+            const tbody = document.getElementById('stockTableBody');
+            const t = translations[currentLang];
+            
+            if (stocksData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="no-data">${t.loading}</td></tr>`;
+                return;
+            }
+            
+            let html = '';
+            
+            stocksData.forEach(stock => {
+                const hasData = stock.has_live_data;
+                const changeClass = stock.change > 0 ? 'up' : stock.change < 0 ? 'down' : 'neutral';
+                const sign = stock.change > 0 ? '+' : '';
+                const peDisplay = stock.pe ? stock.pe.toFixed(1) : '—';
+                const ratingClass = getRatingClass(stock.rating);
+                const ratingText = getRatingText(stock.rating, t);
+                
+                html += `
+                    <tr class="stock-row ${hasData ? '' : 'inactive'}">
+                        <td class="symbol">${stock.symbol}</td>
+                        <td class="sector" title="${stock.sector}">${stock.sector}</td>
+                        <td class="capital">${stock.capital}</td>
+                        <td class="price">${hasData ? stock.price.toFixed(2) : '—'}</td>
+                        <td class="change ${changeClass}">${hasData ? sign + stock.change.toFixed(2) + '%' : '—'}</td>
+                        <td class="pe">${peDisplay}</td>
+                        <td><span class="rating ${ratingClass}">${ratingText}</span></td>
+                    </tr>
+                `;
+            });
+            
+            tbody.innerHTML = html;
+            
+            // Update title with count
+            const liveCount = stocksData.filter(s => s.has_live_data).length;
+            document.getElementById('stocksTitle').textContent = `${t.stocksTitle} • ${liveCount}/${stocksData.length}`;
+        }
+        
+        function getRatingClass(rating) {
+            if (!rating || rating === '—') return 'rating-none';
+            const r = rating.toLowerCase();
+            if (r.includes('strong buy') || r.includes('achat fort') || r.includes('شراء قوي')) return 'rating-strong-buy';
+            if (r.includes('buy') || r.includes('achat') || r.includes('شراء')) return 'rating-buy';
+            if (r.includes('strong sell') || r.includes('vente fort') || r.includes('بيع قوي')) return 'rating-strong-sell';
+            if (r.includes('sell') || r.includes('vente') || r.includes('بيع')) return 'rating-sell';
+            if (r.includes('hold') || r.includes('conserver') || r.includes('احتفاظ')) return 'rating-hold';
+            return 'rating-neutral';
+        }
+        
+        function getRatingText(rating, t) {
+            if (!rating || rating === '—') return '—';
+            const r = rating.toLowerCase();
+            if (r.includes('strong buy')) return t.strongBuy;
+            if (r.includes('buy') && !r.includes('sell')) return t.buy;
+            if (r.includes('strong sell')) return t.strongSell;
+            if (r.includes('sell')) return t.sell;
+            if (r.includes('hold')) return t.hold;
+            return t.neutral;
+        }
+        
+        function renderNews() {
+            const container = document.getElementById('newsList');
+            const t = translations[currentLang];
+            
+            if (newsData.length === 0) {
+                container.innerHTML = `<div class="loading">${t.loading}</div>`;
+                return;
+            }
+            
+            let html = '';
+            
+            newsData.slice(0, 8).forEach(item => {
+                const timeText = formatTimeAgo(item.time, t);
+                
+                html += `
+                    <div class="news-item">
+                        <div class="news-meta">
+                            <span class="news-time">${timeText}</span>
+                            <span class="news-category">${item.category}</span>
+                        </div>
+                        <a href="${item.link}" target="_blank" class="news-title">${item.title}</a>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        function formatTimeAgo(minutes, t) {
+            if (minutes < 60) return `${minutes}${t.minutes}`;
+            if (minutes < 1440) return `${Math.floor(minutes / 60)}${t.hours_ago}`;
+            return `${Math.floor(minutes / 1440)}${t.days_ago}`;
+        }
+    </script>
+</body>
+</html>
