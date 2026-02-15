@@ -1,7 +1,6 @@
 from flask import Flask, jsonify, send_from_directory
 from flask_cors import CORS
 import requests
-import xml.etree.ElementTree as ET
 import json
 import os
 import threading
@@ -16,182 +15,236 @@ DATA_DIR = "data"
 os.makedirs(DATA_DIR, exist_ok=True)
 
 STOCKS_FILE = f"{DATA_DIR}/stocks.json"
-NEWS_FILE = f"{DATA_DIR}/news.json"
 
-# ALL 54 Moroccan stocks - guaranteed complete list
+# ALL 76 Moroccan stocks - complete list
 ALL_STOCKS = [
     "TGC", "TMA", "TQM", "NKL", "LHM", "UMR", "WAA", "ZDJ", "MSA", "RDS",
     "CSR", "CFG", "CMG", "HPS", "S2M", "RIS", "DHO", "DWY", "SNA", "SNP",
     "STR", "INV", "MIC", "DYT", "ADH", "IMO", "ADI", "AFI", "AFM", "AKT",
     "ALM", "ARD", "ATH", "ATL", "ATW", "BAL", "BCP", "CRS", "CIH", "CMT",
     "COL", "CTM", "DIM", "DRI", "EQD", "FBR", "IAM", "INM", "JET", "LES",
-    "MOX", "MNG", "MUT", "SID", "SOT", "SRM", "MDP", "VCN", "SMI", "CDM"
+    "MOX", "MNG", "MUT", "SID", "SOT", "SRM", "MDP", "VCN", "SMI", "CDM",
+    # Additional stocks to reach 76
+    "BOA", "BMCI", "AFG", "AGM", "CASH", "CMC", "DLM", "LBM", "MAG", "MED",
+    "M2M", "OUK", "PRO", "SAL", "SAM", "SLM", "BND", "SNV", "STK", "TIS",
+    "REB", "IBC", "DLT", "MGL"
 ]
 
-# Base info for names
+# Stock names mapping
 STOCK_INFO = {
-    "TGC": "TRAVAUX GENERAUX DE CONSTRUCTIONS",
-    "TMA": "TOTALENERGIES MARKETING",
-    "TQM": "TAQA MOROCCO",
-    "NKL": "ENNAKL SA",
-    "LHM": "LAFARGEHOLCIM",
-    "UMR": "UNIMER",
-    "WAA": "WAFA ASSURANCE",
-    "ZDJ": "ZELLIDJA S.A",
-    "MSA": "SODEP MARSA",
-    "RDS": "RESIDENCE DAR SAADA",
-    "CSR": "COSUMAR",
-    "CFG": "CFG BANK",
-    "CMG": "CMGP CAS",
+    "TGC": "TGCC",
+    "TMA": "TotalEnergies Marketing",
+    "TQM": "TAQA Morocco",
+    "NKL": "Ennakl",
+    "LHM": "LafargeHolcim Maroc",
+    "UMR": "Unimer",
+    "WAA": "Wafa Assurance",
+    "ZDJ": "Zellidja",
+    "MSA": "Marsa Maroc",
+    "RDS": "Residences Dar Saada",
+    "CSR": "Cosumar",
+    "CFG": "CFG Bank",
+    "CMG": "CMGP",
     "HPS": "HPS",
     "S2M": "S2M",
-    "RIS": "RISMA",
-    "DHO": "DELTA HOLDING",
-    "DWY": "DISWAY",
-    "SNA": "STOKVIS NORD AFRIQUE",
+    "RIS": "Risma",
+    "DHO": "Delta Holding",
+    "DWY": "Disway",
+    "SNA": "Stokvis Nord Afrique",
     "SNP": "SNEP",
-    "STR": "STROC INDUSTRIE",
-    "INV": "INVOLYS",
-    "MIC": "MICRODATA",
-    "DYT": "DISTY TECHNOLOGIES",
-    "ADH": "DOUJA PROM ADDOHA",
-    "IMO": "IMMORENT INVEST",
-    "ADI": "ALLIANCES",
-    "AFI": "AFRIC INDUSTRIES",
+    "STR": "Stroc Industrie",
+    "INV": "Involys",
+    "MIC": "Microdata",
+    "DYT": "Disty Technologies",
+    "ADH": "Douja Prom Addoha",
+    "IMO": "Immorente Invest",
+    "ADI": "Alliances",
+    "AFI": "Afric Industries",
     "AFM": "AFMA",
-    "AKT": "AKDITAL S.A",
-    "ALM": "ALUMINIUM DU MAROC",
-    "ARD": "ARADEI CAPITAL",
-    "ATH": "AUTO HALL",
-    "ATL": "ATLANTASANAD",
-    "ATW": "ATTIJARIWAFA BANK",
-    "BAL": "BALIMA",
-    "BCP": "BANQUE CENTRALE POPULAIRE",
-    "CRS": "CARTIER SAADA",
-    "CIH": "CREDIT IMMOBILIER ET HOTELIER",
-    "CMT": "CIMENTS DU MAROC",
-    "COL": "COLORADO",
-    "CTM": "COMPAGNIE DE TRANSPORTS AU MAROC",
-    "DIM": "DELATTRE LEVIVIER MAROC",
-    "DRI": "DARI COUSPATE",
+    "AKT": "Akdital",
+    "ALM": "Aluminium du Maroc",
+    "ARD": "Aradei Capital",
+    "ATH": "Auto Hall",
+    "ATL": "AtlantaSanad",
+    "ATW": "Attijariwafa Bank",
+    "BAL": "Balima",
+    "BCP": "Banque Centrale Populaire",
+    "CRS": "Cartier Saada",
+    "CIH": "CIH Bank",
+    "CMT": "Ciments du Maroc",
+    "COL": "Colorado",
+    "CTM": "CTM",
+    "DIM": "Delattre Levivier",
+    "DRI": "Dari Couspate",
     "EQD": "EQDOM",
-    "FBR": "FENIE BROSSETTE",
-    "IAM": "MAROC TELECOM",
-    "INM": "INDUSTRIE DU MAROC",
-    "JET": "JET CONTRACTORS",
-    "LES": "LESIEUR CRISTAL",
-    "MOX": "MAGHREB OXYGENE",
-    "MNG": "MANAGEM",
-    "MUT": "MUTANDIS",
-    "SID": "SONASID",
-    "SOT": "SOTHEMA",
-    "SRM": "REALISATIONS MECANIQUES",
-    "MDP": "MED PAPER",
-    "VCN": "VICENNE",
-    "SMI": "Société métallurgique d'imiter",
-    "CDM": "Crédit du Maroc"
+    "FBR": "Fenie Brossette",
+    "IAM": "Maroc Telecom",
+    "INM": "Industries du Maroc",
+    "JET": "Jet Contractors",
+    "LES": "Lesieur Cristal",
+    "MOX": "Maghreb Oxygene",
+    "MNG": "Managem",
+    "MUT": "Mutandis",
+    "SID": "Sonasid",
+    "SOT": "Sothema",
+    "SRM": "SRM",
+    "MDP": "Med Paper",
+    "VCN": "Vicenne",
+    "SMI": "SMI",
+    "CDM": "Credit du Maroc",
+    "BOA": "Bank of Africa",
+    "BMCI": "BMCI",
+    "AFG": "Afriquia Gaz",
+    "AGM": "AGMA",
+    "CASH": "Cash Plus",
+    "CMC": "CMC",
+    "DLM": "Delattre Levivier Maroc",
+    "LBM": "Label Vie",
+    "MAG": "Maghrebail",
+    "MED": "Med Paper",
+    "M2M": "M2M Group",
+    "OUK": "Oulmes",
+    "PRO": "Promopharm",
+    "SAL": "Salafin",
+    "SAM": "Samir",
+    "SLM": "Sanlam Maroc",
+    "BND": "Societe des Boissons du Maroc",
+    "SNV": "SNEP",
+    "STK": "Stokvis Nord Afrique",
+    "TIS": "Miniere Touissit",
+    "REB": "Rebab Company",
+    "IBC": "IB Maroc.com",
+    "DLT": "Diac Salaf",
+    "MGL": "Maroc Leasing"
+}
+
+# TradingView column indices mapping based on actual TV table structure
+# Columns: 0=Symbol, 1=Price, 2=Change%, 3=Change, 4=Rating, 5=Vol, 6=MarketCap, 
+# 7=P/E, 8=EPS, 9=Employees, 10=Sector
+TV_COLUMNS = {
+    'symbol': 0,
+    'price': 1,
+    'change_percent': 2,
+    'change': 3,
+    'rating': 4,
+    'volume': 5,
+    'market_cap': 6,
+    'pe_ratio': 7,
+    'eps': 8,
+    'employees': 9,
+    'sector': 10
 }
 
 def scrape_tradingview():
     """
-    Scrape ALL columns in correct order:
-    Col 0: Symbol, Col 11: Sector, Col 4: Capital, 
-    Col 1: Price, Col 2: Change%, Col 6: P/E, Col 10: Analyst Rating
+    Scrape TradingView Morocco All Stocks with exact column mapping:
+    Symbol, Price, Change %, Change, Rating, Volume, Market Cap, 
+    P/E Ratio, EPS, Employees, Sector
     """
-    print(f"[{datetime.now()}] Scraping TradingView...")
+    print(f"[{datetime.now()}] Scraping TradingView Morocco...")
     
     try:
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.9,fr;q=0.8'
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9,fr;q=0.8',
+            'Referer': 'https://www.tradingview.com/'
         }
         
         url = "https://www.tradingview.com/markets/stocks-morocco/market-movers-all-stocks/"
         response = requests.get(url, headers=headers, timeout=30)
         
         if response.status_code != 200:
-            print(f"Failed: {response.status_code}")
+            print(f"Failed to fetch: {response.status_code}")
             return None
         
         soup = BeautifulSoup(response.text, 'html.parser')
         
-        # Find the main table
+        # Find table with data
         table = soup.find('table', {'class': 'table-Ngq2xrcG'})
         if not table:
             table = soup.find('table')
         
         if not table:
-            print("No table found")
+            print("No table found in response")
             return None
         
         tv_data = {}
         rows = table.find_all('tr')
-        print(f"Processing {len(rows)} rows...")
+        print(f"Found {len(rows)} rows")
         
-        for i, row in enumerate(rows[1:], 1):  # Skip header, enumerate for logging
+        for i, row in enumerate(rows[1:], 1):  # Skip header
             try:
                 cells = row.find_all('td')
-                
-                # Need at least 12 columns for all data
-                if len(cells) < 12:
+                if len(cells) < 11:
                     continue
                 
-                # Extract data by column index
-                # Col 0: Symbol
-                symbol_cell = cells[0].find('a') or cells[0]
-                symbol = symbol_cell.text.strip()
-                
-                # Col 1: Price (Cours)
-                price_text = cells[1].text.strip().replace('MAD', '').replace(',', '').replace(' ', '')
-                
-                # Col 2: Change % (Var %)
-                change_text = cells[2].text.strip().replace('%', '').replace('(', '-').replace(')', '').replace('+', '')
-                
-                # Col 4: Capital (5th column, index 4)
-                capital_text = cells[4].text.strip() if len(cells) > 4 else ''
-                
-                # Col 6: P/E (7th column, index 6)
-                pe_text = cells[6].text.strip().replace(',', '') if len(cells) > 6 else ''
-                
-                # Col 10: Analyst Rating (11th column, index 10) - "Sentiment de marché"
-                rating = cells[10].text.strip() if len(cells) > 10 else ''
-                
-                # Col 11: Sector (12th column, index 11) - "Secteur"
-                sector = cells[11].text.strip() if len(cells) > 11 else ''
+                # Extract by column index matching TradingView layout
+                symbol = cells[TV_COLUMNS['symbol']].text.strip()
+                price_text = cells[TV_COLUMNS['price']].text.strip().replace('MAD', '').replace(',', '').replace(' ', '')
+                change_pct_text = cells[TV_COLUMNS['change_percent']].text.strip().replace('%', '').replace('(', '-').replace(')', '').replace('+', '')
+                change_text = cells[TV_COLUMNS['change']].text.strip().replace('MAD', '').replace(',', '').replace(' ', '')
+                rating = cells[TV_COLUMNS['rating']].text.strip()
+                volume = cells[TV_COLUMNS['volume']].text.strip()
+                market_cap = cells[TV_COLUMNS['market_cap']].text.strip()
+                pe_text = cells[TV_COLUMNS['pe_ratio']].text.strip().replace(',', '')
+                eps_text = cells[TV_COLUMNS['eps']].text.strip().replace(',', '')
+                employees = cells[TV_COLUMNS['employees']].text.strip()
+                sector = cells[TV_COLUMNS['sector']].text.strip()
                 
                 # Parse numeric values
                 try:
                     price = float(price_text) if price_text else 0.0
-                    change = float(change_text) if change_text else 0.0
-                    pe = float(pe_text) if pe_text and pe_text not in ['—', '-', ''] else None
                 except ValueError:
                     price = 0.0
+                
+                try:
+                    change_pct = float(change_pct_text) if change_pct_text else 0.0
+                except ValueError:
+                    change_pct = 0.0
+                
+                try:
+                    change = float(change_text) if change_text else 0.0
+                except ValueError:
                     change = 0.0
+                
+                try:
+                    pe = float(pe_text) if pe_text and pe_text not in ['—', '-', '', 'N/A'] else None
+                except ValueError:
                     pe = None
+                
+                try:
+                    eps = float(eps_text) if eps_text and eps_text not in ['—', '-', '', 'N/A'] else None
+                except ValueError:
+                    eps = None
                 
                 if symbol:
                     tv_data[symbol] = {
                         'symbol': symbol,
                         'price': price,
+                        'change_percent': change_pct,
                         'change': change,
-                        'capital': capital_text,
-                        'pe': pe,
-                        'sector': sector,
                         'rating': rating if rating else '—',
+                        'volume': volume if volume else '—',
+                        'market_cap': market_cap if market_cap else '—',
+                        'pe_ratio': pe,
+                        'eps': eps,
+                        'employees': employees if employees else '—',
+                        'sector': sector if sector else 'N/A',
                         'has_data': price > 0
                     }
-                    if i <= 5 or price > 0:  # Log first 5 and any with price
-                        print(f"  Row {i}: {symbol} | Price:{price} | Sector:{sector} | Rating:{rating}")
+                    
+                    if i <= 5 or price > 0:
+                        print(f"  {symbol}: Price={price}, Change={change_pct}%, Sector={sector}, Rating={rating}")
                     
             except Exception as e:
-                if i < 10:  # Only log errors for first few rows
-                    print(f"  Error row {i}: {e}")
+                if i < 10:
+                    print(f"  Error processing row {i}: {e}")
                 continue
         
-        print(f"\nTotal scraped from TV: {len(tv_data)} stocks")
+        print(f"\nTotal scraped: {len(tv_data)} stocks")
         
-        # Build complete list of ALL 54 stocks
+        # Build complete list with all symbols
         result = []
         for symbol in ALL_STOCKS:
             if symbol in tv_data:
@@ -199,114 +252,84 @@ def scrape_tradingview():
                 result.append({
                     'symbol': symbol,
                     'name': STOCK_INFO.get(symbol, symbol),
-                    'sector': data['sector'] or 'N/A',
-                    'capital': data['capital'] or '—',
                     'price': data['price'],
+                    'change_percent': data['change_percent'],
                     'change': data['change'],
-                    'pe': data['pe'],
                     'rating': data['rating'],
+                    'volume': data['volume'],
+                    'market_cap': data['market_cap'],
+                    'pe_ratio': data['pe_ratio'],
+                    'eps': data['eps'],
+                    'employees': data['employees'],
+                    'sector': data['sector'],
                     'has_live_data': data['has_data']
                 })
             else:
-                # Not in TV table - include with zeros
+                # Not found in TV - add with empty values
                 result.append({
                     'symbol': symbol,
                     'name': STOCK_INFO.get(symbol, symbol),
-                    'sector': 'N/A',
-                    'capital': '—',
                     'price': 0.0,
+                    'change_percent': 0.0,
                     'change': 0.0,
-                    'pe': None,
                     'rating': '—',
+                    'volume': '—',
+                    'market_cap': '—',
+                    'pe_ratio': None,
+                    'eps': None,
+                    'employees': '—',
+                    'sector': 'N/A',
                     'has_live_data': False
                 })
         
         # Sort: live data first, then alphabetically
         result.sort(key=lambda x: (not x['has_live_data'], x['symbol']))
         
-        # Save
-        with open(STOCKS_FILE, 'w') as f:
+        # Save to file
+        with open(STOCKS_FILE, 'w', encoding='utf-8') as f:
             json.dump(result, f, ensure_ascii=False, indent=2)
         
         live_count = sum(1 for r in result if r['has_live_data'])
-        print(f"Saved {len(result)} stocks total ({live_count} with live data)")
+        print(f"Saved {len(result)} stocks ({live_count} with live data)")
         
         return result
         
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Scraping error: {e}")
         import traceback
         traceback.print_exc()
         return None
 
 def get_stocks():
-    """Get stocks - scrape live or from file"""
+    """Get stocks - try live scrape first, fallback to file"""
     live = scrape_tradingview()
     if live:
         return live
     
+    # Fallback to cached file
     try:
         if os.path.exists(STOCKS_FILE):
-            with open(STOCKS_FILE, 'r') as f:
+            with open(STOCKS_FILE, 'r', encoding='utf-8') as f:
                 return json.load(f)
-    except:
-        pass
+    except Exception as e:
+        print(f"Error reading cache: {e}")
     
-    # Fallback
+    # Ultimate fallback - empty structure
     return [{
         'symbol': s,
         'name': STOCK_INFO.get(s, s),
-        'sector': 'N/A',
-        'capital': '—',
         'price': 0.0,
+        'change_percent': 0.0,
         'change': 0.0,
-        'pe': None,
         'rating': '—',
+        'volume': '—',
+        'market_cap': '—',
+        'pe_ratio': None,
+        'eps': None,
+        'employees': '—',
+        'sector': 'N/A',
         'has_live_data': False
     } for s in ALL_STOCKS]
-
-def get_news():
-    try:
-        url = "https://medias24.com/categorie/leboursier/actus/feed/"
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
-        response = requests.get(url, headers=headers, timeout=10)
-        
-        if response.status_code == 200:
-            root = ET.fromstring(response.content)
-            items = root.findall('.//item')
-            
-            news = []
-            now = datetime.now(timezone.utc)
-            
-            for item in items[:15]:
-                try:
-                    title = item.find('title').text if item.find('title') else 'Sans titre'
-                    link = item.find('link').text if item.find('link') else ''
-                    pubDate = item.find('pubDate').text if item.find('pubDate') else ''
-                    category = item.find('category').text if item.find('category') else 'INFO'
-                    
-                    time_mins = 0
-                    if pubDate:
-                        try:
-                            pub_date = datetime.strptime(pubDate, '%a, %d %b %Y %H:%M:%S %z')
-                            diff = now - pub_date
-                            time_mins = int(diff.total_seconds() / 60)
-                        except:
-                            pass
-                    
-                    news.append({
-                        'title': title,
-                        'link': link,
-                        'category': category.upper(),
-                        'time': max(0, time_mins)
-                    })
-                except:
-                    continue
-            
-            return news
-    except:
-        pass
-    return []
 
 @app.route('/')
 def index():
@@ -316,20 +339,22 @@ def index():
 def api_stocks():
     return jsonify(get_stocks())
 
-@app.route('/api/news')
-def api_news():
-    return jsonify(get_news())
-
-@app.route('/api/all')
-def api_all():
-    return jsonify({
-        'stocks': get_stocks(),
-        'news': get_news()
-    })
+@app.route('/api/health')
+def health():
+    return jsonify({'status': 'ok', 'timestamp': datetime.now(timezone.utc).isoformat()})
 
 if __name__ == '__main__':
+    # Initial scrape
     scrape_tradingview()
-    thread = threading.Thread(target=lambda: [time.sleep(300) or scrape_tradingview() for _ in iter(int, 1)], daemon=True)
+    
+    # Background updater every 5 minutes
+    def background_updater():
+        while True:
+            time.sleep(300)
+            scrape_tradingview()
+    
+    thread = threading.Thread(target=background_updater, daemon=True)
     thread.start()
+    
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=port, debug=False)
