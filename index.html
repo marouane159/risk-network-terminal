@@ -47,6 +47,7 @@
             transition: background 0.3s, color 0.3s;
         }
         
+        /* Header */
         .header {
             background: linear-gradient(90deg, var(--bg-primary) 0%, rgba(255,102,0,0.1) 100%);
             border-bottom: 2px solid var(--accent);
@@ -167,12 +168,14 @@
             color: var(--text-secondary);
         }
         
+        /* Main Container */
         .container {
             display: grid;
             grid-template-columns: 1fr 320px;
             height: calc(100vh - 50px);
         }
         
+        /* Stocks Panel */
         .stocks-panel {
             border-right: 1px solid var(--border);
             display: flex;
@@ -228,6 +231,7 @@
             cursor: not-allowed;
         }
         
+        /* Table */
         .table-container {
             flex: 1;
             overflow: auto;
@@ -338,6 +342,7 @@
         .rating-strong-sell { background: var(--down); color: #fff; }
         .rating-none { background: transparent; border: 1px solid var(--border); color: var(--text-muted); }
         
+        /* News Panel */
         .news-panel {
             background: var(--bg-secondary);
             display: flex;
@@ -393,6 +398,7 @@
             color: var(--accent);
         }
         
+        /* Market Info Footer */
         .market-info {
             background: var(--bg-tertiary);
             border-top: 1px solid var(--border);
@@ -414,6 +420,7 @@
             color: var(--accent);
         }
         
+        /* Loading & Error States */
         .loading {
             padding: 40px;
             text-align: center;
@@ -434,19 +441,7 @@
             color: var(--text-muted);
         }
         
-        .scraping-indicator {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: var(--accent);
-            color: #000;
-            padding: 8px 16px;
-            border-radius: 4px;
-            font-weight: 600;
-            display: none;
-            z-index: 1000;
-        }
-        
+        /* Scrollbar */
         ::-webkit-scrollbar {
             width: 6px;
             height: 6px;
@@ -465,6 +460,7 @@
             background: var(--accent);
         }
         
+        /* Responsive */
         @media (max-width: 900px) {
             .container {
                 grid-template-columns: 1fr;
@@ -481,6 +477,7 @@
             }
         }
         
+        /* RTL Support */
         [dir="rtl"] .stock-table th,
         [dir="rtl"] .stock-table td {
             text-align: right !important;
@@ -499,8 +496,6 @@
     </style>
 </head>
 <body>
-    <div class="scraping-indicator" id="scrapingIndicator">SCRAPING DATA...</div>
-    
     <header class="header">
         <div class="logo">▶ RISK NETWORK GROUP</div>
         
@@ -536,12 +531,13 @@
     </header>
     
     <div class="container" id="mainContainer">
+        <!-- Stocks Panel -->
         <div class="stocks-panel">
             <div class="panel-header">
                 <span class="panel-title" id="stocksTitle">◈ MASI ALL SHARES</span>
                 <div class="panel-actions">
                     <span class="last-update" id="lastUpdate"></span>
-                    <button class="refresh-btn" id="refreshBtn" onclick="triggerRefresh()">↻ REFRESH</button>
+                    <button class="refresh-btn" id="refreshBtn" onclick="fetchAllData()">↻</button>
                 </div>
             </div>
             
@@ -559,12 +555,13 @@
                         </tr>
                     </thead>
                     <tbody id="stockTableBody">
-                        <tr><td colspan="7" class="loading" id="loadingMsg">Initializing...</td></tr>
+                        <tr><td colspan="7" class="loading" id="loadingMsg">Loading...</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
         
+        <!-- News Panel -->
         <div class="news-panel">
             <div class="panel-header">
                 <span class="panel-title">◢ MEDIAS24</span>
@@ -588,9 +585,10 @@
     </div>
 
     <script>
-        // Use relative path - NO CORS ISSUES when served from same domain
-        const API_BASE = window.location.origin;
+        // Configuration - CHANGE THIS TO YOUR RENDER URL
+        const API_BASE = 'https://risk-network-terminal.onrender.com';
         
+        // Translations
         const translations = {
             fr: {
                 stocksTitle: '◈ MASI ALL SHARES',
@@ -610,7 +608,7 @@
                 live: 'DIRECT',
                 offline: 'HORS LIGNE',
                 sync: 'SYNC',
-                refresh: '↻ RAFRAICHIR',
+                refresh: '↻',
                 minutes: 'min',
                 hours_ago: 'h',
                 days_ago: 'j',
@@ -619,9 +617,7 @@
                 neutral: 'NEUTRE',
                 hold: 'CONSERVER',
                 sell: 'VENTE',
-                strongSell: 'VENTE FORTE',
-                initializing: 'Initialisation...',
-                noData: 'Aucune donnée - Le marché est fermé ou le scraper est en cours'
+                strongSell: 'VENTE FORTE'
             },
             en: {
                 stocksTitle: '◈ MASI ALL SHARES',
@@ -641,7 +637,7 @@
                 live: 'LIVE',
                 offline: 'OFFLINE',
                 sync: 'SYNC',
-                refresh: '↻ REFRESH',
+                refresh: '↻',
                 minutes: 'min',
                 hours_ago: 'h',
                 days_ago: 'd',
@@ -650,9 +646,7 @@
                 neutral: 'NEUTRAL',
                 hold: 'HOLD',
                 sell: 'SELL',
-                strongSell: 'STRONG SELL',
-                initializing: 'Initializing...',
-                noData: 'No data - Market closed or scraper running'
+                strongSell: 'STRONG SELL'
             },
             ar: {
                 stocksTitle: '◈ جميع أسهم ماسي',
@@ -672,7 +666,7 @@
                 live: 'مباشر',
                 offline: 'غير متصل',
                 sync: 'مزامنة',
-                refresh: '↻ تحديث',
+                refresh: '↻',
                 minutes: 'د',
                 hours_ago: 'س',
                 days_ago: 'ي',
@@ -681,25 +675,24 @@
                 neutral: 'محايد',
                 hold: 'احتفاظ',
                 sell: 'بيع',
-                strongSell: 'بيع قوي',
-                initializing: 'جاري التهيئة...',
-                noData: 'لا توجد بيانات - السوق مغلق أو جاري التشغيل'
+                strongSell: 'بيع قوي'
             }
         };
         
+        // State
         let currentLang = 'fr';
         let currentTheme = 'dark';
         let stocksData = [];
         let newsData = [];
         let masiData = null;
         let marketStatusData = null;
-        let isLoading = false;
-        let autoRefreshInterval = null;
         
+        // Initialize
         document.addEventListener('DOMContentLoaded', function() {
             updateClock();
             setInterval(updateClock, 1000);
             
+            // Language selector
             document.getElementById('langSelect').addEventListener('change', function(e) {
                 currentLang = e.target.value;
                 document.getElementById('mainContainer').dir = currentLang === 'ar' ? 'rtl' : 'ltr';
@@ -708,13 +701,14 @@
                 renderNews();
             });
             
+            // Theme toggle
             document.getElementById('themeBtn').addEventListener('click', toggleTheme);
             
-            // Initial load
+            // Initial fetch
             fetchAllData();
             
-            // Auto refresh every 30 seconds
-            autoRefreshInterval = setInterval(fetchAllData, 30000);
+            // Auto refresh every 10 minutes
+            setInterval(fetchAllData, 600000);
         });
         
         function updateClock() {
@@ -742,7 +736,7 @@
             document.getElementById('hoursLabel').textContent = t.hours;
             document.getElementById('daysLabel').textContent = t.days;
             document.getElementById('refreshBtn').textContent = t.refresh;
-            document.getElementById('loadingMsg').textContent = t.initializing;
+            document.getElementById('loadingMsg').textContent = t.loading;
             document.getElementById('newsLoading').textContent = t.loading;
             
             if (marketStatusData) {
@@ -751,42 +745,23 @@
         }
         
         async function fetchAllData() {
-            if (isLoading) return;
-            isLoading = true;
-            
             setStatus('sync');
-            const refreshBtn = document.getElementById('refreshBtn');
-            refreshBtn.disabled = true;
             
             try {
                 const response = await fetch(`${API_BASE}/api/all`);
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 
                 const data = await response.json();
-                console.log('Data received:', data);
                 
-                // Show scraping indicator
-                if (data.scraping_active) {
-                    document.getElementById('scrapingIndicator').style.display = 'block';
-                } else {
-                    document.getElementById('scrapingIndicator').style.display = 'none';
-                }
-                
-                stocksData = Array.isArray(data.stocks) ? data.stocks : [];
-                newsData = Array.isArray(data.news) ? data.news : [];
-                masiData = data.masi || null;
-                marketStatusData = data.market_status || null;
+                stocksData = data.stocks || [];
+                newsData = data.news || [];
+                masiData = data.masi;
+                marketStatusData = data.market_status;
                 
                 renderStocks();
                 renderNews();
                 renderMasi();
-                
-                if (marketStatusData) {
-                    updateMarketStatus(marketStatusData);
-                }
+                updateMarketStatus(marketStatusData);
                 
                 if (data.last_update) {
                     const date = new Date(data.last_update);
@@ -794,31 +769,14 @@
                 }
                 
                 setStatus('live');
-                
             } catch (error) {
                 console.error('Fetch error:', error);
                 setStatus('offline');
                 
+                // Show error in table
                 const t = translations[currentLang];
                 document.getElementById('stockTableBody').innerHTML = 
-                    `<tr><td colspan="7" class="error">${t.offline}: ${error.message}</td></tr>`;
-            } finally {
-                isLoading = false;
-                refreshBtn.disabled = false;
-            }
-        }
-        
-        async function triggerRefresh() {
-            const t = translations[currentLang];
-            document.getElementById('refreshBtn').textContent = 'SCRAPING...';
-            document.getElementById('scrapingIndicator').style.display = 'block';
-            
-            try {
-                await fetch(`${API_BASE}/api/refresh`, { method: 'POST' });
-                // Wait a bit then fetch
-                setTimeout(fetchAllData, 2000);
-            } catch (e) {
-                console.error('Refresh trigger failed:', e);
+                    `<tr><td colspan="7" class="error">${t.offline} - ${error.message}</td></tr>`;
             }
         }
         
@@ -849,12 +807,9 @@
             const change = document.getElementById('masiChange');
             
             display.style.display = 'flex';
+            price.textContent = masiData.price.toFixed(2);
             
-            const priceValue = masiData.price || 0;
-            const changeValue = masiData.change_percent || masiData.change || 0;
-            
-            price.textContent = priceValue.toFixed(2);
-            
+            const changeValue = masiData.change_percent || 0;
             const sign = changeValue >= 0 ? '+' : '';
             change.textContent = `${sign}${changeValue.toFixed(2)}%`;
             change.style.color = changeValue >= 0 ? 'var(--up)' : 'var(--down)';
@@ -874,7 +829,7 @@
             } else {
                 container.className = 'market-status market-closed';
                 text.textContent = t.marketClosed;
-                nextOpen.textContent = `${t.nextOpen} ${status.next_open || ''}`;
+                nextOpen.textContent = `${t.nextOpen} ${status.next_open}`;
             }
         }
         
@@ -883,7 +838,7 @@
             const t = translations[currentLang];
             
             if (stocksData.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="no-data">${t.noData}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" class="no-data">${t.loading}</td></tr>`;
                 return;
             }
             
@@ -901,7 +856,7 @@
                     <tr class="stock-row ${hasData ? '' : 'inactive'}">
                         <td class="symbol">${stock.symbol}</td>
                         <td class="sector" title="${stock.sector}">${stock.sector}</td>
-                        <td class="capital">${stock.capital || '—'}</td>
+                        <td class="capital">${stock.capital}</td>
                         <td class="price">${hasData ? stock.price.toFixed(2) : '—'}</td>
                         <td class="change ${changeClass}">${hasData ? sign + stock.change.toFixed(2) + '%' : '—'}</td>
                         <td class="pe">${peDisplay}</td>
@@ -912,6 +867,7 @@
             
             tbody.innerHTML = html;
             
+            // Update title with count
             const liveCount = stocksData.filter(s => s.has_live_data).length;
             document.getElementById('stocksTitle').textContent = `${t.stocksTitle} • ${liveCount}/${stocksData.length}`;
         }
@@ -943,20 +899,20 @@
             const t = translations[currentLang];
             
             if (newsData.length === 0) {
-                container.innerHTML = `<div class="loading">No news available</div>`;
+                container.innerHTML = `<div class="loading">${t.loading}</div>`;
                 return;
             }
             
             let html = '';
             
-            newsData.slice(0, 10).forEach(item => {
+            newsData.slice(0, 8).forEach(item => {
                 const timeText = formatTimeAgo(item.time, t);
                 
                 html += `
                     <div class="news-item">
                         <div class="news-meta">
                             <span class="news-time">${timeText}</span>
-                            <span class="news-category">${item.category || 'INFO'}</span>
+                            <span class="news-category">${item.category}</span>
                         </div>
                         <a href="${item.link}" target="_blank" class="news-title">${item.title}</a>
                     </div>
