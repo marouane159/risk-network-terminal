@@ -47,6 +47,7 @@
             transition: background 0.3s, color 0.3s;
         }
         
+        /* Header */
         .header {
             background: linear-gradient(90deg, var(--bg-primary) 0%, rgba(255,102,0,0.1) 100%);
             border-bottom: 2px solid var(--accent);
@@ -167,12 +168,14 @@
             color: var(--text-secondary);
         }
         
+        /* Main Container */
         .container {
             display: grid;
             grid-template-columns: 1fr 320px;
             height: calc(100vh - 50px);
         }
         
+        /* Stocks Panel */
         .stocks-panel {
             border-right: 1px solid var(--border);
             display: flex;
@@ -217,92 +220,78 @@
             font-family: inherit;
             font-size: 10px;
             font-weight: 600;
+            transition: all 0.2s;
         }
         
         .refresh-btn:hover {
             background: var(--accent-light);
         }
         
-        .refresh-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        
+        /* Table */
         .table-container {
             flex: 1;
-            overflow: auto;
+            overflow-y: auto;
+            overflow-x: hidden;
         }
         
-        .stock-table {
+        .stocks-table {
             width: 100%;
             border-collapse: collapse;
-            table-layout: fixed;
+            font-size: 11px;
         }
         
-        .stock-table th {
-            background: var(--bg-tertiary);
-            color: var(--text-secondary);
-            font-weight: 500;
-            text-align: left;
-            padding: 10px 8px;
-            border-bottom: 1px solid var(--border);
-            font-size: 10px;
+        .stocks-table thead {
             position: sticky;
             top: 0;
+            background: var(--bg-secondary);
             z-index: 10;
         }
         
-        .stock-table th:nth-child(3),
-        .stock-table th:nth-child(4),
-        .stock-table th:nth-child(5),
-        .stock-table th:nth-child(6) {
-            text-align: right;
-        }
-        
-        .stock-table th:nth-child(7) {
-            text-align: center;
-        }
-        
-        .stock-table td {
-            padding: 8px;
+        .stocks-table th {
+            padding: 8px 10px;
+            text-align: left;
             border-bottom: 1px solid var(--border);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            color: var(--text-muted);
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
         }
         
-        .stock-table td:nth-child(3),
-        .stock-table td:nth-child(4),
-        .stock-table td:nth-child(5),
-        .stock-table td:nth-child(6) {
-            text-align: right;
+        .stocks-table td {
+            padding: 10px 10px;
+            border-bottom: 1px solid var(--border);
         }
         
-        .stock-table td:nth-child(7) {
-            text-align: center;
+        .stock-row {
+            transition: background 0.2s;
         }
         
         .stock-row:hover {
-            background: rgba(255, 102, 0, 0.05);
+            background: var(--bg-tertiary);
         }
         
         .stock-row.inactive {
-            opacity: 0.4;
+            opacity: 0.5;
         }
         
         .symbol {
+            color: var(--accent);
             font-weight: 700;
-            color: var(--text-primary);
         }
         
         .sector {
             color: var(--text-secondary);
-            font-size: 11px;
+            font-size: 10px;
+            max-width: 120px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
         
         .capital {
             color: var(--text-secondary);
-            font-size: 11px;
+            font-size: 10px;
         }
         
         .price {
@@ -322,43 +311,43 @@
         }
         
         .rating {
-            display: inline-block;
             padding: 2px 6px;
             border-radius: 3px;
             font-size: 9px;
-            font-weight: 700;
+            font-weight: 600;
             text-transform: uppercase;
         }
         
-        .rating-strong-buy { background: var(--up); color: #000; }
-        .rating-buy { background: #90ee90; color: #000; }
-        .rating-neutral { background: var(--text-muted); color: #fff; }
-        .rating-hold { background: #888; color: #fff; }
-        .rating-sell { background: #ff8844; color: #000; }
-        .rating-strong-sell { background: var(--down); color: #fff; }
-        .rating-none { background: transparent; border: 1px solid var(--border); color: var(--text-muted); }
+        .rating-strong-buy { background: rgba(0, 255, 65, 0.2); color: var(--up); }
+        .rating-buy { background: rgba(0, 200, 100, 0.15); color: #00cc66; }
+        .rating-hold { background: rgba(255, 170, 0, 0.15); color: #ffaa00; }
+        .rating-sell { background: rgba(255, 68, 68, 0.15); color: #ff6666; }
+        .rating-strong-sell { background: rgba(255, 68, 68, 0.2); color: var(--down); }
+        .rating-neutral { background: var(--bg-tertiary); color: var(--text-muted); }
+        .rating-none { color: var(--text-muted); }
         
+        /* News Panel */
         .news-panel {
-            background: var(--bg-secondary);
             display: flex;
             flex-direction: column;
+            background: var(--bg-secondary);
             overflow: hidden;
         }
         
-        .news-list {
+        .news-container {
             flex: 1;
-            overflow: auto;
-            padding: 8px;
+            overflow-y: auto;
+            padding: 12px;
         }
         
         .news-item {
-            padding: 10px;
+            margin-bottom: 16px;
+            padding-bottom: 16px;
             border-bottom: 1px solid var(--border);
-            transition: background 0.2s;
         }
         
-        .news-item:hover {
-            background: rgba(255, 102, 0, 0.05);
+        .news-item:last-child {
+            border-bottom: none;
         }
         
         .news-meta {
@@ -369,74 +358,47 @@
         }
         
         .news-time {
-            color: var(--accent);
-            font-size: 10px;
-        }
-        
-        .news-category {
-            background: var(--bg-tertiary);
-            color: var(--text-secondary);
-            padding: 2px 6px;
-            border-radius: 3px;
+            color: var(--text-muted);
             font-size: 9px;
         }
         
+        .news-category {
+            background: var(--accent);
+            color: #000;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 8px;
+            font-weight: 700;
+        }
+        
         .news-title {
+            display: block;
             color: var(--text-primary);
             text-decoration: none;
-            font-size: 11px;
             line-height: 1.5;
-            display: block;
+            font-size: 11px;
+            transition: color 0.2s;
         }
         
         .news-title:hover {
             color: var(--accent);
         }
         
-        .market-info {
-            background: var(--bg-tertiary);
-            border-top: 1px solid var(--border);
-            padding: 10px 12px;
-            font-size: 10px;
-        }
-        
-        .market-info-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 4px;
-        }
-        
-        .market-info-label {
-            color: var(--text-secondary);
-        }
-        
-        .market-info-value {
-            color: var(--accent);
-        }
-        
-        .loading {
-            padding: 40px;
+        .loading, .error, .no-data {
             text-align: center;
-            color: var(--accent);
+            padding: 40px 20px;
+            color: var(--text-muted);
+            font-size: 11px;
         }
         
         .error {
-            padding: 20px;
-            margin: 20px;
-            background: rgba(255, 68, 68, 0.1);
-            border-left: 3px solid var(--down);
             color: var(--down);
         }
         
-        .no-data {
-            padding: 40px;
-            text-align: center;
-            color: var(--text-muted);
-        }
-        
+        /* Scrollbar */
         ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
+            width: 8px;
+            height: 8px;
         }
         
         ::-webkit-scrollbar-track {
@@ -445,253 +407,266 @@
         
         ::-webkit-scrollbar-thumb {
             background: var(--border);
-            border-radius: 3px;
+            border-radius: 4px;
         }
         
         ::-webkit-scrollbar-thumb:hover {
             background: var(--accent);
         }
         
-        @media (max-width: 900px) {
-            .container {
-                grid-template-columns: 1fr;
-                grid-template-rows: 1fr 250px;
-            }
-            
-            .header-center {
-                display: none;
-            }
-            
-            .stocks-panel {
-                border-right: none;
-                border-bottom: 1px solid var(--border);
-            }
+        /* Market Hours Info */
+        .market-hours {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 10px;
         }
         
-        [dir="rtl"] .stock-table th,
-        [dir="rtl"] .stock-table td {
-            text-align: right !important;
+        .market-hours-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
         }
         
-        [dir="rtl"] .stock-table th:nth-child(3),
-        [dir="rtl"] .stock-table th:nth-child(4),
-        [dir="rtl"] .stock-table th:nth-child(5),
-        [dir="rtl"] .stock-table th:nth-child(6),
-        [dir="rtl"] .stock-table td:nth-child(3),
-        [dir="rtl"] .stock-table td:nth-child(4),
-        [dir="rtl"] .stock-table td:nth-child(5),
-        [dir="rtl"] .stock-table td:nth-child(6) {
-            text-align: left !important;
+        .market-hours-label {
+            color: var(--text-muted);
+            font-size: 9px;
+        }
+        
+        .market-hours-value {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+        
+        .next-open {
+            font-size: 9px;
+            color: var(--text-muted);
+            margin-left: 8px;
         }
     </style>
 </head>
-<body>
-    <header class="header">
-        <div class="logo">▶ RISK NETWORK GROUP</div>
+<body data-theme="dark">
+    <!-- Header -->
+    <div class="header">
+        <div class="logo">
+            ⚡ RISK NETWORK GROUP
+        </div>
         
         <div class="header-center">
-            <div class="masi-display" id="masiDisplay" style="display: none;">
+            <div id="masiDisplay" class="masi-display" style="display: none;">
                 <span class="masi-label">MASI</span>
-                <span class="masi-value" id="masiPrice">--</span>
-                <span class="masi-change" id="masiChange">--</span>
+                <span id="masiPrice" class="masi-value">---</span>
+                <span id="masiChange" class="masi-change">--%</span>
             </div>
             
-            <div class="market-status" id="marketStatus">
+            <div class="market-hours">
+                <div class="market-hours-item">
+                    <span class="market-hours-label" id="hoursLabel">HEURES</span>
+                    <span class="market-hours-value">09:30-15:40</span>
+                </div>
+                <div class="market-hours-item">
+                    <span class="market-hours-label" id="daysLabel">JOURS</span>
+                    <span class="market-hours-value">LUN-VEN</span>
+                </div>
+            </div>
+            
+            <div id="marketStatus" class="market-status market-closed">
                 <span id="marketDot">●</span>
-                <span id="marketText">--</span>
+                <span id="marketText">FERMÉ</span>
+                <span id="nextOpen" class="next-open"></span>
             </div>
         </div>
         
         <div class="header-controls">
-            <select class="control-btn" id="langSelect">
-                <option value="fr">FR</option>
-                <option value="en">EN</option>
-                <option value="ar">AR</option>
-            </select>
-            
-            <button class="control-btn" id="themeBtn">☀️</button>
-            
             <div class="status-indicator">
-                <span class="status-dot status-sync" id="statusDot"></span>
-                <span id="statusText">SYNC</span>
+                <span id="statusDot" class="status-dot status-sync"></span>
+                <span id="statusText">SYNC...</span>
             </div>
             
-            <span class="clock" id="clock">00:00:00</span>
+            <select id="langSelect" class="control-btn">
+                <option value="fr">Français</option>
+                <option value="en">English</option>
+                <option value="ar">العربية</option>
+            </select>
+            
+            <button id="themeBtn" class="control-btn">☀️</button>
+            
+            <div id="clock" class="clock">--:--:--</div>
         </div>
-    </header>
+    </div>
     
-    <div class="container" id="mainContainer">
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Stocks Panel -->
         <div class="stocks-panel">
             <div class="panel-header">
-                <span class="panel-title" id="stocksTitle">◈ MASI ALL SHARES</span>
+                <span id="stocksTitle" class="panel-title">ACTIONS CASABLANCA</span>
                 <div class="panel-actions">
-                    <span class="last-update" id="lastUpdate"></span>
-                    <button class="refresh-btn" id="refreshBtn" onclick="fetchAllData()">↻</button>
+                    <span id="lastUpdate" class="last-update">Chargement...</span>
+                    <button id="refreshBtn" class="refresh-btn">↻ ACTUALISER</button>
                 </div>
             </div>
             
             <div class="table-container">
-                <table class="stock-table">
+                <table class="stocks-table">
                     <thead>
                         <tr>
-                            <th style="width: 10%" id="colSymbol">SYMBOL</th>
-                            <th style="width: 18%" id="colSector">SECTOR</th>
-                            <th style="width: 14%" id="colCap">MARKET CAP</th>
-                            <th style="width: 12%" id="colPrice">PRICE</th>
-                            <th style="width: 10%" id="colChange">CHANGE %</th>
-                            <th style="width: 8%" id="colPE">P/E</th>
-                            <th style="width: 14%" id="colRating">RATING</th>
+                            <th id="colSymbol">SYMBOLE</th>
+                            <th id="colSector">SECTEUR</th>
+                            <th id="colCap">CAP.</th>
+                            <th id="colPrice">PRIX</th>
+                            <th id="colChange">VAR %</th>
+                            <th id="colPE">P/E</th>
+                            <th id="colRating">RATING</th>
                         </tr>
                     </thead>
                     <tbody id="stockTableBody">
-                        <tr><td colspan="7" class="loading" id="loadingMsg">Loading...</td></tr>
+                        <tr><td colspan="7" id="loadingMsg" class="loading">Chargement des données...</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
         
+        <!-- News Panel -->
         <div class="news-panel">
             <div class="panel-header">
-                <span class="panel-title">◢ MEDIAS24</span>
+                <span class="panel-title">📰 ACTUALITÉS BOURSE</span>
             </div>
-            
-            <div class="news-list" id="newsList">
-                <div class="loading" id="newsLoading">Loading...</div>
-            </div>
-            
-            <div class="market-info">
-                <div class="market-info-row">
-                    <span class="market-info-label" id="hoursLabel">Market Hours:</span>
-                    <span>09:30 - 15:40</span>
-                </div>
-                <div class="market-info-row">
-                    <span class="market-info-label" id="daysLabel">Mon-Fri</span>
-                    <span id="nextOpen"></span>
-                </div>
+            <div class="news-container" id="newsList">
+                <div id="newsLoading" class="loading">Chargement des actualités...</div>
             </div>
         </div>
     </div>
-
+    
     <script>
-        // API Configuration
+        // API Configuration - CRITICAL: Use your Render backend URL
         const API_BASE = 'https://risk-network-terminal.onrender.com';
-        let useCORSProxy = false; // Will be set to true if direct fetch fails
         
-        // Translations
-        const translations = {
-            fr: {
-                stocksTitle: '◈ MASI ALL SHARES',
-                symbol: 'SYMBOL',
-                sector: 'SECTEUR',
-                cap: 'CAP. BOURSIÈRE',
-                price: 'COURS',
-                change: 'VAR %',
-                pe: 'P/E',
-                rating: 'NOTATION',
-                marketOpen: 'MARCHÉ OUVERT',
-                marketClosed: 'MARCHÉ FERMÉ',
-                hours: 'Horaires:',
-                days: 'Lun-Ven',
-                nextOpen: 'Prochain:',
-                loading: 'Chargement...',
-                live: 'DIRECT',
-                offline: 'HORS LIGNE',
-                sync: 'SYNC',
-                refresh: '↻',
-                minutes: 'min',
-                hours_ago: 'h',
-                days_ago: 'j',
-                strongBuy: 'ACHAT FORT',
-                buy: 'ACHAT',
-                neutral: 'NEUTRE',
-                hold: 'CONSERVER',
-                sell: 'VENTE',
-                strongSell: 'VENTE FORTE'
-            },
-            en: {
-                stocksTitle: '◈ MASI ALL SHARES',
-                symbol: 'SYMBOL',
-                sector: 'SECTOR',
-                cap: 'MARKET CAP',
-                price: 'PRICE',
-                change: 'CHANGE %',
-                pe: 'P/E',
-                rating: 'RATING',
-                marketOpen: 'MARKET OPEN',
-                marketClosed: 'MARKET CLOSED',
-                hours: 'Hours:',
-                days: 'Mon-Fri',
-                nextOpen: 'Next:',
-                loading: 'Loading...',
-                live: 'LIVE',
-                offline: 'OFFLINE',
-                sync: 'SYNC',
-                refresh: '↻',
-                minutes: 'min',
-                hours_ago: 'h',
-                days_ago: 'd',
-                strongBuy: 'STRONG BUY',
-                buy: 'BUY',
-                neutral: 'NEUTRAL',
-                hold: 'HOLD',
-                sell: 'SELL',
-                strongSell: 'STRONG SELL'
-            },
-            ar: {
-                stocksTitle: '◈ جميع أسهم ماسي',
-                symbol: 'الرمز',
-                sector: 'القطاع',
-                cap: 'القيمة السوقية',
-                price: 'السعر',
-                change: 'التغيير %',
-                pe: 'P/E',
-                rating: 'التقييم',
-                marketOpen: 'السوق مفتوح',
-                marketClosed: 'السوق مغلق',
-                hours: 'الساعات:',
-                days: 'الإثنين-الجمعة',
-                nextOpen: 'القادم:',
-                loading: 'جاري التحميل...',
-                live: 'مباشر',
-                offline: 'غير متصل',
-                sync: 'مزامنة',
-                refresh: '↻',
-                minutes: 'د',
-                hours_ago: 'س',
-                days_ago: 'ي',
-                strongBuy: 'شراء قوي',
-                buy: 'شراء',
-                neutral: 'محايد',
-                hold: 'احتفاظ',
-                sell: 'بيع',
-                strongSell: 'بيع قوي'
-            }
-        };
-        
+        // State
         let currentLang = 'fr';
         let currentTheme = 'dark';
         let stocksData = [];
         let newsData = [];
         let masiData = null;
         let marketStatusData = null;
-        let isLoading = false;
         
-        document.addEventListener('DOMContentLoaded', function() {
-            updateClock();
-            setInterval(updateClock, 1000);
+        // Translations
+        const translations = {
+            fr: {
+                stocksTitle: 'ACTIONS CASABLANCA',
+                symbol: 'SYMBOLE',
+                sector: 'SECTEUR',
+                cap: 'CAP.',
+                price: 'PRIX',
+                change: 'VAR %',
+                pe: 'P/E',
+                rating: 'RATING',
+                hours: 'HEURES',
+                days: 'JOURS',
+                refresh: '↻ ACTUALISER',
+                loading: 'Chargement...',
+                live: 'LIVE',
+                sync: 'SYNC...',
+                offline: 'HORS LIGNE',
+                marketOpen: 'OUVERT',
+                marketClosed: 'FERMÉ',
+                nextOpen: 'Prochain:',
+                minutes: 'min',
+                hours_ago: 'h',
+                days_ago: 'j',
+                strongBuy: 'ACHAT FORT',
+                buy: 'ACHAT',
+                hold: 'CONSERVER',
+                sell: 'VENTE',
+                strongSell: 'VENTE FORTE',
+                neutral: 'NEUTRE'
+            },
+            en: {
+                stocksTitle: 'CASABLANCA STOCKS',
+                symbol: 'SYMBOL',
+                sector: 'SECTOR',
+                cap: 'CAP.',
+                price: 'PRICE',
+                change: 'CHG %',
+                pe: 'P/E',
+                rating: 'RATING',
+                hours: 'HOURS',
+                days: 'DAYS',
+                refresh: '↻ REFRESH',
+                loading: 'Loading...',
+                live: 'LIVE',
+                sync: 'SYNC...',
+                offline: 'OFFLINE',
+                marketOpen: 'OPEN',
+                marketClosed: 'CLOSED',
+                nextOpen: 'Next:',
+                minutes: 'm',
+                hours_ago: 'h',
+                days_ago: 'd',
+                strongBuy: 'STRONG BUY',
+                buy: 'BUY',
+                hold: 'HOLD',
+                sell: 'SELL',
+                strongSell: 'STRONG SELL',
+                neutral: 'NEUTRAL'
+            },
+            ar: {
+                stocksTitle: 'أسهم الدار البيضاء',
+                symbol: 'الرمز',
+                sector: 'القطاع',
+                cap: 'القيمة',
+                price: 'السعر',
+                change: 'التغير %',
+                pe: 'P/E',
+                rating: 'التقييم',
+                hours: 'الساعات',
+                days: 'الأيام',
+                refresh: '↻ تحديث',
+                loading: 'جار التحميل...',
+                live: 'مباشر',
+                sync: 'مزامنة...',
+                offline: 'غير متصل',
+                marketOpen: 'مفتوح',
+                marketClosed: 'مغلق',
+                nextOpen: 'القادم:',
+                minutes: 'د',
+                hours_ago: 'س',
+                days_ago: 'ي',
+                strongBuy: 'شراء قوي',
+                buy: 'شراء',
+                hold: 'احتفاظ',
+                sell: 'بيع',
+                strongSell: 'بيع قوي',
+                neutral: 'محايد'
+            }
+        };
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Initializing RISK Network Terminal...');
+            console.log('API Base URL:', API_BASE);
             
-            document.getElementById('langSelect').addEventListener('change', function(e) {
+            // Event listeners
+            document.getElementById('langSelect').addEventListener('change', (e) => {
                 currentLang = e.target.value;
-                document.getElementById('mainContainer').dir = currentLang === 'ar' ? 'rtl' : 'ltr';
                 updateTranslations();
                 renderStocks();
                 renderNews();
             });
             
             document.getElementById('themeBtn').addEventListener('click', toggleTheme);
+            document.getElementById('refreshBtn').addEventListener('click', fetchAllData);
             
+            // Initial fetch
             fetchAllData();
-            setInterval(fetchAllData, 120000);
+            
+            // Auto-refresh every 10 minutes
+            setInterval(fetchAllData, 600000);
+            
+            // Update clock every second
+            setInterval(updateClock, 1000);
+            updateClock();
         });
         
         function updateClock() {
@@ -727,63 +702,34 @@
             }
         }
         
-        // FIXED: Smart fetch with CORS proxy fallback
-        async function smartFetch(url) {
-            const fullURL = `${url}?_=${Date.now()}`;
-            
-            // Try direct fetch first (works if hosted on same domain or server has CORS)
-            if (!useCORSProxy) {
-                try {
-                    const response = await fetch(fullURL, {
-                        headers: { 'Accept': 'application/json' },
-                        mode: 'cors',
-                        timeout: 10000
-                    });
-                    if (response.ok) return response;
-                } catch (e) {
-                    console.log('Direct fetch failed, switching to CORS proxy...');
-                    useCORSProxy = true;
-                }
-            }
-            
-            // Fallback to CORS proxy
-            const proxyURL = `https://api.allorigins.win/get?url=${encodeURIComponent(fullURL)}`;
-            const proxyResponse = await fetch(proxyURL);
-            const proxyData = await proxyResponse.json();
-            
-            // Create a response-like object
-            return {
-                ok: true,
-                json: () => Promise.resolve(JSON.parse(proxyData.contents))
-            };
-        }
-        
         async function fetchAllData() {
-            if (isLoading) return;
-            isLoading = true;
-            
             setStatus('sync');
-            const refreshBtn = document.getElementById('refreshBtn');
-            refreshBtn.disabled = true;
+            console.log('Fetching data from:', `${API_BASE}/api/all`);
             
             try {
-                const response = await smartFetch(`${API_BASE}/api/all`);
-                const data = await response.json();
+                const response = await fetch(`${API_BASE}/api/all`);
+                console.log('Response status:', response.status);
                 
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
                 console.log('Data received:', data);
                 
-                stocksData = Array.isArray(data.stocks) ? data.stocks : [];
-                newsData = Array.isArray(data.news) ? data.news : [];
-                masiData = data.masi || null;
-                marketStatusData = data.market_status || null;
+                stocksData = data.stocks || [];
+                newsData = data.news || [];
+                masiData = data.masi;
+                marketStatusData = data.market_status;
+                
+                console.log('Stocks:', stocksData.length);
+                console.log('News:', newsData.length);
+                console.log('MASI:', masiData);
                 
                 renderStocks();
                 renderNews();
                 renderMasi();
-                
-                if (marketStatusData) {
-                    updateMarketStatus(marketStatusData);
-                }
+                updateMarketStatus(marketStatusData);
                 
                 if (data.last_update) {
                     const date = new Date(data.last_update);
@@ -791,17 +737,14 @@
                 }
                 
                 setStatus('live');
-                
             } catch (error) {
                 console.error('Fetch error:', error);
                 setStatus('offline');
                 
+                // Show error in table
                 const t = translations[currentLang];
                 document.getElementById('stockTableBody').innerHTML = 
-                    `<tr><td colspan="7" class="error">${t.offline}: ${error.message}<br><small>Server may be starting up (takes 30-60s on Render free tier)</small></td></tr>`;
-            } finally {
-                isLoading = false;
-                refreshBtn.disabled = false;
+                    `<tr><td colspan="7" class="error">❌ ${t.offline}<br><small>${error.message}</small><br><small>Backend URL: ${API_BASE}</small></td></tr>`;
             }
         }
         
@@ -825,19 +768,21 @@
         }
         
         function renderMasi() {
-            if (!masiData) return;
+            if (!masiData) {
+                console.log('No MASI data');
+                return;
+            }
+            
+            console.log('Rendering MASI:', masiData);
             
             const display = document.getElementById('masiDisplay');
             const price = document.getElementById('masiPrice');
             const change = document.getElementById('masiChange');
             
             display.style.display = 'flex';
+            price.textContent = masiData.price.toFixed(2);
             
-            const priceValue = masiData.price || 0;
-            const changeValue = masiData.change_percent || masiData.change || 0;
-            
-            price.textContent = priceValue.toFixed(2);
-            
+            const changeValue = masiData.change_percent || 0;
             const sign = changeValue >= 0 ? '+' : '';
             change.textContent = `${sign}${changeValue.toFixed(2)}%`;
             change.style.color = changeValue >= 0 ? 'var(--up)' : 'var(--down)';
@@ -857,7 +802,7 @@
             } else {
                 container.className = 'market-status market-closed';
                 text.textContent = t.marketClosed;
-                nextOpen.textContent = `${t.nextOpen} ${status.next_open || ''}`;
+                nextOpen.textContent = `${t.nextOpen} ${status.next_open}`;
             }
         }
         
@@ -865,8 +810,10 @@
             const tbody = document.getElementById('stockTableBody');
             const t = translations[currentLang];
             
+            console.log('Rendering stocks:', stocksData.length);
+            
             if (stocksData.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="no-data">No stock data available - Market may be closed or scraper still running</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" class="no-data">${t.loading}</td></tr>`;
                 return;
             }
             
@@ -884,7 +831,7 @@
                     <tr class="stock-row ${hasData ? '' : 'inactive'}">
                         <td class="symbol">${stock.symbol}</td>
                         <td class="sector" title="${stock.sector}">${stock.sector}</td>
-                        <td class="capital">${stock.capital || '—'}</td>
+                        <td class="capital">${stock.capital}</td>
                         <td class="price">${hasData ? stock.price.toFixed(2) : '—'}</td>
                         <td class="change ${changeClass}">${hasData ? sign + stock.change.toFixed(2) + '%' : '—'}</td>
                         <td class="pe">${peDisplay}</td>
@@ -895,6 +842,7 @@
             
             tbody.innerHTML = html;
             
+            // Update title with count
             const liveCount = stocksData.filter(s => s.has_live_data).length;
             document.getElementById('stocksTitle').textContent = `${t.stocksTitle} • ${liveCount}/${stocksData.length}`;
         }
@@ -925,8 +873,10 @@
             const container = document.getElementById('newsList');
             const t = translations[currentLang];
             
+            console.log('Rendering news:', newsData.length);
+            
             if (newsData.length === 0) {
-                container.innerHTML = `<div class="loading">No news available</div>`;
+                container.innerHTML = `<div class="loading">${t.loading}</div>`;
                 return;
             }
             
@@ -939,7 +889,7 @@
                     <div class="news-item">
                         <div class="news-meta">
                             <span class="news-time">${timeText}</span>
-                            <span class="news-category">${item.category || 'INFO'}</span>
+                            <span class="news-category">${item.category}</span>
                         </div>
                         <a href="${item.link}" target="_blank" class="news-title">${item.title}</a>
                     </div>
