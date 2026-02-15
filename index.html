@@ -21,14 +21,17 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
         }
         .logo { color: #ff6600; font-weight: 800; font-size: 18px; letter-spacing: 2px; }
         
-        /* Social Media Links - Terminal Style */
+        /* Social Media Links */
         .social-bar {
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 10px;
+            flex-wrap: wrap;
         }
         .social-link {
             color: #666;
@@ -37,17 +40,11 @@
             border: 1px solid #333;
             padding: 4px 8px;
             transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            gap: 5px;
         }
         .social-link:hover {
             color: #ff6600;
             border-color: #ff6600;
             background: rgba(255, 102, 0, 0.1);
-        }
-        .social-icon {
-            font-size: 12px;
         }
         .website-link {
             color: #000;
@@ -57,47 +54,31 @@
         }
         .website-link:hover {
             background: #ff8833;
-            color: #000;
         }
         
-        .status { display: flex; gap: 20px; font-size: 12px; }
+        .status { display: flex; gap: 15px; font-size: 12px; align-items: center; }
         .status-item { display: flex; align-items: center; gap: 5px; }
         .dot { width: 8px; height: 8px; background: #333; display: inline-block; }
         .dot.live { background: #00ff41; box-shadow: 0 0 8px #00ff41; }
         .dot.offline { background: #ff0000; }
+        .dot.sync { background: #ffaa00; animation: pulse 1s infinite; }
         
-        .container { display: grid; grid-template-columns: 1fr 350px; height: calc(100vh - 50px); }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
         
-        /* Mobile responsive for social bar */
-        @media (max-width: 900px) {
-            .header {
-                flex-direction: column;
-                gap: 10px;
-                padding: 10px;
-            }
-            .social-bar {
-                flex-wrap: wrap;
-                justify-content: center;
-                gap: 8px;
-            }
-            .social-link {
-                font-size: 10px;
-                padding: 3px 6px;
-            }
-        }
+        .container { display: grid; grid-template-columns: 1fr 400px; height: calc(100vh - 60px); }
         
-        /* Stocks Panel */
         .stocks-panel { border-right: 1px solid #222; overflow: hidden; display: flex; flex-direction: column; }
         .panel-header {
             background: #0a0a0a;
             border-bottom: 1px solid #333;
             padding: 8px 15px;
-            font-size: 12px;
-            color: #666;
+            font-size: 11px;
+            color: #ff6600;
             text-transform: uppercase;
             letter-spacing: 1px;
+            font-weight: 700;
         }
-        .stock-table { width: 100%; border-collapse: collapse; }
+        .stock-table { width: 100%; border-collapse: collapse; font-size: 13px; }
         .stock-table th {
             background: #111;
             color: #666;
@@ -105,50 +86,91 @@
             text-align: left;
             padding: 10px 15px;
             border-bottom: 1px solid #333;
-            font-size: 12px;
             position: sticky;
             top: 0;
         }
         .stock-table td {
-            padding: 12px 15px;
+            padding: 10px 15px;
             border-bottom: 1px solid #1a1a1a;
-            font-size: 14px;
         }
         .stock-row:hover { background: #1a0f00; cursor: pointer; }
-        .symbol { color: #fff; font-weight: 700; }
-        .price { text-align: right; color: #fff; font-weight: 700; }
-        .change { text-align: right; font-weight: 700; }
+        .symbol { color: #fff; font-weight: 700; font-size: 14px; }
+        .price { text-align: right; color: #fff; font-weight: 700; font-size: 14px; }
+        .change { text-align: right; font-weight: 700; font-size: 14px; }
         .change.up { color: #00ff41; }
         .change.down { color: #ff6600; }
         .change.neutral { color: #888; }
+        .no-data { color: #444; font-style: italic; }
         
-        /* News Panel */
         .news-panel { background: #050505; overflow: hidden; display: flex; flex-direction: column; }
+        .news-list { overflow-y: auto; flex: 1; }
         .news-item {
             padding: 12px 15px;
             border-bottom: 1px solid #1a1a1a;
             font-size: 12px;
-            line-height: 1.5;
+            line-height: 1.4;
         }
         .news-item:hover { background: #1a0f00; }
-        .news-time { color: #ff6600; font-size: 11px; margin-bottom: 4px; }
-        .news-title { color: #ccc; text-decoration: none; display: block; }
-        .news-title:hover { color: #fff; }
-        .news-source { color: #666; font-size: 10px; margin-top: 4px; }
+        .news-time { 
+            color: #ff6600; 
+            font-size: 10px; 
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .news-title { color: #ccc; text-decoration: none; display: block; font-weight: 500; }
+        .news-title:hover { color: #fff; text-decoration: underline; }
+        .news-cat { 
+            color: #666; 
+            font-size: 10px; 
+            background: #1a1a1a;
+            padding: 2px 6px;
+            display: inline-block;
+        }
         
-        .loading { color: #ff6600; padding: 20px; text-align: center; font-size: 12px; animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        .loading { 
+            color: #ff6600; 
+            padding: 20px; 
+            text-align: center; 
+            font-size: 12px; 
+            animation: pulse 1.5s infinite; 
+        }
+        .error { 
+            color: #ff0000; 
+            padding: 15px; 
+            font-size: 11px; 
+            border-left: 3px solid #ff0000; 
+            margin: 10px; 
+            background: #1a0000; 
+        }
+        .refresh-btn {
+            background: #ff6600;
+            color: #000;
+            border: none;
+            padding: 4px 10px;
+            font-family: inherit;
+            font-size: 11px;
+            cursor: pointer;
+            font-weight: 700;
+        }
+        .refresh-btn:hover { background: #ff8833; }
         
-        .error { color: #ff0000; padding: 10px; font-size: 11px; border-left: 3px solid #ff0000; margin: 10px; background: #1a0000; }
+        .api-status {
+            font-size: 11px;
+            color: #666;
+            padding: 2px 6px;
+            border: 1px solid #333;
+        }
         
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #000; }
-        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb { background: #333; }
         ::-webkit-scrollbar-thumb:hover { background: #ff6600; }
         
         @media (max-width: 900px) {
-            .container { grid-template-columns: 1fr; }
-            .news-panel { border-top: 2px solid #333; height: 300px; }
+            .container { grid-template-columns: 1fr; grid-template-rows: 1fr 300px; }
+            .header { flex-direction: column; align-items: flex-start; }
+            .stocks-panel { border-right: none; border-bottom: 1px solid #333; }
         }
     </style>
 </head>
@@ -158,21 +180,11 @@
         
         <!-- Social Media Bar -->
         <div class="social-bar">
-            <a href="https://risk.ma" target="_blank" class="social-link website-link">
-                <span class="social-icon">+</span> RISK.MA
-            </a>
-            <a href="https://x.com/dogofallstreets" target="_blank" class="social-link">
-                <span class="social-icon">+</span> X
-            </a>
-            <a href="https://tiktok.com/u/@dogofallstreets" target="_blank" class="social-link">
-                <span class="social-icon">+</span> Tiktok
-            </a>
-            <a href="https://instagram.com/risk.maroc" target="_blank" class="social-link">
-                <span class="social-icon">+</span> Instagram
-            </a>
-            <a href="https://t.me/boursedecasa" target="_blank" class="social-link">
-                <span class="social-icon">+</span> Telegram
-            </a>
+            <a href="https://risk.ma" target="_blank" class="social-link website-link">🌐 RISK.MA</a>
+            <a href="https://x.com/dogofallstreets" target="_blank" class="social-link">𝕏 X</a>
+            <a href="https://tiktok.com/u/@dogofallstreets" target="_blank" class="social-link">🎵 TIKTOK</a>
+            <a href="https://instagram.com/risk.maroc" target="_blank" class="social-link">📷 IG</a>
+            <a href="https://t.me/boursedecasa" target="_blank" class="social-link">✈️ TG</a>
         </div>
 
         <div class="status">
@@ -189,18 +201,18 @@
     <div class="container">
         <!-- Stocks Panel -->
         <div class="stocks-panel">
-            <div class="panel-header">COURS EN TEMPS RÉEL • MASI ALL SHARES</div>
+            <div class="panel-header" id="stockHeader">◈ COURS EN TEMPS RÉEL • CHARGEMENT...</div>
             <div style="overflow-y: auto; flex: 1;">
                 <table class="stock-table">
                     <thead>
                         <tr>
-                            <th style="width: 25%">TICKER</th>
-                            <th style="width: 35%; text-align: right">DERNIER (MAD)</th>
-                            <th style="width: 40%; text-align: right">VARIATION %</th>
+                            <th style="width: 30%">TICKER</th>
+                            <th style="width: 35%; text-align: right">PRIX (MAD)</th>
+                            <th style="width: 35%; text-align: right">VAR %</th>
                         </tr>
                     </thead>
                     <tbody id="stockTableBody">
-                        <tr><td colspan="3" class="loading">RÉCUPÉRATION DES DONNÉES...</td></tr>
+                        <tr><td colspan="3" class="loading">CONNEXION À L'API...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -208,19 +220,20 @@
 
         <!-- News Panel -->
         <div class="news-panel">
-            <div class="panel-header">◢ RISK NETWORK • RADAR</div>
-            <div style="overflow-y: auto; flex: 1;" id="newsContainer">
-                <div class="loading">CHARGEMENT DES NEWS</div>
+            <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <span>◢ ACTUALITÉS • MEDIAS24</span>
+                <button class="refresh-btn" onclick="fetchAllData()">↻ RAFRAICHIR</button>
+            </div>
+            <div class="news-list" id="newsContainer">
+                <div class="loading">CHARGEMENT...</div>
             </div>
         </div>
     </div>
 
     <script>
-        // Configuration
-        const API_URL = 'https://risk-network-terminal.onrender.com/api/stocks';
-        const RSS_URL = 'https://medias24.com/categorie/leboursier/actus/feed/';
-        const REFRESH_INTERVAL = 30000; // 30 seconds
-
+        // ⚠️ IMPORTANT: Set your Render API URL here
+        const API_BASE = 'https://risk-network-terminal.onrender.com';
+        
         // Clock
         function updateClock() {
             const now = new Date();
@@ -229,143 +242,207 @@
         setInterval(updateClock, 1000);
         updateClock();
 
-        // Fetch Stocks from API
+        // Fetch Stocks from Render API
         async function fetchStocks() {
             const dot = document.getElementById('apiDot');
             const status = document.getElementById('apiStatus');
+            const header = document.getElementById('stockHeader');
             
-            dot.className = 'dot';
+            dot.className = 'dot sync';
             status.textContent = 'SYNC...';
             
             try {
-                const response = await fetch(API_URL);
-                if (!response.ok) throw new Error('API Error');
+                console.log('Fetching from:', `${API_BASE}/api/stocks`);
+                
+                const response = await fetch(`${API_BASE}/api/stocks`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                    },
+                    // No-cors mode won't work for JSON, we need proper CORS
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
                 
                 const stocks = await response.json();
+                console.log(`Received ${stocks.length} stocks`);
+                
                 renderStocks(stocks);
                 
                 dot.className = 'dot live';
                 status.textContent = 'LIVE';
+                
+                // Update header with count
+                const liveCount = stocks.filter(s => s.price > 0).length;
+                header.textContent = `◈ COURS EN TEMPS RÉEL • ${stocks.length} TICKERS (${liveCount} ACTIFS)`;
+                
             } catch (error) {
                 console.error('Stock fetch error:', error);
                 dot.className = 'dot offline';
                 status.textContent = 'OFFLINE';
-                showStockError();
+                document.getElementById('stockTableBody').innerHTML = 
+                    `<tr><td colspan="3" class="error">
+                        ERREUR CONNEXION API<br>
+                        ${error.message}<br>
+                        <button onclick="fetchAllData()" class="refresh-btn" style="margin-top:10px">RÉESSAYER</button>
+                    </td></tr>`;
             }
         }
 
         function renderStocks(stocks) {
             const tbody = document.getElementById('stockTableBody');
+            
             if (!stocks || stocks.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="3" class="error">AUCUNE DONNÉE DISPONIBLE</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="3" style="padding: 20px; color: #666; text-align: center;">AUCUNE DONNÉE</td></tr>';
                 return;
             }
 
             let html = '';
             stocks.forEach(stock => {
-                const changeClass = stock.change > 0 ? 'up' : stock.change < 0 ? 'down' : 'neutral';
-                const sign = stock.change > 0 ? '+' : '';
+                const hasData = stock.price > 0;
                 
-                html += `
-                    <tr class="stock-row">
-                        <td class="symbol">${stock.symbol}</td>
-                        <td class="price">${stock.price.toFixed(2)}</td>
-                        <td class="change ${changeClass}">${sign}${stock.change.toFixed(2)}%</td>
-                    </tr>
-                `;
+                if (hasData) {
+                    const changeClass = stock.change > 0 ? 'up' : stock.change < 0 ? 'down' : 'neutral';
+                    const sign = stock.change > 0 ? '+' : '';
+                    
+                    html += `
+                        <tr class="stock-row">
+                            <td class="symbol">${stock.symbol}</td>
+                            <td class="price">${stock.price.toFixed(2)}</td>
+                            <td class="change ${changeClass}">${sign}${stock.change.toFixed(2)}%</td>
+                        </tr>
+                    `;
+                } else {
+                    // Show stock even with no data
+                    html += `
+                        <tr class="stock-row">
+                            <td class="symbol">${stock.symbol}</td>
+                            <td class="price no-data">0.00</td>
+                            <td class="change neutral no-data">0.00%</td>
+                        </tr>
+                    `;
+                }
             });
             tbody.innerHTML = html;
         }
 
-        function showStockError() {
-            document.getElementById('stockTableBody').innerHTML = 
-                '<tr><td colspan="3" class="error">ERREUR CONNEXION API<br>Vérifiez que le serveur est en ligne</td></tr>';
-        }
-
-        // Fetch News directly from RSS (Client-side)
+        // Fetch News directly from RSS (Client-side with CORS proxy)
         async function fetchNews() {
             const container = document.getElementById('newsContainer');
+            container.innerHTML = '<div class="loading">CHARGEMENT RSS...</div>';
             
-            try {
-                // Using a CORS proxy since medias24 might block direct browser requests
-                const proxyUrls = [
-                    'https://api.allorigins.win/raw?url=' + encodeURIComponent(RSS_URL),
-                    'https://api.codetabs.com/v1/proxy?quest=' + RSS_URL
-                ];
-                
-                let response = null;
-                
-                for (let url of proxyUrls) {
-                    try {
-                        response = await fetch(url, { 
-                            mode: 'cors',
-                            headers: { 'Accept': 'application/rss+xml, application/xml' }
-                        });
-                        if (response.ok) break;
-                    } catch (e) {
-                        continue;
-                    }
+            const RSS_URL = 'https://medias24.com/categorie/leboursier/actus/feed/';
+            
+            // Try multiple CORS proxies
+            const proxies = [
+                'https://api.allorigins.win/raw?url=',
+                'https://api.codetabs.com/v1/proxy?quest=',
+                'https://corsproxy.io/?'
+            ];
+            
+            for (let proxy of proxies) {
+                try {
+                    console.log('Trying proxy:', proxy);
+                    const response = await fetch(proxy + encodeURIComponent(RSS_URL));
+                    
+                    if (!response.ok) continue;
+                    
+                    const xmlText = await response.text();
+                    parseRSS(xmlText);
+                    return; // Success
+                    
+                } catch (error) {
+                    console.log('Proxy failed:', proxy, error.message);
+                    continue;
                 }
-                
-                if (!response || !response.ok) throw new Error('RSS Fetch Failed');
-                
-                const text = await response.text();
-                parseRSS(text);
-                
-            } catch (error) {
-                console.error('News fetch error:', error);
-                container.innerHTML = `
-                    <div class="error">
-                        ERREUR CHARGEMENT RSS<br>
-                        <button onclick="fetchNews()" style="background:#ff6600;color:#000;border:none;padding:5px 10px;margin-top:10px;cursor:pointer;font-family:inherit;">RÉESSAYER</button>
-                    </div>
-                `;
             }
+            
+            // All proxies failed
+            container.innerHTML = `
+                <div class="error">
+                    ERREUR: Impossible de charger le flux RSS (CORS)<br>
+                    <button onclick="fetchNews()" class="refresh-btn" style="margin-top:10px">RÉESSAYER</button>
+                </div>
+            `;
         }
 
         function parseRSS(xmlText) {
-            const parser = new DOMParser();
-            const xml = parser.parseFromString(xmlText, 'text/xml');
-            const items = xml.querySelectorAll('item');
+            const container = document.getElementById('newsContainer');
             
-            let html = '';
-            let count = 0;
-            
-            items.forEach(item => {
-                if (count >= 15) return;
+            try {
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
                 
-                const title = item.querySelector('title')?.textContent || 'Sans titre';
-                const link = item.querySelector('link')?.textContent || '#';
-                const pubDate = item.querySelector('pubDate')?.textContent || '';
-                const category = item.querySelector('category')?.textContent || 'INFO';
+                const items = xmlDoc.querySelectorAll('item');
                 
-                let timeStr = '';
-                if (pubDate) {
-                    const date = new Date(pubDate);
-                    timeStr = date.toLocaleDateString('fr-FR') + ' ' + date.toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'});
+                if (items.length === 0) {
+                    container.innerHTML = '<div class="loading">AUCUNE ACTUALITÉ</div>';
+                    return;
                 }
                 
-                html += `
-                    <div class="news-item">
-                        <div class="news-time">${timeStr} • ${category}</div>
-                        <a href="${link}" target="_blank" class="news-title">${title}</a>
-                        <div class="news-source">Medias24.com</div>
-                    </div>
-                `;
-                count++;
-            });
-            
-            document.getElementById('newsContainer').innerHTML = html;
+                let html = '';
+                const now = new Date();
+                
+                items.forEach((item, index) => {
+                    if (index >= 15) return; // Limit to 15
+                    
+                    const title = item.querySelector('title')?.textContent || 'Sans titre';
+                    const link = item.querySelector('link')?.textContent || '#';
+                    const pubDate = item.querySelector('pubDate')?.textContent || '';
+                    const category = item.querySelector('category')?.textContent || 'INFO';
+                    
+                    // Calculate time ago
+                    let timeText = 'À l\'instant';
+                    if (pubDate) {
+                        try {
+                            const pubDateObj = new Date(pubDate);
+                            const diffMs = now - pubDateObj;
+                            const diffMins = Math.floor(diffMs / 60000);
+                            const diffHours = Math.floor(diffMs / 3600000);
+                            const diffDays = Math.floor(diffMs / 86400000);
+                            
+                            if (diffMins < 60) timeText = `il y a ${diffMins}min`;
+                            else if (diffHours < 24) timeText = `il y a ${diffHours}h`;
+                            else timeText = `il y a ${diffDays}j`;
+                        } catch (e) {
+                            timeText = pubDate;
+                        }
+                    }
+                    
+                    html += `
+                        <div class="news-item">
+                            <div class="news-time">
+                                <span>${timeText}</span>
+                                <span class="news-cat">${category.toUpperCase()}</span>
+                            </div>
+                            <a href="${link}" target="_blank" class="news-title">${title}</a>
+                        </div>
+                    `;
+                });
+                
+                container.innerHTML = html;
+                
+            } catch (error) {
+                console.error('RSS parse error:', error);
+                container.innerHTML = '<div class="error">ERREUR PARSING RSS</div>';
+            }
         }
 
-        // Initial load and refresh
-        fetchStocks();
-        fetchNews();
+        // Fetch both
+        async function fetchAllData() {
+            await Promise.all([
+                fetchStocks(),
+                fetchNews()
+            ]);
+        }
+
+        // Initial load
+        fetchAllData();
         
-        setInterval(() => {
-            fetchStocks();
-            fetchNews();
-        }, REFRESH_INTERVAL);
+        // Auto refresh every 30 seconds
+        setInterval(fetchAllData, 30000);
     </script>
 </body>
 </html>
