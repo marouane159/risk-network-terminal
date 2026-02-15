@@ -104,6 +104,20 @@ def scrape_tradingview():
         print("TradingView fetch error:", e)
         return stocks_cache
 
+def convert_rating(value):
+    if value is None:
+        return "—"
+
+    if value >= 0.5:
+        return "Strong Buy"
+    elif value >= 0.1:
+        return "Buy"
+    elif value > -0.1:
+        return "Neutral"
+    elif value > -0.5:
+        return "Sell"
+    else:
+        return "Strong Sell"
 
 
 # -----------------------
