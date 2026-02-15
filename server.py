@@ -48,44 +48,57 @@ def get_market_status():
 def scrape_tradingview():
     global stocks_cache
 
-    url = "https://www.tradingview.com/markets/stocks-morocco/market-movers-all-stocks/"
+    url = "https://scanner.tradingview.com/morocco/scan"
 
-    headers = {
-        "User-Agent": "Mozilla/5.0"
+    payload = {
+        "filter": [],
+        "options": {"lang": "en"},
+        "symbols": {"query": {"types": []}, "tickers": []},
+        "columns": [
+            "name",
+            "sector",
+            "close",
+            "change",
+            "market_cap_basic"
+        ]
     }
 
-    response = requests.get(url, headers=headers, timeout=30)
-    soup = BeautifulSoup(response.text, "html.parser")
+    headers = {
+        "User-Agent": "Mozilla/5.0",
+        "Content-Type": "application/json"
+    }
 
-    scripts = soup.find_all("script")
+    try:
+        r = requests.post(url, json=payload, headers=headers, timeout=30)
 
-    stocks = []
+        if r.status_code != 200:
+            print("TradingView API error:", r.status_code)
+            return stocks_cache
 
-    for script in scripts:
-        if "market-movers" in script.text and "symbols" in script.text:
-            data_match = re.search(r"symbols\":(\[.*?\])", script.text)
+        data = r.json()
 
-            if data_match:
-                try:
-                    import json
-                    symbols = json.loads(data_match.group(1))
+        stocks = []
 
-                    for s in symbols:
-                        stocks.append({
-                            "symbol": s.get("symbol", ""),
-                            "sector": s.get("sector", "—"),
-                            "capital": "—",
-                            "price": float(s.get("close", 0)),
-                            "change": float(s.get("change", 0)),
-                            "pe": None,
-                            "rating": "—",
-                            "has_live_data": True
-                        })
-                except:
-                    pass
+        for item in data.get("data", []):
+            d = item.get("d", [])
 
-    stocks_cache = stocks
-    return stocks_cache
+            stocks.append({
+                "symbol": d[0],
+                "sector": d[1] if d[1] else "—",
+                "capital": f"{round(d[4] / 1_000_000_000, 2)}B MAD" if d[4] else "—",
+                "price": float(d[2]) if d[2] else 0,
+                "change": float(d[3]) if d[3] else 0,
+                "pe": None,
+                "rating": "—",
+                "has_live_data": True
+            })
+
+        stocks_cache = stocks
+        return stocks_cache
+
+    except Exception as e:
+        print("TradingView fetch error:", e)
+        return stocks_cache
 
 
 # -----------------------
