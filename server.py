@@ -18,75 +18,85 @@ os.makedirs(DATA_DIR, exist_ok=True)
 STOCKS_FILE = f"{DATA_DIR}/stocks.json"
 NEWS_FILE = f"{DATA_DIR}/news.json"
 
-# Complete base info for all 54 stocks (fallback if sector not in TV)
-BASE_STOCKS = {
-    "TGC": {"name": "TRAVAUX GENERAUX DE CONSTRUCTIONS", "sector": "Construction"},
-    "TMA": {"name": "TOTALENERGIES MARKETING", "sector": "Énergie"},
-    "TQM": {"name": "TAQA MOROCCO", "sector": "Énergie"},
-    "NKL": {"name": "ENNAKL SA", "sector": "Transport"},
-    "LHM": {"name": "LAFARGEHOLCIM", "sector": "Construction"},
-    "UMR": {"name": "UNIMER", "sector": "Agroalimentaire"},
-    "WAA": {"name": "WAFA ASSURANCE", "sector": "Assurance"},
-    "ZDJ": {"name": "ZELLIDJA S.A", "sector": "Mines"},
-    "MSA": {"name": "SODEP MARSA", "sector": "Transport"},
-    "RDS": {"name": "RESIDENCE DAR SAADA", "sector": "Construction"},
-    "CSR": {"name": "COSUMAR", "sector": "Industrie"},
-    "CFG": {"name": "CFG BANK", "sector": "Banque"},
-    "CMG": {"name": "CMGP CAS", "sector": "Agriculture"},
-    "HPS": {"name": "HPS", "sector": "Paiment"},
-    "S2M": {"name": "S2M", "sector": "Paiment"},
-    "RIS": {"name": "RISMA", "sector": "Hotel Management"},
-    "DHO": {"name": "DELTA HOLDING", "sector": "Industrie"},
-    "DWY": {"name": "DISWAY", "sector": "Distribution éléctro"},
-    "SNA": {"name": "STOKVIS NORD AFRIQUE", "sector": "Distribution service"},
-    "SNP": {"name": "SNEP", "sector": "Process Industries"},
-    "STR": {"name": "STROC INDUSTRIE", "sector": "Service Industriel"},
-    "INV": {"name": "INVOLYS", "sector": "Service de Technologie"},
-    "MIC": {"name": "MICRODATA", "sector": "Service de Technologie"},
-    "DYT": {"name": "DISTY TECHNOLOGIES", "sector": "Service de destribution"},
-    "ADH": {"name": "DOUJA PROM ADDOHA", "sector": "Immobilier"},
-    "IMO": {"name": "IMMORENT INVEST", "sector": "Immobilier"},
-    "ADI": {"name": "ALLIANCES", "sector": "Divers"},
-    "AFI": {"name": "AFRIC INDUSTRIES", "sector": "Industrie"},
-    "AFM": {"name": "AFMA", "sector": "Finance"},
-    "AKT": {"name": "AKDITAL S.A", "sector": "Santé"},
-    "ALM": {"name": "ALUMINIUM DU MAROC", "sector": "Matériaux"},
-    "ARD": {"name": "ARADEI CAPITAL", "sector": "Immobilier"},
-    "ATH": {"name": "AUTO HALL", "sector": "Automobile"},
-    "ATL": {"name": "ATLANTASANAD", "sector": "Distribution"},
-    "ATW": {"name": "ATTIJARIWAFA BANK", "sector": "Banque"},
-    "BAL": {"name": "BALIMA", "sector": "Distribution"},
-    "BCP": {"name": "BANQUE CENTRALE POPULAIRE", "sector": "Banque"},
-    "CRS": {"name": "CARTIER SAADA", "sector": "Distribution"},
-    "CIH": {"name": "CREDIT IMMOBILIER ET HOTELIER", "sector": "Banque"},
-    "CMT": {"name": "CIMENTS DU MAROC", "sector": "Matériaux"},
-    "COL": {"name": "COLORADO", "sector": "Distribution"},
-    "CTM": {"name": "COMPAGNIE DE TRANSPORTS AU MAROC", "sector": "Transport"},
-    "DIM": {"name": "DELATTRE LEVIVIER MAROC", "sector": "Industrie"},
-    "DRI": {"name": "DARI COUSPATE", "sector": "Agroalimentaire"},
-    "EQD": {"name": "EQDOM", "sector": "Immobilier"},
-    "FBR": {"name": "FENIE BROSSETTE", "sector": "Distribution"},
-    "IAM": {"name": "MAROC TELECOM", "sector": "Télécom"},
-    "INM": {"name": "INDUSTRIE DU MAROC", "sector": "Industrie"},
-    "JET": {"name": "JET CONTRACTORS", "sector": "Construction"},
-    "LES": {"name": "LESIEUR CRISTAL", "sector": "Agroalimentaire"},
-    "MOX": {"name": "MAGHREB OXYGENE", "sector": "Industrie"},
-    "MNG": {"name": "MANAGEM", "sector": "Mines"},
-    "MUT": {"name": "MUTANDIS", "sector": "Agroalimentaire"},
-    "SID": {"name": "SONASID", "sector": "Agroalimentaire"},
-    "SOT": {"name": "SOTHEMA", "sector": "Pharma"},
-    "SRM": {"name": "REALISATIONS MECANIQUES", "sector": "Industrie"},
-    "MDP": {"name": "MED PAPER", "sector": "Industrie"},
-    "VCN": {"name": "VICENNE", "sector": "Santé"},
-    "SMI": {"name": "Société métallurgique d'imiter", "sector": "Finance"},
-    "CDM": {"name": "Crédit du Maroc", "sector": "Banque"}
+# ALL 54 Moroccan stocks - guaranteed complete list
+ALL_STOCKS = [
+    "TGC", "TMA", "TQM", "NKL", "LHM", "UMR", "WAA", "ZDJ", "MSA", "RDS",
+    "CSR", "CFG", "CMG", "HPS", "S2M", "RIS", "DHO", "DWY", "SNA", "SNP",
+    "STR", "INV", "MIC", "DYT", "ADH", "IMO", "ADI", "AFI", "AFM", "AKT",
+    "ALM", "ARD", "ATH", "ATL", "ATW", "BAL", "BCP", "CRS", "CIH", "CMT",
+    "COL", "CTM", "DIM", "DRI", "EQD", "FBR", "IAM", "INM", "JET", "LES",
+    "MOX", "MNG", "MUT", "SID", "SOT", "SRM", "MDP", "VCN", "SMI", "CDM"
+]
+
+# Base info for names
+STOCK_INFO = {
+    "TGC": "TRAVAUX GENERAUX DE CONSTRUCTIONS",
+    "TMA": "TOTALENERGIES MARKETING",
+    "TQM": "TAQA MOROCCO",
+    "NKL": "ENNAKL SA",
+    "LHM": "LAFARGEHOLCIM",
+    "UMR": "UNIMER",
+    "WAA": "WAFA ASSURANCE",
+    "ZDJ": "ZELLIDJA S.A",
+    "MSA": "SODEP MARSA",
+    "RDS": "RESIDENCE DAR SAADA",
+    "CSR": "COSUMAR",
+    "CFG": "CFG BANK",
+    "CMG": "CMGP CAS",
+    "HPS": "HPS",
+    "S2M": "S2M",
+    "RIS": "RISMA",
+    "DHO": "DELTA HOLDING",
+    "DWY": "DISWAY",
+    "SNA": "STOKVIS NORD AFRIQUE",
+    "SNP": "SNEP",
+    "STR": "STROC INDUSTRIE",
+    "INV": "INVOLYS",
+    "MIC": "MICRODATA",
+    "DYT": "DISTY TECHNOLOGIES",
+    "ADH": "DOUJA PROM ADDOHA",
+    "IMO": "IMMORENT INVEST",
+    "ADI": "ALLIANCES",
+    "AFI": "AFRIC INDUSTRIES",
+    "AFM": "AFMA",
+    "AKT": "AKDITAL S.A",
+    "ALM": "ALUMINIUM DU MAROC",
+    "ARD": "ARADEI CAPITAL",
+    "ATH": "AUTO HALL",
+    "ATL": "ATLANTASANAD",
+    "ATW": "ATTIJARIWAFA BANK",
+    "BAL": "BALIMA",
+    "BCP": "BANQUE CENTRALE POPULAIRE",
+    "CRS": "CARTIER SAADA",
+    "CIH": "CREDIT IMMOBILIER ET HOTELIER",
+    "CMT": "CIMENTS DU MAROC",
+    "COL": "COLORADO",
+    "CTM": "COMPAGNIE DE TRANSPORTS AU MAROC",
+    "DIM": "DELATTRE LEVIVIER MAROC",
+    "DRI": "DARI COUSPATE",
+    "EQD": "EQDOM",
+    "FBR": "FENIE BROSSETTE",
+    "IAM": "MAROC TELECOM",
+    "INM": "INDUSTRIE DU MAROC",
+    "JET": "JET CONTRACTORS",
+    "LES": "LESIEUR CRISTAL",
+    "MOX": "MAGHREB OXYGENE",
+    "MNG": "MANAGEM",
+    "MUT": "MUTANDIS",
+    "SID": "SONASID",
+    "SOT": "SOTHEMA",
+    "SRM": "REALISATIONS MECANIQUES",
+    "MDP": "MED PAPER",
+    "VCN": "VICENNE",
+    "SMI": "Société métallurgique d'imiter",
+    "CDM": "Crédit du Maroc"
 }
 
 def scrape_tradingview():
     """
-    Scrape all columns from TradingView:
-    Col 0: Symbol, Col 1: Price, Col 2: Change%, 
-    Col 6: P/E, Col 10: Sector, Col 11: Analyst Rating
+    Scrape ALL columns in correct order:
+    Col 0: Symbol, Col 11: Sector, Col 4: Capital, 
+    Col 1: Price, Col 2: Change%, Col 6: P/E, Col 10: Analyst Rating
     """
     print(f"[{datetime.now()}] Scraping TradingView...")
     
@@ -94,7 +104,7 @@ def scrape_tradingview():
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.9'
+            'Accept-Language': 'en-US,en;q=0.9,fr;q=0.8'
         }
         
         url = "https://www.tradingview.com/markets/stocks-morocco/market-movers-all-stocks/"
@@ -105,91 +115,121 @@ def scrape_tradingview():
             return None
         
         soup = BeautifulSoup(response.text, 'html.parser')
-        table = soup.find('table')
+        
+        # Find the main table
+        table = soup.find('table', {'class': 'table-Ngq2xrcG'})
+        if not table:
+            table = soup.find('table')
         
         if not table:
             print("No table found")
             return None
         
         tv_data = {}
+        rows = table.find_all('tr')
+        print(f"Processing {len(rows)} rows...")
         
-        for row in table.find_all('tr')[1:]:  # Skip header
+        for i, row in enumerate(rows[1:], 1):  # Skip header, enumerate for logging
             try:
                 cells = row.find_all('td')
-                if len(cells) >= 12:  # Need at least 12 columns
+                
+                # Need at least 12 columns for all data
+                if len(cells) < 12:
+                    continue
+                
+                # Extract data by column index
+                # Col 0: Symbol
+                symbol_cell = cells[0].find('a') or cells[0]
+                symbol = symbol_cell.text.strip()
+                
+                # Col 1: Price (Cours)
+                price_text = cells[1].text.strip().replace('MAD', '').replace(',', '').replace(' ', '')
+                
+                # Col 2: Change % (Var %)
+                change_text = cells[2].text.strip().replace('%', '').replace('(', '-').replace(')', '').replace('+', '')
+                
+                # Col 4: Capital (5th column, index 4)
+                capital_text = cells[4].text.strip() if len(cells) > 4 else ''
+                
+                # Col 6: P/E (7th column, index 6)
+                pe_text = cells[6].text.strip().replace(',', '') if len(cells) > 6 else ''
+                
+                # Col 10: Analyst Rating (11th column, index 10) - "Sentiment de marché"
+                rating = cells[10].text.strip() if len(cells) > 10 else ''
+                
+                # Col 11: Sector (12th column, index 11) - "Secteur"
+                sector = cells[11].text.strip() if len(cells) > 11 else ''
+                
+                # Parse numeric values
+                try:
+                    price = float(price_text) if price_text else 0.0
+                    change = float(change_text) if change_text else 0.0
+                    pe = float(pe_text) if pe_text and pe_text not in ['—', '-', ''] else None
+                except ValueError:
+                    price = 0.0
+                    change = 0.0
+                    pe = None
+                
+                if symbol:
+                    tv_data[symbol] = {
+                        'symbol': symbol,
+                        'price': price,
+                        'change': change,
+                        'capital': capital_text,
+                        'pe': pe,
+                        'sector': sector,
+                        'rating': rating if rating else '—',
+                        'has_data': price > 0
+                    }
+                    if i <= 5 or price > 0:  # Log first 5 and any with price
+                        print(f"  Row {i}: {symbol} | Price:{price} | Sector:{sector} | Rating:{rating}")
                     
-                    # Column 0: Symbol
-                    symbol_cell = cells[0].find('a')
-                    symbol = symbol_cell.text.strip() if symbol_cell else cells[0].text.strip()
-                    
-                    # Column 1: Price
-                    price_text = cells[1].text.strip().replace('MAD', '').replace(',', '').replace(' ', '')
-                    
-                    # Column 2: Change %
-                    change_text = cells[2].text.strip().replace('%', '').replace('(', '-').replace(')', '').replace('+', '')
-                    
-                    # Column 6: P/E (7th column, index 6)
-                    pe_text = cells[6].text.strip().replace(',', '') if len(cells) > 6 else ''
-                    
-                    # Column 10: Sector (11th column, index 10)  
-                    sector = cells[10].text.strip() if len(cells) > 10 else ''
-                    
-                    # Column 11: Analyst Rating (12th column, index 11)
-                    rating = cells[11].text.strip() if len(cells) > 11 else ''
-                    
-                    try:
-                        price = float(price_text) if price_text else 0.0
-                        change = float(change_text) if change_text else 0.0
-                        pe = float(pe_text) if pe_text and pe_text != '—' else None
-                        
-                        if symbol and price > 0:
-                            tv_data[symbol] = {
-                                'symbol': symbol,
-                                'price': price,
-                                'change': change,
-                                'pe': pe,
-                                'sector_tv': sector,
-                                'rating': rating
-                            }
-                            print(f"  ✓ {symbol}: {price} MAD | P/E:{pe} | {rating}")
-                    except ValueError:
-                        continue
-                        
             except Exception as e:
+                if i < 10:  # Only log errors for first few rows
+                    print(f"  Error row {i}: {e}")
                 continue
         
-        print(f"Scraped {len(tv_data)} stocks")
+        print(f"\nTotal scraped from TV: {len(tv_data)} stocks")
         
-        # Build complete 54-stock list with all fields
+        # Build complete list of ALL 54 stocks
         result = []
-        for symbol, base_info in BASE_STOCKS.items():
+        for symbol in ALL_STOCKS:
             if symbol in tv_data:
                 data = tv_data[symbol]
                 result.append({
                     'symbol': symbol,
-                    'name': base_info['name'],
+                    'name': STOCK_INFO.get(symbol, symbol),
+                    'sector': data['sector'] or 'N/A',
+                    'capital': data['capital'] or '—',
                     'price': data['price'],
                     'change': data['change'],
                     'pe': data['pe'],
-                    'sector': data['sector_tv'] or base_info['sector'],  # Use TV sector if available
                     'rating': data['rating'],
-                    'has_live_data': True
+                    'has_live_data': data['has_data']
                 })
             else:
+                # Not in TV table - include with zeros
                 result.append({
                     'symbol': symbol,
-                    'name': base_info['name'],
+                    'name': STOCK_INFO.get(symbol, symbol),
+                    'sector': 'N/A',
+                    'capital': '—',
                     'price': 0.0,
                     'change': 0.0,
                     'pe': None,
-                    'sector': base_info['sector'],
                     'rating': '—',
                     'has_live_data': False
                 })
         
+        # Sort: live data first, then alphabetically
+        result.sort(key=lambda x: (not x['has_live_data'], x['symbol']))
+        
         # Save
         with open(STOCKS_FILE, 'w') as f:
-            json.dump(result, f)
+            json.dump(result, f, ensure_ascii=False, indent=2)
+        
+        live_count = sum(1 for r in result if r['has_live_data'])
+        print(f"Saved {len(result)} stocks total ({live_count} with live data)")
         
         return result
         
@@ -200,7 +240,7 @@ def scrape_tradingview():
         return None
 
 def get_stocks():
-    """Get stocks with live scrape or fallback"""
+    """Get stocks - scrape live or from file"""
     live = scrape_tradingview()
     if live:
         return live
@@ -212,15 +252,24 @@ def get_stocks():
     except:
         pass
     
-    return [{'symbol': k, 'name': v['name'], 'price': 0.0, 'change': 0.0, 'pe': None, 'sector': v['sector'], 'rating': '—', 'has_live_data': False} 
-            for k, v in BASE_STOCKS.items()]
+    # Fallback
+    return [{
+        'symbol': s,
+        'name': STOCK_INFO.get(s, s),
+        'sector': 'N/A',
+        'capital': '—',
+        'price': 0.0,
+        'change': 0.0,
+        'pe': None,
+        'rating': '—',
+        'has_live_data': False
+    } for s in ALL_STOCKS]
 
 def get_news():
     try:
         url = "https://medias24.com/categorie/leboursier/actus/feed/"
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
         response = requests.get(url, headers=headers, timeout=10)
-        response.encoding = 'utf-8'
         
         if response.status_code == 200:
             root = ET.fromstring(response.content)
@@ -279,7 +328,7 @@ def api_all():
     })
 
 if __name__ == '__main__':
-    scrape_tradingview()  # Initial scrape
+    scrape_tradingview()
     thread = threading.Thread(target=lambda: [time.sleep(300) or scrape_tradingview() for _ in iter(int, 1)], daemon=True)
     thread.start()
     port = int(os.environ.get('PORT', 5000))
