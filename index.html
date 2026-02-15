@@ -2,136 +2,80 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>RISK NETWORK GROUP | TERMINAL LIVE</title>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+    <title>RISK NETWORK | TERMINAL LIVE</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-            font-family: 'JetBrains Mono', monospace; 
-            background-color: #000000; 
-            color: #e0e0e0; 
-            overflow: hidden;
-            height: 100vh;
-        }
+        body { background: #000; color: #ff6600; font-family: 'JetBrains Mono', monospace; margin: 0; padding: 15px; }
+        .header-bar { border-bottom: 2px solid #ff6600; padding-bottom: 10px; margin-bottom: 20px; font-weight: 800; }
         
-        /* Header & Brand Styling from Original */
-        .top-bar {
-            background: #0a0a0a;
-            border-bottom: 2px solid #ff6600;
-            padding: 10px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .brand { color: #ff6600; font-weight: 800; font-size: 16px; }
-        .live-indicator { color: #00ff41; font-size: 12px; }
-
-        /* FIXED COLUMN ALIGNMENT SYSTEM */
-        .table-header {
-            background: #111;
-            display: flex;
-            padding: 12px 15px;
-            border-bottom: 1px solid #333;
-            font-size: 11px;
-            color: #888;
-            font-weight: bold;
-        }
-        .table-row {
-            display: flex;
-            padding: 10px 15px;
-            border-bottom: 1px solid #111;
+        /* Grid Alignment Fix */
+        .stock-row {
+            display: grid;
+            grid-template-columns: 100px 120px 120px 80px 140px;
+            padding: 10px;
+            border-bottom: 1px solid #222;
             font-size: 12px;
             align-items: center;
-            transition: background 0.2s;
         }
-        .table-row:hover { background: #0a0a0a; }
-
-        /* Define exact widths for alignment */
-        .col-1 { width: 10%; } /* Ticker */
-        .col-2 { width: 25%; } /* Name */
-        .col-3 { width: 15%; } /* Sector */
-        .col-4 { width: 12%; text-align: right; } /* Capital */
-        .col-5 { width: 12%; text-align: right; font-weight: bold; } /* Price */
-        .col-6 { width: 10%; text-align: right; } /* Var% */
-        .col-7 { width: 16%; text-align: center; } /* Rating */
-
+        .header-row { color: #888; font-size: 11px; text-transform: uppercase; border-bottom: 2px solid #333; }
+        .ticker { color: #fff; font-weight: bold; }
         .up { color: #00ff41; }
         .down { color: #ff4444; }
-        .rating-box {
-            padding: 2px 8px;
-            border-radius: 3px;
-            font-size: 10px;
-            font-weight: bold;
-            background: #222;
-        }
-        .rating-buy { background: #004d20; color: #00ff41; border: 1px solid #00ff41; }
-        .rating-sell { background: #4d1a00; color: #ff6600; border: 1px solid #ff6600; }
-
-        #main-container { height: calc(100vh - 100px); overflow-y: auto; }
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-thumb { background: #ff6600; }
+        .rating { background: #222; padding: 3px 8px; border-radius: 4px; font-size: 10px; text-align: center; }
     </style>
 </head>
 <body>
 
-    <div class="top-bar">
-        <div class="brand">▶ RISK NETWORK GROUP | MOROCCO TERMINAL</div>
-        <div class="live-indicator">● LIVE SYNC <span id="clock">00:00:00</span></div>
-    </div>
+<div class="header-bar">▶ RISK NETWORK GROUP TERMINAL | LIVE BOURSE MAROC</div>
 
-    <div class="table-header">
-        <div class="col-1">TICKER</div>
-        <div class="col-2">NOM</div>
-        <div class="col-3">SECTEUR</div>
-        <div class="col-4">CAPITAL</div>
-        <div class="col-5">COURS</div>
-        <div class="col-6">VAR%</div>
-        <div class="col-7">SENTIMENT</div>
-    </div>
+<div class="stock-row header-row">
+    <div>Ticker</div>
+    <div>Cours</div>
+    <div>Variation</div>
+    <div>P/E</div>
+    <div>Recommandation</div>
+</div>
 
-    <div id="main-container">
-        </div>
+<div id="stock-container">
+    <div style="padding: 20px;">Synchronisation en cours...</div>
+</div>
 
-    <script>
-        const API_URL = 'https://risk-network-terminal.onrender.com/api/stocks';
+<script>
+    // Replace this with your ACTUAL Render URL
+    const API_URL = 'https://risk-network-terminal.onrender.com/api/stocks';
 
-        async function updateTerminal() {
-            try {
-                const response = await fetch(API_URL);
-                const stocks = await response.json();
-                const container = document.getElementById('main-container');
+    async function fetchStocks() {
+        try {
+            const response = await fetch(API_URL);
+            const stocks = await response.json();
+            const container = document.getElementById('stock-container');
+            
+            container.innerHTML = stocks.map(stock => {
+                const isUp = stock.change.includes('+');
+                const colorClass = isUp ? 'up' : stock.change.includes('-') ? 'down' : '';
                 
-                container.innerHTML = stocks.map(s => {
-                    const isUp = s.change.includes('+');
-                    const colorClass = isUp ? 'up' : s.change.includes('-') ? 'down' : '';
-                    const rClass = s.rating.toLowerCase().includes('buy') ? 'rating-buy' : 
-                                  s.rating.toLowerCase().includes('sell') ? 'rating-sell' : '';
-                    
-                    return `
-                        <div class="table-row" style="${s.active ? '' : 'opacity: 0.4'}">
-                            <div class="col-1" style="color:#ff6600; font-weight:800">${s.ticker}</div>
-                            <div class="col-2">${s.name}</div>
-                            <div class="col-3" style="color:#888; font-size:10px">${s.sector}</div>
-                            <div class="col-4">${s.cap}</div>
-                            <div class="col-5">${s.price}</div>
-                            <div class="col-6 ${colorClass}">${s.change}</div>
-                            <div class="col-7">
-                                <span class="rating-box ${rClass}">${s.rating}</span>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-            } catch (e) { console.error("Sync Error", e); }
+                return `
+                    <div class="stock-row">
+                        <div class="ticker">${stock.ticker}</div>
+                        <div>${stock.price}</div>
+                        <div class="${colorClass}">${stock.change}</div>
+                        <div>${stock.pe}</div>
+                        <div><span class="rating">${stock.rating}</span></div>
+                    </div>
+                `;
+            }).join('');
+        } catch (error) {
+            console.error("API Error:", error);
+            document.getElementById('stock-container').innerHTML = '<div style="color: red;">Erreur de connexion au serveur Render.</div>';
         }
+    }
 
-        // Clock Update
-        setInterval(() => {
-            document.getElementById('clock').innerText = new Date().toLocaleTimeString();
-        }, 1000);
+    // Initial Load
+    fetchStocks();
+    
+    // Auto-refresh every 60 seconds
+    setInterval(fetchStocks, 60000);
+</script>
 
-        // Initial Load and Auto-refresh every 60 seconds
-        updateTerminal();
-        setInterval(updateTerminal, 60000);
-    </script>
 </body>
 </html>
