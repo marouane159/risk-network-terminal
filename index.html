@@ -11,8 +11,8 @@
             font-family: 'JetBrains Mono', monospace;
             background: #000;
             color: #e0e0e0;
-            font-size: 12px;
-            line-height: 1.4;
+            font-size: 11px;
+            line-height: 1.3;
             height: 100vh;
             overflow: hidden;
         }
@@ -23,21 +23,21 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            height: 45px;
+            height: 42px;
         }
-        .logo { color: #ff6600; font-weight: 800; font-size: 16px; letter-spacing: 1px; }
+        .logo { color: #ff6600; font-weight: 800; font-size: 15px; letter-spacing: 1px; }
         
         .social-bar {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
         .social-link {
             color: #666;
             text-decoration: none;
-            font-size: 10px;
+            font-size: 9px;
             border: 1px solid #333;
-            padding: 3px 6px;
+            padding: 2px 5px;
             transition: all 0.3s;
         }
         .social-link:hover {
@@ -52,59 +52,61 @@
             font-weight: 700;
         }
         
-        .status { display: flex; gap: 15px; font-size: 11px; align-items: center; }
+        .status { display: flex; gap: 12px; font-size: 10px; align-items: center; }
         .dot { width: 6px; height: 6px; background: #333; display: inline-block; }
         .dot.live { background: #00ff41; box-shadow: 0 0 6px #00ff41; }
         .dot.offline { background: #ff0000; }
         .dot.sync { background: #ffaa00; animation: pulse 1s infinite; }
         
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-        
-        .container { display: grid; grid-template-columns: 1fr 320px; height: calc(100vh - 45px); }
+        .container { display: grid; grid-template-columns: 1fr 300px; height: calc(100vh - 42px); }
         
         .stocks-panel { border-right: 1px solid #222; overflow: hidden; display: flex; flex-direction: column; }
         .panel-header {
             background: #0a0a0a;
             border-bottom: 1px solid #333;
-            padding: 6px 10px;
+            padding: 5px 8px;
             font-size: 10px;
             color: #ff6600;
             text-transform: uppercase;
             letter-spacing: 1px;
         }
         
-        /* Table Styles */
+        /* Table with exact column alignment */
         .stock-table { 
             width: 100%; 
             border-collapse: collapse; 
-            font-size: 11px;
+            table-layout: fixed; /* Critical for alignment */
         }
         .stock-table th {
             background: #111;
-            color: #666;
+            color: #888;
             font-weight: 400;
             text-align: left;
             padding: 6px 4px;
             border-bottom: 1px solid #333;
-            position: sticky;
-            top: 0;
-            font-size: 10px;
+            font-size: 9px;
             white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         .stock-table td {
             padding: 5px 4px;
             border-bottom: 1px solid #1a1a1a;
             white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            vertical-align: middle;
         }
-        .stock-row:hover { background: #1a0f00; cursor: pointer; }
+        .stock-row:hover { background: #1a0f00; }
         
-        /* Column specific styles */
-        .col-symbol { width: 8%; color: #fff; font-weight: 700; }
-        .col-price { width: 12%; text-align: right; color: #fff; font-weight: 700; }
-        .col-change { width: 10%; text-align: right; font-weight: 700; }
-        .col-pe { width: 10%; text-align: right; color: #888; }
-        .col-sector { width: 25%; color: #888; overflow: hidden; text-overflow: ellipsis; }
-        .col-rating { width: 15%; text-align: center; }
+        /* Exact column widths for alignment */
+        .col-ticker { width: 8%; color: #fff; font-weight: 700; }
+        .col-secteur { width: 14%; color: #aaa; }
+        .col-capital { width: 12%; color: #888; text-align: right; }
+        .col-cours { width: 11%; color: #fff; font-weight: 700; text-align: right; }
+        .col-var { width: 9%; text-align: right; font-weight: 700; }
+        .col-pe { width: 8%; color: #888; text-align: right; }
+        .col-sentiment { width: 14%; text-align: center; }
         
         .change.up { color: #00ff41; }
         .change.down { color: #ff6600; }
@@ -115,16 +117,18 @@
         .rating {
             display: inline-block;
             padding: 1px 4px;
-            font-size: 9px;
+            font-size: 8px;
             border-radius: 2px;
             font-weight: 700;
+            white-space: nowrap;
         }
         .rating-strong-buy { background: #00ff41; color: #000; }
         .rating-buy { background: #90ee90; color: #000; }
         .rating-neutral { background: #666; color: #fff; }
+        .rating-hold { background: #888; color: #fff; }
         .rating-sell { background: #ff6600; color: #000; }
         .rating-strong-sell { background: #ff0000; color: #fff; }
-        .rating-none { background: #222; color: #666; }
+        .rating-none { background: transparent; color: #444; border: 1px solid #333; }
         
         .news-panel { background: #050505; overflow: hidden; display: flex; flex-direction: column; }
         .news-list { overflow-y: auto; flex: 1; }
@@ -132,9 +136,7 @@
             padding: 8px 10px;
             border-bottom: 1px solid #1a1a1a;
             font-size: 11px;
-            line-height: 1.3;
         }
-        .news-item:hover { background: #1a0f00; }
         .news-time { 
             color: #ff6600; 
             font-size: 9px; 
@@ -142,15 +144,9 @@
             display: flex;
             justify-content: space-between;
         }
-        .news-title { color: #ccc; text-decoration: none; display: block; font-size: 11px; }
+        .news-title { color: #ccc; text-decoration: none; font-size: 11px; }
         .news-title:hover { color: #fff; text-decoration: underline; }
-        .news-cat { 
-            color: #666; 
-            font-size: 9px; 
-            background: #1a1a1a;
-            padding: 1px 4px;
-            display: inline-block;
-        }
+        .news-cat { color: #666; font-size: 9px; background: #1a1a1a; padding: 1px 4px; }
         
         .loading { 
             color: #ff6600; 
@@ -181,11 +177,10 @@
         ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-track { background: #000; }
         ::-webkit-scrollbar-thumb { background: #333; }
-        ::-webkit-scrollbar-thumb:hover { background: #ff6600; }
         
-        @media (max-width: 1000px) {
+        @media (max-width: 900px) {
             .container { grid-template-columns: 1fr; grid-template-rows: 1fr 250px; }
-            .col-sector { max-width: 80px; }
+            body { font-size: 10px; }
         }
     </style>
 </head>
@@ -194,11 +189,11 @@
         <div class="logo">▶ RISK NETWORK GROUP</div>
         
         <div class="social-bar">
-            <a href="https://risk.ma" target="_blank" class="social-link website-link">🌐 RISK.MA</a>
-            <a href="https://x.com/dogofallstreets" target="_blank" class="social-link">𝕏 X</a>
-            <a href="https://tiktok.com/u/@dogofallstreets" target="_blank" class="social-link">🎵 TK</a>
-            <a href="https://instagram.com/risk.maroc" target="_blank" class="social-link">📷 IG</a>
-            <a href="https://t.me/boursedecasa" target="_blank" class="social-link">✈️ TG</a>
+            <a href="https://risk.ma" target="_blank" class="social-link website-link">RISK.MA</a>
+            <a href="https://x.com/dogofallstreets" target="_blank" class="social-link">X</a>
+            <a href="https://tiktok.com/u/@dogofallstreets" target="_blank" class="social-link">TK</a>
+            <a href="https://instagram.com/risk.maroc" target="_blank" class="social-link">IG</a>
+            <a href="https://t.me/boursedecasa" target="_blank" class="social-link">TG</a>
         </div>
 
         <div class="status">
@@ -218,16 +213,17 @@
                 <table class="stock-table">
                     <thead>
                         <tr>
-                            <th class="col-symbol">SYMB</th>
-                            <th class="col-price">PRIX</th>
-                            <th class="col-change">VAR %</th>
+                            <th class="col-ticker">TICKER</th>
+                            <th class="col-secteur">SECTEUR</th>
+                            <th class="col-capital">CAPITAL</th>
+                            <th class="col-cours">COURS</th>
+                            <th class="col-var">VAR %</th>
                             <th class="col-pe">P/E</th>
-                            <th class="col-sector">SECTEUR</th>
-                            <th class="col-rating">RATING</th>
+                            <th class="col-sentiment">SENTIMENT</th>
                         </tr>
                     </thead>
                     <tbody id="stockTableBody">
-                        <tr><td colspan="6" class="loading">CONNEXION À L'API...</td></tr>
+                        <tr><td colspan="7" class="loading">CONNEXION À L'API...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -235,12 +231,12 @@
 
         <!-- News Panel -->
         <div class="news-panel">
-            <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
-                <span>◢ MEDIAS24 • LE BOURSIER</span>
-                <button class="refresh-btn" onclick="fetchAllData()">↻ RAFRAICHIR</button>
+            <div class="panel-header" style="display: flex; justify-content: space-between;">
+                <span>◢ MEDIAS24</span>
+                <button class="refresh-btn" onclick="fetchAllData()">↻</button>
             </div>
             <div class="news-list" id="newsContainer">
-                <div class="loading">CHARGEMENT...</div>
+                <div class="loading">...</div>
             </div>
         </div>
     </div>
@@ -259,9 +255,10 @@
             if (!rating || rating === '—') return 'rating-none';
             const r = rating.toLowerCase();
             if (r.includes('strong buy')) return 'rating-strong-buy';
-            if (r.includes('buy')) return 'rating-buy';
-            if (r.includes('sell') && r.includes('strong')) return 'rating-strong-sell';
+            if (r.includes('buy') && !r.includes('sell')) return 'rating-buy';
+            if (r.includes('strong sell')) return 'rating-strong-sell';
             if (r.includes('sell')) return 'rating-sell';
+            if (r.includes('hold')) return 'rating-hold';
             return 'rating-neutral';
         }
 
@@ -278,6 +275,8 @@
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 
                 const stocks = await response.json();
+                console.log(`Got ${stocks.length} stocks`);
+                
                 renderStocks(stocks);
                 
                 dot.className = 'dot live';
@@ -291,14 +290,14 @@
                 dot.className = 'dot offline';
                 status.textContent = 'OFFLINE';
                 document.getElementById('stockTableBody').innerHTML = 
-                    `<tr><td colspan="6" class="error">ERREUR: ${error.message}</td></tr>`;
+                    `<tr><td colspan="7" class="error">ERREUR: ${error.message}</td></tr>`;
             }
         }
 
         function renderStocks(stocks) {
             const tbody = document.getElementById('stockTableBody');
             if (!stocks || stocks.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="padding: 20px; text-align: center;">AUCUNE DONNÉE</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" style="padding: 20px; text-align: center;">AUCUNE DONNÉE</td></tr>';
                 return;
             }
 
@@ -318,27 +317,31 @@
                 const peDisplay = stock.pe ? stock.pe.toFixed(1) : '—';
                 const ratingClass = getRatingClass(stock.rating);
                 const ratingText = stock.rating || '—';
+                const sectorText = stock.sector || 'N/A';
+                const capitalText = stock.capital || '—';
                 
                 if (hasData) {
                     html += `
                         <tr class="stock-row">
-                            <td class="col-symbol">${stock.symbol}</td>
-                            <td class="col-price">${stock.price.toFixed(2)}</td>
-                            <td class="col-change ${changeClass}">${sign}${stock.change.toFixed(2)}%</td>
+                            <td class="col-ticker">${stock.symbol}</td>
+                            <td class="col-secteur" title="${sectorText}">${sectorText}</td>
+                            <td class="col-capital">${capitalText}</td>
+                            <td class="col-cours">${stock.price.toFixed(2)}</td>
+                            <td class="col-var ${changeClass}">${sign}${stock.change.toFixed(2)}%</td>
                             <td class="col-pe">${peDisplay}</td>
-                            <td class="col-sector" title="${stock.sector}">${stock.sector}</td>
-                            <td class="col-rating"><span class="rating ${ratingClass}">${ratingText}</span></td>
+                            <td class="col-sentiment"><span class="rating ${ratingClass}">${ratingText}</span></td>
                         </tr>
                     `;
                 } else {
                     html += `
-                        <tr class="stock-row" style="opacity: 0.4;">
-                            <td class="col-symbol" style="color: #444;">${stock.symbol}</td>
-                            <td class="col-price no-data">0.00</td>
-                            <td class="col-change neutral no-data">0.00%</td>
+                        <tr class="stock-row" style="opacity: 0.35;">
+                            <td class="col-ticker" style="color: #444;">${stock.symbol}</td>
+                            <td class="col-secteur no-data">—</td>
+                            <td class="col-capital no-data">—</td>
+                            <td class="col-cours no-data">0.00</td>
+                            <td class="col-var no-data">0.00%</td>
                             <td class="col-pe no-data">—</td>
-                            <td class="col-sector no-data">${stock.sector}</td>
-                            <td class="col-rating"><span class="rating rating-none">—</span></td>
+                            <td class="col-sentiment"><span class="rating rating-none">—</span></td>
                         </tr>
                     `;
                 }
@@ -348,7 +351,7 @@
 
         async function fetchNews() {
             const container = document.getElementById('newsContainer');
-            container.innerHTML = '<div class="loading">CHARGEMENT RSS...</div>';
+            container.innerHTML = '<div class="loading">...</div>';
             
             const RSS_URL = 'https://medias24.com/categorie/leboursier/actus/feed/';
             const proxies = [
@@ -366,8 +369,7 @@
                     return;
                 } catch (e) { continue; }
             }
-            
-            container.innerHTML = '<div class="error">ERREUR CHARGEMENT RSS</div>';
+            container.innerHTML = '<div class="error">RSS ERREUR</div>';
         }
 
         function parseRSS(xmlText) {
@@ -379,19 +381,19 @@
             const now = new Date();
             
             items.forEach((item, i) => {
-                if (i >= 15) return;
+                if (i >= 10) return;
                 const title = item.querySelector('title')?.textContent || 'Sans titre';
                 const link = item.querySelector('link')?.textContent || '#';
                 const pubDate = item.querySelector('pubDate')?.textContent || '';
                 const category = item.querySelector('category')?.textContent || 'INFO';
                 
-                let timeText = 'À l\'instant';
+                let timeText = 'maintenant';
                 if (pubDate) {
                     const date = new Date(pubDate);
                     const diff = Math.floor((now - date) / 60000);
-                    if (diff < 60) timeText = `il y a ${diff}min`;
-                    else if (diff < 1440) timeText = `il y a ${Math.floor(diff/60)}h`;
-                    else timeText = `il y a ${Math.floor(diff/1440)}j`;
+                    if (diff < 60) timeText = `${diff}min`;
+                    else if (diff < 1440) timeText = `${Math.floor(diff/60)}h`;
+                    else timeText = `${Math.floor(diff/1440)}j`;
                 }
                 
                 html += `
@@ -401,7 +403,6 @@
                     </div>
                 `;
             });
-            
             document.getElementById('newsContainer').innerHTML = html;
         }
 
