@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 RISK Network Terminal - Backend Server
-Scrapes TradingView Morocco + MASI using Playwright (JS rendering)
+Scrapes Investing.com for MASI index + components
 Auto-refreshes every 10 minutes
 """
 
@@ -12,19 +12,16 @@ import xml.etree.ElementTree as ET
 import os
 import threading
 import time
-import re
 from datetime import datetime, timezone, timedelta
 from bs4 import BeautifulSoup
-
-# ────────────────────────────────────────────────
-# Playwright imports (must be installed + browsers)
-# ────────────────────────────────────────────────
-from playwright.sync_api import sync_playwright
+import re
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
-# Data storage
+# ────────────────────────────────────────────────
+# Your Moroccan stocks database (name used for matching)
+# ────────────────────────────────────────────────
 ALL_STOCKS = {
     "TGC": {"name": "TRAVAUX GENERAUX DE CONSTRUCTIONS", "sector": "Construction"},
     "TMA": {"name": "TOTALENERGIES MARKETING", "sector": "Énergie"},
@@ -107,18 +104,16 @@ last_update = None
 def get_market_status():
     now = datetime.now(timezone(timedelta(hours=1)))  # Morocco ≈ UTC+1
     weekday = now.weekday()
-    hour = now.hour
-    minute = now.minute
-    current_time = hour * 60 + minute
+    hour, minute = now.hour, now.minute
+    current_minutes = hour * 60 + minute
 
-    open_time = 9 * 60 + 30
-    close_time = 15 * 60 + 40
+    open_min = 9 * 60 + 30
+    close_min = 15 * 60 + 40
 
-    is_weekday = weekday < 5
-    is_open_hours = open_time <= current_time <= close_time
+    is_open = weekday < 5 and open_min <= current_minutes <= close_min
 
     return {
-        "is_open": is_weekday and is_open_hours,
+        "is_open": is_open,
         "open_time": "09:30",
         "close_time": "15:40",
         "current_time": now.strftime("%H:%M"),
@@ -126,225 +121,168 @@ def get_market_status():
         "next_open": get_next_market_open(now)
     }
 
-def get_next_market_open(current_time):
-    weekday = current_time.weekday()
-    hour = current_time.hour
-    minute = current_time.minute
-    current_minutes = hour * 60 + minute
+def get_next_market_open(current):
+    # same as before...
+    weekday = current.weekday()
+    current_min = current.hour * 60 + current.minute
 
     if weekday >= 5:
-        days_until_monday = 7 - weekday
-        next_open = current_time + timedelta(days=days_until_monday)
-        return next_open.replace(hour=9, minute=30, second=0).strftime("%Y-%m-%d %H:%M")
-    elif current_minutes > 15 * 60 + 40:
-        next_open = current_time + timedelta(days=1)
-        if next_open.weekday() >= 5:
-            days_until_monday = 7 - next_open.weekday()
-            next_open = next_open + timedelta(days=days_until_monday)
-        return next_open.replace(hour=9, minute=30, second=0).strftime("%Y-%m-%d %H:%M")
+        days_to_monday = 7 - weekday
+        next_day = current + timedelta(days=days_to_monday)
+    elif current_min > 15*60 + 40:
+        next_day = current + timedelta(days=1)
+        if next_day.weekday() >= 5:
+            next_day += timedelta(days=7 - next_day.weekday())
     else:
         return "Today 09:30"
 
+    return next_day.replace(hour=9, minute=30, second=0).strftime("%Y-%m-%d %H:%M")
+
+def clean_number(text):
+    """Handle French/Moroccan formats: 18 573,12 → 18573.12"""
+    text = re.sub(r'[\s\xa0\u202f]', '', text.strip())
+    text = text.replace(',', '.')
+    try:
+        return float(text)
+    except:
+        return None
+
 def scrape_masi_index():
     global masi_cache
-    print(f"[{datetime.now()}] Scraping MASI index...")
+    print(f"[{datetime.now()}] Scraping MASI from investing.com...")
 
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True, args=["--no-sandbox", "--disable-setuid-sandbox"])
-            page = browser.new_page(user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-            page.goto("https://fr.tradingview.com/symbols/CSEMA-MASI/", timeout=60000)
-            page.wait_for_load_state("networkidle", timeout=45000)
-            html = page.content()
-            browser.close()
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+        url = "https://www.investing.com/indices/masi"
+        resp = requests.get(url, headers=headers, timeout=20)
+        resp.raise_for_status()
 
-        soup = BeautifulSoup(html, 'html.parser')
+        soup = BeautifulSoup(resp.text, 'html.parser')
 
-        price_elem = (
-            soup.find('span', class_='last-zoF9r75I') or
-            soup.find('span', class_=lambda x: x and 'last-' in str(x)) or
-            soup.find('span', {'data-qa-id': 'symbol-last-value'})
-        )
+        # Look for price/change block - often in a div with price and change together
+        price_block = soup.find(string=re.compile(r'[\d\s,.]+.*[-+].*%'))
+        if not price_block:
+            price_block = soup.find('div', class_=lambda c: c and 'instrument-price' in c) or \
+                          soup.find('span', class_=lambda c: c and ('instrument-price' in c or 'last' in c))
 
-        price = None
-        if price_elem:
-            price_text = price_elem.get_text().strip()
-            price_text = price_text.replace('\u202f', '').replace(' ', '').replace('\xa0', '').replace(',', '.')
-            try:
-                price = float(price_text)
-                print(f"Found MASI price: {price}")
-            except ValueError:
-                print(f"Could not parse price: {price_text}")
+        price, change_abs, change_pct = None, 0.0, 0.0
+
+        if price_block:
+            text = price_block.get_text(strip=True)
+            # Example: "18,573.12 -72.31 (-0.39%)"
+            match = re.search(r'([\d\s,.]+)\s*([-+][\d\s,.]+)\s*\(([-+][\d,.]+%)\)', text)
+            if match:
+                price_str, change_abs_str, change_pct_str = match.groups()
+                price = clean_number(price_str)
+                change_abs = clean_number(change_abs_str) or 0.0
+                change_pct = clean_number(change_pct_str.replace('%', '')) or 0.0
+                print(f"Parsed MASI: {price} | {change_abs} ({change_pct}%)")
 
         if price is None:
-            for span in soup.find_all('span'):
-                text = span.get_text().strip()
-                if re.match(r'^[\d\s\u202f,\.]+$', text):
-                    clean = text.replace('\u202f', '').replace(' ', '').replace('\xa0', '').replace(',', '.')
-                    try:
-                        val = float(clean)
-                        if 8000 < val < 50000:
-                            price = val
-                            print(f"Found MASI price (fallback): {price}")
-                            break
-                    except:
-                        continue
+            # Fallback: find any large number in ~18000 range
+            for span in soup.find_all(['span', 'div']):
+                t = span.get_text(strip=True)
+                val = clean_number(t)
+                if val and 15000 < val < 25000:
+                    price = val
+                    print(f"Fallback MASI price: {price}")
+                    break
 
-        change_percent = None
-        change_elem = (
-            soup.find('span', class_=lambda x: x and 'change-' in str(x)) or
-            soup.find('span', {'data-qa-id': 'symbol-change-percent-value'})
-        )
-        if change_elem:
-            txt = change_elem.get_text().strip().replace('%', '').replace('+', '').replace(',', '.')
-            try:
-                change_percent = float(txt)
-                print(f"Found change: {change_percent}%")
-            except:
-                pass
-
-        masi_cache = {
-            "symbol": "MASI",
-            "name": "Morocco All Shares Index",
+        masi_cache.update({
             "price": price if price else masi_cache["price"],
-            "change": change_percent or 0.0,
-            "change_percent": change_percent or 0.0,
-            "currency": "MAD",
+            "change": change_abs,
+            "change_percent": change_pct,
             "last_update": datetime.now().isoformat()
-        }
+        })
 
-        print(f"MASI → {masi_cache['price']} ({masi_cache['change_percent']}%)")
+        print(f"MASI updated: {masi_cache['price']} ({masi_cache['change_percent']}%)")
         return masi_cache
 
     except Exception as e:
-        print(f"MASI scrape failed: {e}")
+        print(f"MASI scrape error: {e}")
         return masi_cache
 
-def scrape_tradingview():
+def scrape_masi_components():
     global stocks_cache, last_update
-    print(f"[{datetime.now()}] Scraping TradingView Morocco stocks...")
+    print(f"[{datetime.now()}] Scraping MASI components from investing.com...")
 
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True, args=["--no-sandbox", "--disable-setuid-sandbox"])
-            page = browser.new_page(user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-            page.goto("https://www.tradingview.com/markets/stocks-morocco/market-movers-all-stocks/", timeout=90000)
-            page.wait_for_load_state("networkidle", timeout=60000)
-            # Give extra time for table to appear
-            page.wait_for_selector("table", timeout=30000)
-            html = page.content()
-            browser.close()
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+        url = "https://www.investing.com/indices/masi-components"
+        resp = requests.get(url, headers=headers, timeout=25)
+        resp.raise_for_status()
 
-        soup = BeautifulSoup(html, 'html.parser')
+        soup = BeautifulSoup(resp.text, 'html.parser')
+
+        # Find the components table - usually has many rows, class genTbl or cross_rates
+        table = None
+        for t in soup.find_all('table'):
+            rows = t.find_all('tr')
+            if len(rows) > 20:  # arbitrary but > most other tables
+                table = t
+                break
+
+        if not table:
+            print("No suitable table found")
+            return stocks_cache
+
         tv_data = {}
+        name_to_symbol = {info['name'].lower(): sym for sym, info in ALL_STOCKS.items()}
 
-        tables = soup.find_all('table')
-        print(f"Found {len(tables)} tables")
-
-        for table in tables:
-            rows = table.find_all('tr')
-            if len(rows) < 5:
+        for row in table.find_all('tr')[1:]:  # skip header
+            cells = row.find_all('td')
+            if len(cells) < 6:
                 continue
 
-            for row in rows[1:]:
-                try:
-                    cells = row.find_all(['td', 'th'])
-                    if len(cells) < 5:
-                        continue
+            name_cell = cells[0].get_text(strip=True).lower()
+            if not name_cell:
+                continue
 
-                    symbol_cell = cells[0].find('a') or cells[0]
-                    symbol = symbol_cell.get_text().strip().upper()
+            # Match name (partial, case-insensitive)
+            matched_symbol = None
+            for full_name_lower, sym in name_to_symbol.items():
+                if full_name_lower in name_cell or name_cell in full_name_lower:
+                    matched_symbol = sym
+                    break
 
-                    if not symbol or symbol not in ALL_STOCKS:
-                        continue
+            if not matched_symbol:
+                continue
 
-                    data = {
-                        'symbol': symbol,
-                        'price': 0.0,
-                        'change': 0.0,
-                        'capital': '—',
-                        'pe': None,
-                        'sector': ALL_STOCKS[symbol]['sector'],
-                        'rating': '—'
-                    }
+            price_str = cells[2].get_text(strip=True)   # Last
+            chg_pct_str = cells[5].get_text(strip=True) # Chg. %
 
-                    for j, cell in enumerate(cells):
-                        text = cell.get_text().strip()
+            price = clean_number(price_str)
+            change_pct = clean_number(chg_pct_str.replace('%', '')) if '%' in chg_pct_str else None
 
-                        # Price
-                        if j == 1:
-                            try:
-                                clean = text.replace('MAD', '').replace(',', '').replace(' ', '').replace('\u202f', '').replace('\xa0', '')
-                                val = float(clean)
-                                if 0 < val < 10000:
-                                    data['price'] = val
-                            except:
-                                pass
+            tv_data[matched_symbol] = {
+                'symbol': matched_symbol,
+                'price': price or 0.0,
+                'change': change_pct or 0.0,
+                'capital': '—',
+                'pe': None,
+                'sector': ALL_STOCKS[matched_symbol]['sector'],
+                'rating': '—'
+            }
 
-                        # Change %
-                        if '%' in text:
-                            try:
-                                clean = text.replace('%', '').replace('(', '-').replace(')', '').replace('+', '').replace(',', '.')
-                                val = float(clean)
-                                if -50 < val < 50:
-                                    data['change'] = val
-                            except:
-                                pass
+        print(f"Matched {len(tv_data)} stocks")
 
-                        # Market Cap
-                        if any(x in text.lower() for x in ['b', 'm', 'md', 'mm', 'milliard', 'million']) and j > 2:
-                            data['capital'] = text
-
-                        # P/E
-                        if j >= 5:
-                            try:
-                                clean = text.replace(',', '.')
-                                val = float(clean)
-                                if 0 < val < 200:
-                                    data['pe'] = val
-                            except:
-                                pass
-
-                        # Rating / Analyst
-                        rating_keywords = ['buy', 'sell', 'hold', 'neutral', 'strong', 'achat', 'vente', 'conserver']
-                        if any(kw in text.lower() for kw in rating_keywords) and len(text) < 25:
-                            data['rating'] = text
-
-                    tv_data[symbol] = data
-
-                except:
-                    continue
-
-        print(f"Scraped {len(tv_data)} valid Moroccan stocks")
-
-        # Build final list
+        # Build final result (same as before)
         result = []
         for symbol, info in ALL_STOCKS.items():
-            if symbol in tv_data:
-                d = tv_data[symbol]
-                result.append({
-                    'symbol': symbol,
-                    'name': info['name'],
-                    'sector': d['sector'],
-                    'capital': d['capital'],
-                    'price': d['price'],
-                    'change': d['change'],
-                    'pe': d['pe'],
-                    'rating': d['rating'],
-                    'has_live_data': d['price'] > 0
-                })
-            else:
-                result.append({
-                    'symbol': symbol,
-                    'name': info['name'],
-                    'sector': info['sector'],
-                    'capital': '—',
-                    'price': 0.0,
-                    'change': 0.0,
-                    'pe': None,
-                    'rating': '—',
-                    'has_live_data': False
-                })
+            d = tv_data.get(symbol, {})
+            result.append({
+                'symbol': symbol,
+                'name': info['name'],
+                'sector': info['sector'],
+                'capital': d.get('capital', '—'),
+                'price': d.get('price', 0.0),
+                'change': d.get('change', 0.0),
+                'pe': d.get('pe'),
+                'rating': d.get('rating', '—'),
+                'has_live_data': d.get('price', 0) > 0
+            })
 
         result.sort(key=lambda x: (not x['has_live_data'], x['symbol']))
 
@@ -352,34 +290,30 @@ def scrape_tradingview():
         last_update = datetime.now().isoformat()
 
         live = sum(1 for r in result if r['has_live_data'])
-        print(f"→ {len(result)} stocks total, {live} with live data")
+        print(f"→ {len(result)} total, {live} live")
 
         return result
 
     except Exception as e:
-        print(f"TradingView scrape failed: {e}")
+        print(f"Components scrape error: {e}")
         return stocks_cache
 
 def get_news():
+    # unchanged - your original RSS function
     global news_cache
     try:
         url = "https://medias24.com/categorie/leboursier/actus/feed/"
-        headers = {'User-Agent': 'Mozilla/5.0 (compatible; RISKTerminal/1.0)'}
-        r = requests.get(url, headers=headers, timeout=15)
-
+        r = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=15)
         if r.status_code == 200:
             root = ET.fromstring(r.content)
             items = root.findall('.//item')
-
             news = []
             now = datetime.now(timezone.utc)
-
             for item in items[:10]:
                 title = item.find('title').text or 'Sans titre'
                 link = item.find('link').text or ''
                 pub = item.find('pubDate').text
                 cat = (item.find('category').text or 'INFO').upper()
-
                 mins = 0
                 if pub:
                     try:
@@ -387,38 +321,26 @@ def get_news():
                         mins = int((now - dt).total_seconds() / 60)
                     except:
                         pass
-
-                news.append({
-                    'title': title,
-                    'link': link,
-                    'category': cat,
-                    'time': max(0, mins)
-                })
-
+                news.append({'title': title, 'link': link, 'category': cat, 'time': max(0, mins)})
             news_cache = news
             return news
-
     except Exception as e:
-        print(f"News fetch failed: {e}")
-
+        print(f"News error: {e}")
     return news_cache
 
 def background_refresh():
     while True:
-        print(f"[{datetime.now()}] Background refresh starting...")
+        print(f"[{datetime.now()}] Refresh starting...")
         try:
-            scrape_tradingview()
+            scrape_masi_components()
             scrape_masi_index()
             get_news()
-            print(f"[{datetime.now()}] Background refresh completed")
+            print(f"[{datetime.now()}] Refresh done")
         except Exception as e:
             print(f"Refresh error: {e}")
         time.sleep(600)
 
-# ────────────────────────────────────────────────
-# Routes
-# ────────────────────────────────────────────────
-
+# Routes (unchanged except function names)
 @app.route('/')
 def index():
     return send_from_directory('.', 'index.html')
@@ -451,7 +373,7 @@ def api_all():
 
 @app.route('/api/refresh', methods=['POST'])
 def api_refresh():
-    scrape_tradingview()
+    scrape_masi_components()
     scrape_masi_index()
     get_news()
     return jsonify({
@@ -465,19 +387,16 @@ def api_refresh():
 
 if __name__ == '__main__':
     print("═" * 60)
-    print("RISK Network Terminal - Starting")
+    print("Starting RISK Terminal - Investing.com edition")
     print("═" * 60)
 
-    print("Initial data scrape...")
-    scrape_tradingview()
+    print("Initial scrape...")
+    scrape_masi_components()
     scrape_masi_index()
     get_news()
 
     threading.Thread(target=background_refresh, daemon=True).start()
-    print("Auto-refresh thread started (every 10 min)")
+    print("Background refresh started (10 min)")
 
     port = int(os.environ.get('PORT', 5000))
-    print(f"Listening on port {port}")
-    print("═" * 60)
-
     app.run(host='0.0.0.0', port=port, threaded=True)
