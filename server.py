@@ -4,7 +4,6 @@ import requests
 import xml.etree.ElementTree as ET
 import json
 import os
-import re
 import threading
 import time
 from datetime import datetime, timezone
@@ -19,262 +18,195 @@ os.makedirs(DATA_DIR, exist_ok=True)
 STOCKS_FILE = f"{DATA_DIR}/stocks.json"
 NEWS_FILE = f"{DATA_DIR}/news.json"
 
-# Complete list of all 54 stocks for reference
-ALL_SYMBOLS = [
-    "TGC", "TMA", "TQM", "NKL", "LHM", "UMR", "WAA", "ZDJ", "MSA", "RDS",
-    "CSR", "CFG", "CMG", "HPS", "S2M", "RIS", "DHO", "DWY", "SNA", "SNP",
-    "STR", "INV", "MIC", "DYT", "ADH", "IMO", "ADI", "AFI", "AFM", "AKT",
-    "ALM", "ARD", "ATH", "ATL", "ATW", "BAL", "BCP", "CRS", "CIH", "CMT",
-    "COL", "CTM", "DIM", "DRI", "EQD", "FBR", "IAM", "INM", "JET", "LES",
-    "MOX", "MNG", "MUT", "SID", "SOT", "SRM", "MDP", "VCN", "SMI", "CDM"
+# BASE STOCKS with names and sectors
+BASE_STOCKS = [
+    {"symbol": "TGC", "name": "TRAVAUX GENERAUX DE CONSTRUCTIONS", "sector": "Construction"},
+    {"symbol": "TMA", "name": "TOTALENERGIES MARKETING", "sector": "Énergie"},
+    {"symbol": "TQM", "name": "TAQA MOROCCO", "sector": "Énergie"},
+    {"symbol": "NKL", "name": "ENNAKL SA", "sector": "Transport"},
+    {"symbol": "LHM", "name": "LAFARGEHOLCIM", "sector": "Construction"},
+    {"symbol": "UMR", "name": "UNIMER", "sector": "Agroalimentaire"},
+    {"symbol": "WAA", "name": "WAFA ASSURANCE", "sector": "Assurance"},
+    {"symbol": "ZDJ", "name": "ZELLIDJA S.A", "sector": "Mines"},
+    {"symbol": "MSA", "name": "SODEP MARSA", "sector": "Transport"},
+    {"symbol": "RDS", "name": "RESIDENCE DAR SAADA", "sector": "Construction"},
+    {"symbol": "CSR", "name": "COSUMAR", "sector": "Industrie"},
+    {"symbol": "CFG", "name": "CFG BANK", "sector": "Banque"},
+    {"symbol": "CMG", "name": "CMGP CAS", "sector": "Agriculture"},
+    {"symbol": "HPS", "name": "HPS", "sector": "Paiment"},
+    {"symbol": "S2M", "name": "S2M", "sector": "Paiment"},
+    {"symbol": "RIS", "name": "RISMA", "sector": "Hotel Management"},
+    {"symbol": "DHO", "name": "DELTA HOLDING", "sector": "Industrie"},
+    {"symbol": "DWY", "name": "DISWAY", "sector": "Distribution éléctro"},
+    {"symbol": "SNA", "name": "STOKVIS NORD AFRIQUE", "sector": "Distribution service"},
+    {"symbol": "SNP", "name": "SNEP", "sector": "Process Industries"},
+    {"symbol": "STR", "name": "STROC INDUSTRIE", "sector": "Service Industriel"},
+    {"symbol": "INV", "name": "INVOLYS", "sector": "Service de Technologie"},
+    {"symbol": "MIC", "name": "MICRODATA", "sector": "Service de Technologie"},
+    {"symbol": "DYT", "name": "DISTY TECHNOLOGIES", "sector": "Service de destribution"},
+    {"symbol": "ADH", "name": "DOUJA PROM ADDOHA", "sector": "Immobilier"},
+    {"symbol": "IMO", "name": "IMMORENT INVEST", "sector": "Immobilier"},
+    {"symbol": "ADI", "name": "ALLIANCES", "sector": "Divers"},
+    {"symbol": "AFI", "name": "AFRIC INDUSTRIES", "sector": "Industrie"},
+    {"symbol": "AFM", "name": "AFMA", "sector": "Finance"},
+    {"symbol": "AKT", "name": "AKDITAL S.A", "sector": "Santé"},
+    {"symbol": "ALM", "name": "ALUMINIUM DU MAROC", "sector": "Matériaux"},
+    {"symbol": "ARD", "name": "ARADEI CAPITAL", "sector": "Immobilier"},
+    {"symbol": "ATH", "name": "AUTO HALL", "sector": "Automobile"},
+    {"symbol": "ATL", "name": "ATLANTASANAD", "sector": "Distribution"},
+    {"symbol": "ATW", "name": "ATTIJARIWAFA BANK", "sector": "Banque"},
+    {"symbol": "BAL", "name": "BALIMA", "sector": "Distribution"},
+    {"symbol": "BCP", "name": "BANQUE CENTRALE POPULAIRE", "sector": "Banque"},
+    {"symbol": "CRS", "name": "CARTIER SAADA", "sector": "Distribution"},
+    {"symbol": "CIH", "name": "CREDIT IMMOBILIER ET HOTELIER", "sector": "Banque"},
+    {"symbol": "CMT", "name": "CIMENTS DU MAROC", "sector": "Matériaux"},
+    {"symbol": "COL", "name": "COLORADO", "sector": "Distribution"},
+    {"symbol": "CTM", "name": "COMPAGNIE DE TRANSPORTS AU MAROC", "sector": "Transport"},
+    {"symbol": "DIM", "name": "DELATTRE LEVIVIER MAROC", "sector": "Industrie"},
+    {"symbol": "DRI", "name": "DARI COUSPATE", "sector": "Agroalimentaire"},
+    {"symbol": "EQD", "name": "EQDOM", "sector": "Immobilier"},
+    {"symbol": "FBR", "name": "FENIE BROSSETTE", "sector": "Distribution"},
+    {"symbol": "IAM", "name": "MAROC TELECOM", "sector": "Télécom"},
+    {"symbol": "INM", "name": "INDUSTRIE DU MAROC", "sector": "Industrie"},
+    {"symbol": "JET", "name": "JET CONTRACTORS", "sector": "Construction"},
+    {"symbol": "LES", "name": "LESIEUR CRISTAL", "sector": "Agroalimentaire"},
+    {"symbol": "MOX", "name": "MAGHREB OXYGENE", "sector": "Industrie"},
+    {"symbol": "MNG", "name": "MANAGEM", "sector": "Mines"},
+    {"symbol": "MUT", "name": "MUTANDIS", "sector": "Agroalimentaire"},
+    {"symbol": "SID", "name": "SONASID", "sector": "Agroalimentaire"},
+    {"symbol": "SOT", "name": "SOTHEMA", "sector": "Pharma"},
+    {"symbol": "SRM", "name": "REALISATIONS MECANIQUES", "sector": "Industrie"},
+    {"symbol": "MDP", "name": "MED PAPER", "sector": "Industrie"},
+    {"symbol": "VCN", "name": "VICENNE", "sector": "Santé"},
+    {"symbol": "SMI", "name": "Société métallurgique d'imiter", "sector": "Finance"},
+    {"symbol": "CDM", "name": "Crédit du Maroc", "sector": "Banque"}
 ]
 
-def scrape_tradingview_advanced():
+def scrape_tradingview():
     """
-    Advanced scraper that extracts ALL stocks from TradingView
-    Tries multiple methods: JSON in page, multiple tables, API simulation
+    Scrape stocks using your working method + change percentage
     """
-    print(f"[{datetime.now()}] Scraping TradingView (Advanced)...")
-    
-    all_stocks = {}
+    print(f"[{datetime.now()}] Scraping TradingView...")
     
     try:
-        url = "https://www.tradingview.com/markets/stocks-morocco/market-movers-all-stocks/"
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.37 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.37',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.9,fr;q=0.8',
-            'Accept-Encoding': 'gzip, deflate, br',
-            'Cache-Control': 'no-cache',
-            'DNT': '1',
-            'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1',
-            'Sec-Fetch-Dest': 'document',
-            'Sec-Fetch-Mode': 'navigate',
-            'Sec-Fetch-Site': 'none',
-            'Pragma': 'no-cache'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
         }
         
+        url = "https://www.tradingview.com/markets/stocks-morocco/market-movers-all-stocks/"
         response = requests.get(url, headers=headers, timeout=30)
-        html = response.text
         
-        # Method 1: Look for JSON data embedded in the page (TradingView stores data in <script> tags)
-        # Pattern 1: Look for "symbol":"XXX","price":YYY
-        json_pattern = r'"symbol":"(\w+)","name":"([^"]+)","price":([\d.]+),"change":([-\d.]+)'
-        matches = re.findall(json_pattern, html)
+        if response.status_code != 200:
+            print(f"Failed to fetch: {response.status_code}")
+            return None
         
-        if matches:
-            print(f"Found {len(matches)} stocks via JSON pattern 1")
-            for symbol, name, price, change in matches:
-                try:
-                    all_stocks[symbol] = {
-                        'symbol': symbol,
-                        'name': name,
-                        'price': float(price),
-                        'change': float(change)
-                    }
-                except:
-                    continue
+        soup = BeautifulSoup(response.text, 'html.parser')
+        table = soup.find('table')
         
-        # Method 2: Look for alternative JSON patterns (newer TradingView format)
-        # Pattern: {"s":"TGC","c":[price,change],"v":[volume]}
-        alt_pattern = r'"s":"(\w+)","c":\[([-\d.]+),([-\d.]+)\]'
-        alt_matches = re.findall(alt_pattern, html)
+        if not table:
+            print("No table found")
+            return None
         
-        if alt_matches:
-            print(f"Found {len(alt_matches)} stocks via JSON pattern 2")
-            for symbol, price, change in alt_matches:
-                if symbol not in all_stocks:
+        # Extract from table rows
+        tv_data = {}  # symbol -> {price, change}
+        
+        for row in table.find_all('tr')[1:]:  # Skip header
+            try:
+                cells = row.find_all('td')
+                if len(cells) >= 3:
+                    # Symbol (first column, usually in <a> tag)
+                    symbol_cell = cells[0].find('a')
+                    symbol = symbol_cell.text.strip() if symbol_cell else cells[0].text.strip()
+                    
+                    # Price (second column)
+                    price_text = cells[1].text.strip().replace('MAD', '').replace(',', '').replace(' ', '')
+                    
+                    # Change % (third column) - remove % and parentheses
+                    change_text = cells[2].text.strip().replace('%', '').replace('(', '-').replace(')', '').replace('+', '').replace(' ', '')
+                    
                     try:
-                        all_stocks[symbol] = {
-                            'symbol': symbol,
-                            'price': float(price),
-                            'change': float(change)
-                        }
-                    except:
-                        continue
-        
-        # Method 3: Parse all tables (there might be multiple: Top Gainers, Top Losers, Most Active)
-        soup = BeautifulSoup(html, 'html.parser')
-        tables = soup.find_all('table')
-        
-        print(f"Found {len(tables)} tables on page")
-        
-        for table_idx, table in enumerate(tables):
-            rows = table.find_all('tr')
-            print(f"Table {table_idx}: {len(rows)} rows")
-            
-            for row in rows[1:]:  # Skip header
-                try:
-                    cells = row.find_all('td')
-                    if len(cells) >= 3:
-                        # Try to find symbol
-                        symbol_elem = cells[0].find('a') or cells[0]
-                        symbol = symbol_elem.text.strip()
+                        price = float(price_text)
+                        change = float(change_text)
                         
-                        # Price
-                        price_text = cells[1].text.strip().replace('MAD', '').replace(',', '').replace(' ', '')
-                        price = float(price_text) if price_text else 0
-                        
-                        # Change
-                        change_text = cells[2].text.strip().replace('%', '').replace('(', '-').replace(')', '').replace('+', '')
-                        change = float(change_text) if change_text else 0
-                        
-                        if symbol and price > 0:
-                            all_stocks[symbol] = {
-                                'symbol': symbol,
+                        if price > 0 and symbol:
+                            tv_data[symbol] = {
                                 'price': price,
                                 'change': change
                             }
-                except:
-                    continue
+                            print(f"  ✓ {symbol}: {price} MAD ({change}%)")
+                    except ValueError:
+                        continue
+                        
+            except Exception as e:
+                continue
         
-        # Method 4: Look for data in script tags (JSON with ticker info)
-        scripts = soup.find_all('script')
-        for script in scripts:
-            if script.string and 'symbol' in script.string:
-                # Try to extract JSON objects
-                try:
-                    # Look for patterns like: {"symbol":"TGC","price":820.0,...}
-                    data_matches = re.findall(r'\{"symbol":"(\w+)","price":([\d.]+),"change":([-\d.]+)\}', script.string)
-                    for symbol, price, change in data_matches:
-                        if symbol not in all_stocks:
-                            all_stocks[symbol] = {
-                                'symbol': symbol,
-                                'price': float(price),
-                                'change': float(change)
-                            }
-                except:
-                    pass
+        print(f"Found {len(tv_data)} stocks in table")
         
-        print(f"Total unique stocks collected: {len(all_stocks)}")
+        # Build complete list of 54 stocks
+        result = []
+        for base in BASE_STOCKS:
+            symbol = base['symbol']
+            
+            if symbol in tv_data:
+                # Has live data
+                result.append({
+                    'symbol': symbol,
+                    'name': base['name'],
+                    'sector': base['sector'],
+                    'price': tv_data[symbol]['price'],
+                    'change': tv_data[symbol]['change'],
+                    'has_live_data': True
+                })
+            else:
+                # No data from TV - still include with 0.0
+                result.append({
+                    'symbol': symbol,
+                    'name': base['name'],
+                    'sector': base['sector'],
+                    'price': 0.0,
+                    'change': 0.0,
+                    'has_live_data': False
+                })
         
         # Save to file
-        if all_stocks:
-            stock_list = list(all_stocks.values())
-            with open(STOCKS_FILE, 'w') as f:
-                json.dump(stock_list, f)
-            print(f"Saved {len(stock_list)} stocks to file")
-            return all_stocks
-            
+        with open(STOCKS_FILE, 'w') as f:
+            json.dump(result, f)
+        
+        live_count = sum(1 for s in result if s['price'] > 0)
+        print(f"Saved {len(result)} stocks ({live_count} with live data)")
+        
+        return result
+        
     except Exception as e:
         print(f"Scrape error: {e}")
         import traceback
         traceback.print_exc()
-    
-    return None
+        return None
 
-def get_complete_stocks():
-    """Merge scraped data with complete list, ensuring all 54 are present"""
-    # Try to load scraped data
-    scraped_data = {}
+def get_stocks():
+    """Get stocks - try live scrape first, fallback to file"""
+    # Try live scrape
+    live_data = scrape_tradingview()
+    if live_data:
+        return live_data
+    
+    # Fallback to file
     try:
         if os.path.exists(STOCKS_FILE):
             with open(STOCKS_FILE, 'r') as f:
-                file_data = json.load(f)
-                for item in file_data:
-                    if isinstance(item, dict) and 'symbol' in item:
-                        scraped_data[item['symbol']] = item
+                return json.load(f)
     except:
         pass
     
-    # If no file data, try scraping immediately
-    if not scraped_data:
-        scraped_data = scrape_tradingview_advanced() or {}
-    
-    # Base info for all stocks
-    base_info = {
-        "TGC": {"name": "TRAVAUX GENERAUX DE CONSTRUCTIONS", "sector": "Construction"},
-        "TMA": {"name": "TOTALENERGIES MARKETING", "sector": "Énergie"},
-        "TQM": {"name": "TAQA MOROCCO", "sector": "Énergie"},
-        "NKL": {"name": "ENNAKL SA", "sector": "Transport"},
-        "LHM": {"name": "LAFARGEHOLCIM", "sector": "Construction"},
-        "UMR": {"name": "UNIMER", "sector": "Agroalimentaire"},
-        "WAA": {"name": "WAFA ASSURANCE", "sector": "Assurance"},
-        "ZDJ": {"name": "ZELLIDJA S.A", "sector": "Mines"},
-        "MSA": {"name": "SODEP MARSA", "sector": "Transport"},
-        "RDS": {"name": "RESIDENCE DAR SAADA", "sector": "Construction"},
-        "CSR": {"name": "COSUMAR", "sector": "Industrie"},
-        "CFG": {"name": "CFG BANK", "sector": "Banque"},
-        "CMG": {"name": "CMGP CAS", "sector": "Agriculture"},
-        "HPS": {"name": "HPS", "sector": "Paiment"},
-        "S2M": {"name": "S2M", "sector": "Paiment"},
-        "RIS": {"name": "RISMA", "sector": "Hotel Management"},
-        "DHO": {"name": "DELTA HOLDING", "sector": "Industrie"},
-        "DWY": {"name": "DISWAY", "sector": "Distribution éléctro"},
-        "SNA": {"name": "STOKVIS NORD AFRIQUE", "sector": "Distribution service"},
-        "SNP": {"name": "SNEP", "sector": "Process Industries"},
-        "STR": {"name": "STROC INDUSTRIE", "sector": "Service Industriel"},
-        "INV": {"name": "INVOLYS", "sector": "Service de Technologie"},
-        "MIC": {"name": "MICRODATA", "sector": "Service de Technologie"},
-        "DYT": {"name": "DISTY TECHNOLOGIES", "sector": "Service de destribution"},
-        "ADH": {"name": "DOUJA PROM ADDOHA", "sector": "Immobilier"},
-        "IMO": {"name": "IMMORENT INVEST", "sector": "Immobilier"},
-        "ADI": {"name": "ALLIANCES", "sector": "Divers"},
-        "AFI": {"name": "AFRIC INDUSTRIES", "sector": "Industrie"},
-        "AFM": {"name": "AFMA", "sector": "Finance"},
-        "AKT": {"name": "AKDITAL S.A", "sector": "Santé"},
-        "ALM": {"name": "ALUMINIUM DU MAROC", "sector": "Matériaux"},
-        "ARD": {"name": "ARADEI CAPITAL", "sector": "Immobilier"},
-        "ATH": {"name": "AUTO HALL", "sector": "Automobile"},
-        "ATL": {"name": "ATLANTASANAD", "sector": "Distribution"},
-        "ATW": {"name": "ATTIJARIWAFA BANK", "sector": "Banque"},
-        "BAL": {"name": "BALIMA", "sector": "Distribution"},
-        "BCP": {"name": "BANQUE CENTRALE POPULAIRE", "sector": "Banque"},
-        "CRS": {"name": "CARTIER SAADA", "sector": "Distribution"},
-        "CIH": {"name": "CREDIT IMMOBILIER ET HOTELIER", "sector": "Banque"},
-        "CMT": {"name": "CIMENTS DU MAROC", "sector": "Matériaux"},
-        "COL": {"name": "COLORADO", "sector": "Distribution"},
-        "CTM": {"name": "COMPAGNIE DE TRANSPORTS AU MAROC", "sector": "Transport"},
-        "DIM": {"name": "DELATTRE LEVIVIER MAROC", "sector": "Industrie"},
-        "DRI": {"name": "DARI COUSPATE", "sector": "Agroalimentaire"},
-        "EQD": {"name": "EQDOM", "sector": "Immobilier"},
-        "FBR": {"name": "FENIE BROSSETTE", "sector": "Distribution"},
-        "IAM": {"name": "MAROC TELECOM", "sector": "Télécom"},
-        "INM": {"name": "INDUSTRIE DU MAROC", "sector": "Industrie"},
-        "JET": {"name": "JET CONTRACTORS", "sector": "Construction"},
-        "LES": {"name": "LESIEUR CRISTAL", "sector": "Agroalimentaire"},
-        "MOX": {"name": "MAGHREB OXYGENE", "sector": "Industrie"},
-        "MNG": {"name": "MANAGEM", "sector": "Mines"},
-        "MUT": {"name": "MUTANDIS", "sector": "Agroalimentaire"},
-        "SID": {"name": "SONASID", "sector": "Agroalimentaire"},
-        "SOT": {"name": "SOTHEMA", "sector": "Pharma"},
-        "SRM": {"name": "REALISATIONS MECANIQUES", "sector": "Industrie"},
-        "MDP": {"name": "MED PAPER", "sector": "Industrie"},
-        "VCN": {"name": "VICENNE", "sector": "Santé"},
-        "SMI": {"name": "Société métallurgique d'imiter", "sector": "Finance"},
-        "CDM": {"name": "Crédit du Maroc", "sector": "Banque"}
-    }
-    
-    # Build complete list
-    result = []
-    for symbol in ALL_SYMBOLS:
-        info = base_info.get(symbol, {"name": symbol, "sector": "Unknown"})
-        
-        if symbol in scraped_data:
-            data = scraped_data[symbol]
-            result.append({
-                'symbol': symbol,
-                'name': info['name'],
-                'sector': info['sector'],
-                'price': float(data.get('price', 0)),
-                'change': float(data.get('change', 0)),
-                'has_live_data': True
-            })
-        else:
-            # No data available - show 0 but include in list
-            result.append({
-                'symbol': symbol,
-                'name': info['name'],
-                'sector': info['sector'],
-                'price': 0.0,
-                'change': 0.0,
-                'has_live_data': False
-            })
-    
-    # Sort: live data first, then alphabetically
-    result.sort(key=lambda x: (not x['has_live_data'], x['symbol']))
-    return result
+    # Fallback to base list with zeros
+    return [{
+        'symbol': s['symbol'],
+        'name': s['name'],
+        'sector': s['sector'],
+        'price': 0.0,
+        'change': 0.0,
+        'has_live_data': False
+    } for s in BASE_STOCKS]
 
 def get_news():
     try:
@@ -319,11 +251,12 @@ def get_news():
         pass
     return []
 
+# Auto-scraper thread
 def background_scraper():
     while True:
         time.sleep(300)  # 5 minutes
-        print("Background scrape triggered")
-        scrape_tradingview_advanced()
+        print("Background scrape...")
+        scrape_tradingview()
 
 @app.route('/')
 def index():
@@ -331,7 +264,7 @@ def index():
 
 @app.route('/api/stocks')
 def api_stocks():
-    stocks = get_complete_stocks()
+    stocks = get_stocks()
     return jsonify(stocks)
 
 @app.route('/api/news')
@@ -341,26 +274,15 @@ def api_news():
 @app.route('/api/all')
 def api_all():
     return jsonify({
-        'stocks': get_complete_stocks(),
-        'news': get_news(),
-        'timestamp': datetime.now().isoformat()
-    })
-
-@app.route('/api/scrape', methods=['POST'])
-def manual_scrape():
-    data = scrape_tradingview_advanced()
-    return jsonify({
-        'success': data is not None,
-        'count': len(data) if data else 0,
-        'message': f"Scraped {len(data) if data else 0} stocks"
+        'stocks': get_stocks(),
+        'news': get_news()
     })
 
 if __name__ == '__main__':
     # Initial scrape
-    print("Starting server...")
-    scrape_tradingview_advanced()
+    scrape_tradingview()
     
-    # Background thread
+    # Start background thread
     thread = threading.Thread(target=background_scraper, daemon=True)
     thread.start()
     
