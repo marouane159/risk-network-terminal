@@ -3,775 +3,415 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RISK NETWORK | Terminal Bourse Casablanca [LIVE]</title>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>RISK NETWORK GROUP | Terminal Bourse [LIVE]</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        
-        :root {
-            --bg-primary: #0a0a0a;
-            --bg-secondary: #121212;
-            --bg-tertiary: #1a1a1a;
-            --text-primary: #e0e0e0;
-            --text-secondary: #999999;
-            --text-muted: #666666;
-            --accent: #ff6600;
-            --accent-hover: #ff7722;
-            --up: #00ff88;
-            --down: #ff4466;
-            --border: #2a2a2a;
-        }
-        
-        [data-theme="light"] {
-            --bg-primary: #ffffff;
-            --bg-secondary: #f8f8f8;
-            --bg-tertiary: #f0f0f0;
-            --text-primary: #1a1a1a;
-            --text-secondary: #666666;
-            --text-muted: #999999;
-            --accent: #ff6600;
-            --accent-hover: #ff7722;
-            --up: #00cc66;
-            --down: #ff3344;
-            --border: #e0e0e0;
-        }
-        
         body {
             font-family: 'JetBrains Mono', monospace;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            font-size: 13px;
-            line-height: 1.5;
+            background: #000;
+            color: #e0e0e0;
+            font-size: 11px;
+            line-height: 1.3;
             height: 100vh;
             overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(90deg, #000 0%, #1a0f00 100%);
+            border-bottom: 2px solid #ff6600;
+            padding: 8px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 42px;
+        }
+        .logo { color: #ff6600; font-weight: 800; font-size: 15px; letter-spacing: 1px; }
+        
+        .social-bar {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .social-link {
+            color: #666;
+            text-decoration: none;
+            font-size: 9px;
+            border: 1px solid #333;
+            padding: 2px 5px;
             transition: all 0.3s;
         }
-        
-        /* Header */
-        .header {
-            background: var(--bg-secondary);
-            border-bottom: 2px solid var(--accent);
-            padding: 12px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            height: 60px;
+        .social-link:hover {
+            color: #ff6600;
+            border-color: #ff6600;
+            background: rgba(255, 102, 0, 0.1);
         }
-        
-        .logo {
-            color: var(--accent);
-            font-weight: 800;
-            font-size: 16px;
-            letter-spacing: 2px;
-        }
-        
-        .header-center {
-            display: flex;
-            align-items: center;
-            gap: 24px;
-        }
-        
-        .masi-box {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 8px 16px;
-            background: var(--bg-tertiary);
-            border-radius: 6px;
-            border: 1px solid var(--border);
-        }
-        
-        .masi-label {
-            color: var(--text-muted);
-            font-size: 11px;
-            text-transform: uppercase;
-        }
-        
-        .masi-price {
+        .website-link {
+            color: #000;
+            background: #ff6600;
+            border-color: #ff6600;
             font-weight: 700;
-            font-size: 16px;
         }
         
-        .masi-change {
-            font-size: 13px;
-            font-weight: 600;
-        }
+        .status { display: flex; gap: 12px; font-size: 10px; align-items: center; }
+        .dot { width: 6px; height: 6px; background: #333; display: inline-block; }
+        .dot.live { background: #00ff41; box-shadow: 0 0 6px #00ff41; }
+        .dot.offline { background: #ff0000; }
+        .dot.sync { background: #ffaa00; animation: pulse 1s infinite; }
         
-        .market-status {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 14px;
-            border-radius: 6px;
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
+        .container { display: grid; grid-template-columns: 1fr 300px; height: calc(100vh - 42px); }
         
-        .market-open {
-            background: rgba(0, 255, 136, 0.1);
-            color: var(--up);
-            border: 1px solid rgba(0, 255, 136, 0.3);
-        }
-        
-        .market-closed {
-            background: rgba(255, 68, 102, 0.1);
-            color: var(--down);
-            border: 1px solid rgba(255, 68, 102, 0.3);
-        }
-        
-        .market-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            animation: pulse 2s infinite;
-        }
-        
-        .market-open .market-dot {
-            background: var(--up);
-            box-shadow: 0 0 10px var(--up);
-        }
-        
-        .market-closed .market-dot {
-            background: var(--down);
-        }
-        
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.6; }
-        }
-        
-        .header-right {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-        
-        .status-badge {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 11px;
-            padding: 6px 12px;
-            background: var(--bg-tertiary);
-            border-radius: 6px;
-            border: 1px solid var(--border);
-        }
-        
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-        }
-        
-        .status-live { background: var(--up); box-shadow: 0 0 8px var(--up); }
-        .status-loading { background: #ffaa00; animation: pulse 1s infinite; }
-        .status-error { background: var(--down); }
-        
-        .btn {
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border);
-            color: var(--text-primary);
-            padding: 8px 14px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-family: inherit;
-            font-size: 12px;
-            font-weight: 600;
-            transition: all 0.2s;
-        }
-        
-        .btn:hover {
-            border-color: var(--accent);
-            color: var(--accent);
-            transform: translateY(-1px);
-        }
-        
-        .btn-primary {
-            background: var(--accent);
-            color: #000;
-            border-color: var(--accent);
-        }
-        
-        .btn-primary:hover {
-            background: var(--accent-hover);
-            border-color: var(--accent-hover);
-            color: #000;
-        }
-        
-        .clock {
-            font-size: 13px;
-            color: var(--text-secondary);
-            font-weight: 600;
-        }
-        
-        /* Main Layout */
-        .container {
-            display: grid;
-            grid-template-columns: 1fr 360px;
-            height: calc(100vh - 60px);
-            gap: 0;
-        }
-        
-        /* Stocks Panel */
-        .stocks-panel {
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            border-right: 1px solid var(--border);
-        }
-        
+        .stocks-panel { border-right: 1px solid #222; overflow: hidden; display: flex; flex-direction: column; }
         .panel-header {
-            background: var(--bg-secondary);
-            border-bottom: 1px solid var(--border);
-            padding: 12px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .panel-title {
-            color: var(--accent);
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            font-weight: 700;
-        }
-        
-        .panel-actions {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        
-        .last-update {
-            color: var(--text-muted);
-            font-size: 11px;
-        }
-        
-        /* Table */
-        .table-wrapper {
-            flex: 1;
-            overflow-y: auto;
-        }
-        
-        .stocks-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        
-        .stocks-table thead {
-            position: sticky;
-            top: 0;
-            background: var(--bg-secondary);
-            z-index: 10;
-        }
-        
-        .stocks-table th {
-            padding: 12px 16px;
-            text-align: left;
-            border-bottom: 2px solid var(--border);
-            color: var(--text-muted);
+            background: #0a0a0a;
+            border-bottom: 1px solid #333;
+            padding: 5px 8px;
             font-size: 10px;
+            color: #ff6600;
             text-transform: uppercase;
             letter-spacing: 1px;
-            font-weight: 700;
         }
         
-        .stocks-table td {
-            padding: 14px 16px;
-            border-bottom: 1px solid var(--border);
+        /* Table with exact column alignment */
+        .stock-table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            table-layout: fixed; /* Critical for alignment */
         }
-        
-        .stock-row {
-            transition: all 0.2s;
-            cursor: pointer;
+        .stock-table th {
+            background: #111;
+            color: #888;
+            font-weight: 400;
+            text-align: left;
+            padding: 6px 4px;
+            border-bottom: 1px solid #333;
+            font-size: 9px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
-        
-        .stock-row:hover {
-            background: var(--bg-tertiary);
+        .stock-table td {
+            padding: 5px 4px;
+            border-bottom: 1px solid #1a1a1a;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            vertical-align: middle;
         }
+        .stock-row:hover { background: #1a0f00; }
         
-        .symbol {
-            color: var(--accent);
-            font-weight: 700;
-            font-size: 14px;
-        }
+        /* Exact column widths for alignment */
+        .col-ticker { width: 8%; color: #fff; font-weight: 700; }
+        .col-secteur { width: 14%; color: #aaa; }
+        .col-capital { width: 12%; color: #888; text-align: right; }
+        .col-cours { width: 11%; color: #fff; font-weight: 700; text-align: right; }
+        .col-var { width: 9%; text-align: right; font-weight: 700; }
+        .col-pe { width: 8%; color: #888; text-align: right; }
+        .col-sentiment { width: 14%; text-align: center; }
         
-        .sector {
-            color: var(--text-secondary);
-            font-size: 11px;
-        }
+        .change.up { color: #00ff41; }
+        .change.down { color: #ff6600; }
+        .change.neutral { color: #888; }
+        .no-data { color: #444; font-style: italic; }
         
-        .price {
-            font-weight: 700;
-            font-size: 14px;
-        }
-        
-        .change {
-            font-weight: 700;
-            font-size: 13px;
-        }
-        
-        .change.up { color: var(--up); }
-        .change.down { color: var(--down); }
-        .change.neutral { color: var(--text-muted); }
-        
+        /* Rating badges */
         .rating {
             display: inline-block;
-            padding: 4px 10px;
-            border-radius: 4px;
-            font-size: 10px;
+            padding: 1px 4px;
+            font-size: 8px;
+            border-radius: 2px;
             font-weight: 700;
-            text-transform: uppercase;
+            white-space: nowrap;
         }
+        .rating-strong-buy { background: #00ff41; color: #000; }
+        .rating-buy { background: #90ee90; color: #000; }
+        .rating-neutral { background: #666; color: #fff; }
+        .rating-hold { background: #888; color: #fff; }
+        .rating-sell { background: #ff6600; color: #000; }
+        .rating-strong-sell { background: #ff0000; color: #fff; }
+        .rating-none { background: transparent; color: #444; border: 1px solid #333; }
         
-        .rating-strong-buy { background: rgba(0, 255, 136, 0.15); color: var(--up); }
-        .rating-buy { background: rgba(0, 200, 100, 0.15); color: #00cc66; }
-        .rating-hold { background: rgba(255, 170, 0, 0.15); color: #ffaa00; }
-        .rating-sell { background: rgba(255, 68, 102, 0.15); color: #ff6688; }
-        .rating-none { color: var(--text-muted); background: transparent; }
-        
-        /* News Panel */
-        .news-panel {
-            display: flex;
-            flex-direction: column;
-            background: var(--bg-secondary);
-            overflow: hidden;
-        }
-        
-        .news-list {
-            flex: 1;
-            overflow-y: auto;
-            padding: 16px;
-        }
-        
+        .news-panel { background: #050505; overflow: hidden; display: flex; flex-direction: column; }
+        .news-list { overflow-y: auto; flex: 1; }
         .news-item {
-            margin-bottom: 20px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid var(--border);
+            padding: 8px 10px;
+            border-bottom: 1px solid #1a1a1a;
+            font-size: 11px;
         }
-        
-        .news-item:last-child {
-            border-bottom: none;
-        }
-        
-        .news-meta {
+        .news-time { 
+            color: #ff6600; 
+            font-size: 9px; 
+            margin-bottom: 3px;
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
         }
+        .news-title { color: #ccc; text-decoration: none; font-size: 11px; }
+        .news-title:hover { color: #fff; text-decoration: underline; }
+        .news-cat { color: #666; font-size: 9px; background: #1a1a1a; padding: 1px 4px; }
         
-        .news-time {
-            color: var(--text-muted);
-            font-size: 10px;
+        .loading { 
+            color: #ff6600; 
+            padding: 15px; 
+            text-align: center; 
+            font-size: 11px; 
+            animation: pulse 1.5s infinite; 
         }
-        
-        .news-category {
-            background: var(--accent);
+        .error { 
+            color: #ff0000; 
+            padding: 10px; 
+            font-size: 10px; 
+            border-left: 3px solid #ff0000; 
+            margin: 8px; 
+            background: #1a0000; 
+        }
+        .refresh-btn {
+            background: #ff6600;
             color: #000;
+            border: none;
             padding: 3px 8px;
-            border-radius: 4px;
-            font-size: 9px;
+            font-family: inherit;
+            font-size: 10px;
+            cursor: pointer;
             font-weight: 700;
         }
         
-        .news-title {
-            display: block;
-            color: var(--text-primary);
-            text-decoration: none;
-            line-height: 1.6;
-            font-size: 12px;
-            transition: color 0.2s;
-        }
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: #000; }
+        ::-webkit-scrollbar-thumb { background: #333; }
         
-        .news-title:hover {
-            color: var(--accent);
-        }
-        
-        .loading, .error {
-            text-align: center;
-            padding: 60px 20px;
-            color: var(--text-muted);
-        }
-        
-        .error {
-            color: var(--down);
-        }
-        
-        /* Scrollbar */
-        ::-webkit-scrollbar {
-            width: 10px;
-        }
-        
-        ::-webkit-scrollbar-track {
-            background: var(--bg-primary);
-        }
-        
-        ::-webkit-scrollbar-thumb {
-            background: var(--border);
-            border-radius: 5px;
-        }
-        
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--accent);
-        }
-        
-        /* Animations */
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .stock-row {
-            animation: fadeIn 0.3s ease;
+        @media (max-width: 900px) {
+            .container { grid-template-columns: 1fr; grid-template-rows: 1fr 250px; }
+            body { font-size: 10px; }
         }
     </style>
 </head>
-<body data-theme="dark">
-    <!-- Header -->
+<body>
     <div class="header">
-        <div class="logo">⚡ RISK NETWORK</div>
+        <div class="logo">▶ RISK NETWORK GROUP</div>
         
-        <div class="header-center">
-            <div class="masi-box">
-                <span class="masi-label">MASI</span>
-                <span id="masiPrice" class="masi-price">13,500.00</span>
-                <span id="masiChange" class="masi-change">+0.00%</span>
-            </div>
-            
-            <div id="marketStatus" class="market-status market-closed">
-                <span class="market-dot"></span>
-                <span id="marketText">FERMÉ</span>
-            </div>
+        <div class="social-bar">
+            <a href="https://risk.ma" target="_blank" class="social-link website-link">RISK.MA</a>
+            <a href="https://x.com/dogofallstreets" target="_blank" class="social-link">X</a>
+            <a href="https://tiktok.com/u/@dogofallstreets" target="_blank" class="social-link">TK</a>
+            <a href="https://instagram.com/risk.maroc" target="_blank" class="social-link">IG</a>
+            <a href="https://t.me/boursedecasa" target="_blank" class="social-link">TG</a>
         </div>
-        
-        <div class="header-right">
-            <div class="status-badge">
-                <span id="statusDot" class="status-dot status-loading"></span>
-                <span id="statusText">CONNECTING...</span>
+
+        <div class="status">
+            <div class="status-item">
+                <span class="dot" id="apiDot"></span>
+                <span id="apiStatus">CONNECTING...</span>
             </div>
-            
-            <select id="langSelect" class="btn">
-                <option value="fr">🇫🇷 FR</option>
-                <option value="en">🇬🇧 EN</option>
-                <option value="ar">🇲🇦 AR</option>
-            </select>
-            
-            <button id="themeBtn" class="btn">☀️</button>
-            
-            <span id="clock" class="clock">--:--:--</span>
+            <div class="status-item" id="clock">00:00:00</span></div>
         </div>
     </div>
-    
-    <!-- Main Container -->
+
     <div class="container">
         <!-- Stocks Panel -->
         <div class="stocks-panel">
-            <div class="panel-header">
-                <span id="panelTitle" class="panel-title">📈 BOURSE DE CASABLANCA</span>
-                <div class="panel-actions">
-                    <span id="lastUpdate" class="last-update">Mise à jour...</span>
-                    <button id="refreshBtn" class="btn btn-primary">↻ ACTUALISER</button>
-                </div>
-            </div>
-            
-            <div class="table-wrapper">
-                <table class="stocks-table">
+            <div class="panel-header" id="stockHeader">◈ MASI ALL SHARES • CHARGEMENT...</div>
+            <div style="overflow-y: auto; flex: 1;">
+                <table class="stock-table">
                     <thead>
                         <tr>
-                            <th id="thSymbol">SYMBOLE</th>
-                            <th id="thSector">SECTEUR</th>
-                            <th id="thCap">CAP.</th>
-                            <th id="thPrice">PRIX</th>
-                            <th id="thChange">VAR %</th>
-                            <th id="thPE">P/E</th>
-                            <th id="thRating">RATING</th>
+                            <th class="col-ticker">TICKER</th>
+                            <th class="col-secteur">SECTEUR</th>
+                            <th class="col-capital">CAPITAL</th>
+                            <th class="col-cours">COURS</th>
+                            <th class="col-var">VAR %</th>
+                            <th class="col-pe">P/E</th>
+                            <th class="col-sentiment">SENTIMENT</th>
                         </tr>
                     </thead>
-                    <tbody id="stocksBody">
-                        <tr><td colspan="7" class="loading">🔄 Chargement des données...</td></tr>
+                    <tbody id="stockTableBody">
+                        <tr><td colspan="7" class="loading">CONNEXION À L'API...</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
-        
+
         <!-- News Panel -->
         <div class="news-panel">
-            <div class="panel-header">
-                <span class="panel-title">📰 ACTUALITÉS BOURSE</span>
+            <div class="panel-header" style="display: flex; justify-content: space-between;">
+                <span>◢ MEDIAS24</span>
+                <button class="refresh-btn" onclick="fetchAllData()">↻</button>
             </div>
-            <div class="news-list" id="newsList">
-                <div class="loading">🔄 Chargement des actualités...</div>
+            <div class="news-list" id="newsContainer">
+                <div class="loading">...</div>
             </div>
         </div>
     </div>
-    
+
     <script>
-        // Configuration
-        const API_URL = window.location.origin;
-        
-        // State
-        let currentLang = 'fr';
-        let currentTheme = 'dark';
-        let stocksData = [];
-        let newsData = [];
-        
-        // Translations
-        const translations = {
-            fr: {
-                panelTitle: '📈 BOURSE DE CASABLANCA',
-                symbol: 'SYMBOLE', sector: 'SECTEUR', cap: 'CAP.', price: 'PRIX',
-                change: 'VAR %', pe: 'P/E', rating: 'RATING',
-                marketOpen: 'OUVERT', marketClosed: 'FERMÉ',
-                live: 'LIVE', connecting: 'CONNEXION...', error: 'ERREUR',
-                loading: 'Chargement...', updated: 'Mis à jour',
-                minutes: 'min', hours: 'h', days: 'j',
-                strongBuy: 'ACHAT+', buy: 'ACHAT', hold: 'NEUTRE', sell: 'VENTE'
-            },
-            en: {
-                panelTitle: '📈 CASABLANCA STOCK EXCHANGE',
-                symbol: 'SYMBOL', sector: 'SECTOR', cap: 'CAP.', price: 'PRICE',
-                change: 'CHG %', pe: 'P/E', rating: 'RATING',
-                marketOpen: 'OPEN', marketClosed: 'CLOSED',
-                live: 'LIVE', connecting: 'CONNECTING...', error: 'ERROR',
-                loading: 'Loading...', updated: 'Updated',
-                minutes: 'm', hours: 'h', days: 'd',
-                strongBuy: 'STRONG BUY', buy: 'BUY', hold: 'HOLD', sell: 'SELL'
-            },
-            ar: {
-                panelTitle: '📈 بورصة الدار البيضاء',
-                symbol: 'الرمز', sector: 'القطاع', cap: 'القيمة', price: 'السعر',
-                change: 'التغير %', pe: 'P/E', rating: 'التقييم',
-                marketOpen: 'مفتوح', marketClosed: 'مغلق',
-                live: 'مباشر', connecting: 'اتصال...', error: 'خطأ',
-                loading: 'جار التحميل...', updated: 'محدث',
-                minutes: 'د', hours: 'س', days: 'ي',
-                strongBuy: 'شراء+', buy: 'شراء', hold: 'محايد', sell: 'بيع'
-            }
-        };
-        
-        // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log('🚀 RISK Network Terminal initializing...');
-            
-            // Event listeners
-            document.getElementById('langSelect').addEventListener('change', (e) => {
-                currentLang = e.target.value;
-                updateTranslations();
-                renderStocks();
-                renderNews();
-            });
-            
-            document.getElementById('themeBtn').addEventListener('click', () => {
-                currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
-                document.body.setAttribute('data-theme', currentTheme);
-                document.getElementById('themeBtn').textContent = currentTheme === 'dark' ? '☀️' : '🌙';
-            });
-            
-            document.getElementById('refreshBtn').addEventListener('click', fetchData);
-            
-            // Initial fetch
-            fetchData();
-            
-            // Auto-refresh every 10 minutes
-            setInterval(fetchData, 600000);
-            
-            // Update clock
-            setInterval(updateClock, 1000);
-            updateClock();
-        });
+        const API_BASE = 'https://risk-network-terminal.onrender.com';
         
         function updateClock() {
             const now = new Date();
-            document.getElementById('clock').textContent = now.toLocaleTimeString('fr-FR', { hour12: false });
+            document.getElementById('clock').textContent = now.toLocaleTimeString('fr-FR', {hour12: false});
         }
-        
-        function updateTranslations() {
-            const t = translations[currentLang];
-            document.getElementById('panelTitle').textContent = t.panelTitle;
-            document.getElementById('thSymbol').textContent = t.symbol;
-            document.getElementById('thSector').textContent = t.sector;
-            document.getElementById('thCap').textContent = t.cap;
-            document.getElementById('thPrice').textContent = t.price;
-            document.getElementById('thChange').textContent = t.change;
-            document.getElementById('thPE').textContent = t.pe;
-            document.getElementById('thRating').textContent = t.rating;
-        }
-        
-        async function fetchData() {
-            setStatus('loading');
-            
-            try {
-                const response = await fetch(`${API_URL}/api/all`);
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-                
-                const data = await response.json();
-                console.log('✓ Data received:', data);
-                
-                stocksData = data.stocks || [];
-                newsData = data.news || [];
-                
-                renderStocks();
-                renderNews();
-                renderMasi(data.masi);
-                renderMarketStatus(data.market_status);
-                
-                if (data.last_update) {
-                    const time = new Date(data.last_update).toLocaleTimeString('fr-FR');
-                    document.getElementById('lastUpdate').textContent = `${translations[currentLang].updated}: ${time}`;
-                }
-                
-                setStatus('live');
-                
-            } catch (error) {
-                console.error('✗ Fetch error:', error);
-                setStatus('error');
-                document.getElementById('stocksBody').innerHTML = 
-                    `<tr><td colspan="7" class="error">❌ Erreur de connexion: ${error.message}</td></tr>`;
-            }
-        }
-        
-        function setStatus(status) {
-            const dot = document.getElementById('statusDot');
-            const text = document.getElementById('statusText');
-            const t = translations[currentLang];
-            
-            dot.className = 'status-dot';
-            
-            if (status === 'live') {
-                dot.classList.add('status-live');
-                text.textContent = t.live;
-            } else if (status === 'loading') {
-                dot.classList.add('status-loading');
-                text.textContent = t.connecting;
-            } else {
-                dot.classList.add('status-error');
-                text.textContent = t.error;
-            }
-        }
-        
-        function renderMasi(masi) {
-            if (!masi) return;
-            
-            document.getElementById('masiPrice').textContent = masi.price.toLocaleString('fr-FR', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            });
-            
-            const changeEl = document.getElementById('masiChange');
-            const sign = masi.change_percent >= 0 ? '+' : '';
-            changeEl.textContent = `${sign}${masi.change_percent.toFixed(2)}%`;
-            changeEl.style.color = masi.change_percent >= 0 ? 'var(--up)' : 'var(--down)';
-        }
-        
-        function renderMarketStatus(status) {
-            if (!status) return;
-            
-            const container = document.getElementById('marketStatus');
-            const text = document.getElementById('marketText');
-            const t = translations[currentLang];
-            
-            if (status.is_open) {
-                container.className = 'market-status market-open';
-                text.textContent = t.marketOpen;
-            } else {
-                container.className = 'market-status market-closed';
-                text.textContent = t.marketClosed;
-            }
-        }
-        
-        function renderStocks() {
-            const tbody = document.getElementById('stocksBody');
-            const t = translations[currentLang];
-            
-            if (stocksData.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="loading">🔄 ${t.loading}</td></tr>`;
-                return;
-            }
-            
-            let html = '';
-            
-            stocksData.forEach(stock => {
-                const changeClass = stock.change > 0 ? 'up' : stock.change < 0 ? 'down' : 'neutral';
-                const sign = stock.change > 0 ? '+' : '';
-                const peText = stock.pe ? stock.pe.toFixed(1) : '—';
-                const ratingClass = getRatingClass(stock.rating);
-                const ratingText = getRatingText(stock.rating, t);
-                
-                html += `
-                    <tr class="stock-row">
-                        <td class="symbol">${stock.symbol}</td>
-                        <td class="sector">${stock.sector}</td>
-                        <td>${stock.capital}</td>
-                        <td class="price">${stock.price.toFixed(2)}</td>
-                        <td class="change ${changeClass}">${sign}${stock.change.toFixed(2)}%</td>
-                        <td>${peText}</td>
-                        <td><span class="rating ${ratingClass}">${ratingText}</span></td>
-                    </tr>
-                `;
-            });
-            
-            tbody.innerHTML = html;
-        }
-        
+        setInterval(updateClock, 1000);
+        updateClock();
+
         function getRatingClass(rating) {
             if (!rating || rating === '—') return 'rating-none';
             const r = rating.toLowerCase();
             if (r.includes('strong buy')) return 'rating-strong-buy';
-            if (r.includes('buy')) return 'rating-buy';
-            if (r.includes('hold')) return 'rating-hold';
+            if (r.includes('buy') && !r.includes('sell')) return 'rating-buy';
+            if (r.includes('strong sell')) return 'rating-strong-sell';
             if (r.includes('sell')) return 'rating-sell';
-            return 'rating-none';
+            if (r.includes('hold')) return 'rating-hold';
+            return 'rating-neutral';
         }
-        
-        function getRatingText(rating, t) {
-            if (!rating || rating === '—') return '—';
-            const r = rating.toLowerCase();
-            if (r.includes('strong buy')) return t.strongBuy;
-            if (r.includes('buy')) return t.buy;
-            if (r.includes('hold')) return t.hold;
-            if (r.includes('sell')) return t.sell;
-            return '—';
-        }
-        
-        function renderNews() {
-            const container = document.getElementById('newsList');
-            const t = translations[currentLang];
+
+        async function fetchStocks() {
+            const dot = document.getElementById('apiDot');
+            const status = document.getElementById('apiStatus');
+            const header = document.getElementById('stockHeader');
             
-            if (newsData.length === 0) {
-                container.innerHTML = `<div class="loading">🔄 ${t.loading}</div>`;
+            dot.className = 'dot sync';
+            status.textContent = 'SYNC...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/stocks`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const stocks = await response.json();
+                console.log(`Got ${stocks.length} stocks`);
+                
+                renderStocks(stocks);
+                
+                dot.className = 'dot live';
+                status.textContent = 'LIVE';
+                
+                const liveCount = stocks.filter(s => s.price > 0).length;
+                header.textContent = `◈ MASI ALL SHARES • ${liveCount}/${stocks.length} ACTIFS`;
+                
+            } catch (error) {
+                console.error('Error:', error);
+                dot.className = 'dot offline';
+                status.textContent = 'OFFLINE';
+                document.getElementById('stockTableBody').innerHTML = 
+                    `<tr><td colspan="7" class="error">ERREUR: ${error.message}</td></tr>`;
+            }
+        }
+
+        function renderStocks(stocks) {
+            const tbody = document.getElementById('stockTableBody');
+            if (!stocks || stocks.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="padding: 20px; text-align: center;">AUCUNE DONNÉE</td></tr>';
                 return;
             }
-            
+
             let html = '';
             
-            newsData.slice(0, 8).forEach(item => {
-                const timeText = formatTime(item.time, t);
+            // Sort: active first
+            const sorted = stocks.sort((a, b) => {
+                if (a.price === 0 && b.price > 0) return 1;
+                if (a.price > 0 && b.price === 0) return -1;
+                return a.symbol.localeCompare(b.symbol);
+            });
+            
+            sorted.forEach(stock => {
+                const hasData = stock.price > 0;
+                const changeClass = stock.change > 0 ? 'up' : stock.change < 0 ? 'down' : 'neutral';
+                const sign = stock.change > 0 ? '+' : '';
+                const peDisplay = stock.pe ? stock.pe.toFixed(1) : '—';
+                const ratingClass = getRatingClass(stock.rating);
+                const ratingText = stock.rating || '—';
+                const sectorText = stock.sector || 'N/A';
+                const capitalText = stock.capital || '—';
+                
+                if (hasData) {
+                    html += `
+                        <tr class="stock-row">
+                            <td class="col-ticker">${stock.symbol}</td>
+                            <td class="col-secteur" title="${sectorText}">${sectorText}</td>
+                            <td class="col-capital">${capitalText}</td>
+                            <td class="col-cours">${stock.price.toFixed(2)}</td>
+                            <td class="col-var ${changeClass}">${sign}${stock.change.toFixed(2)}%</td>
+                            <td class="col-pe">${peDisplay}</td>
+                            <td class="col-sentiment"><span class="rating ${ratingClass}">${ratingText}</span></td>
+                        </tr>
+                    `;
+                } else {
+                    html += `
+                        <tr class="stock-row" style="opacity: 0.35;">
+                            <td class="col-ticker" style="color: #444;">${stock.symbol}</td>
+                            <td class="col-secteur no-data">—</td>
+                            <td class="col-capital no-data">—</td>
+                            <td class="col-cours no-data">0.00</td>
+                            <td class="col-var no-data">0.00%</td>
+                            <td class="col-pe no-data">—</td>
+                            <td class="col-sentiment"><span class="rating rating-none">—</span></td>
+                        </tr>
+                    `;
+                }
+            });
+            tbody.innerHTML = html;
+        }
+
+        async function fetchNews() {
+            const container = document.getElementById('newsContainer');
+            container.innerHTML = '<div class="loading">...</div>';
+            
+            const RSS_URL = 'https://medias24.com/categorie/leboursier/actus/feed/';
+            const proxies = [
+                'https://api.allorigins.win/raw?url=',
+                'https://api.codetabs.com/v1/proxy?quest='
+            ];
+            
+            for (let proxy of proxies) {
+                try {
+                    const response = await fetch(proxy + encodeURIComponent(RSS_URL));
+                    if (!response.ok) continue;
+                    
+                    const xmlText = await response.text();
+                    parseRSS(xmlText);
+                    return;
+                } catch (e) { continue; }
+            }
+            container.innerHTML = '<div class="error">RSS ERREUR</div>';
+        }
+
+        function parseRSS(xmlText) {
+            const parser = new DOMParser();
+            const xml = parser.parseFromString(xmlText, 'text/xml');
+            const items = xml.querySelectorAll('item');
+            
+            let html = '';
+            const now = new Date();
+            
+            items.forEach((item, i) => {
+                if (i >= 10) return;
+                const title = item.querySelector('title')?.textContent || 'Sans titre';
+                const link = item.querySelector('link')?.textContent || '#';
+                const pubDate = item.querySelector('pubDate')?.textContent || '';
+                const category = item.querySelector('category')?.textContent || 'INFO';
+                
+                let timeText = 'maintenant';
+                if (pubDate) {
+                    const date = new Date(pubDate);
+                    const diff = Math.floor((now - date) / 60000);
+                    if (diff < 60) timeText = `${diff}min`;
+                    else if (diff < 1440) timeText = `${Math.floor(diff/60)}h`;
+                    else timeText = `${Math.floor(diff/1440)}j`;
+                }
                 
                 html += `
                     <div class="news-item">
-                        <div class="news-meta">
-                            <span class="news-time">${timeText}</span>
-                            <span class="news-category">${item.category}</span>
-                        </div>
-                        <a href="${item.link}" target="_blank" class="news-title">${item.title}</a>
+                        <div class="news-time"><span>${timeText}</span><span class="news-cat">${category.toUpperCase()}</span></div>
+                        <a href="${link}" target="_blank" class="news-title">${title}</a>
                     </div>
                 `;
             });
-            
-            container.innerHTML = html;
+            document.getElementById('newsContainer').innerHTML = html;
         }
-        
-        function formatTime(minutes, t) {
-            if (minutes < 60) return `${minutes}${t.minutes}`;
-            if (minutes < 1440) return `${Math.floor(minutes / 60)}${t.hours}`;
-            return `${Math.floor(minutes / 1440)}${t.days}`;
+
+        async function fetchAllData() {
+            await Promise.all([fetchStocks(), fetchNews()]);
         }
+
+        fetchAllData();
+        setInterval(fetchAllData, 30000);
     </script>
 </body>
 </html>
