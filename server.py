@@ -5,7 +5,7 @@ Scrapes TradingView Morocco, MASI Index, and RSS News
 Auto-refreshes every 10 minutes
 """
 
-from flask import Flask, jsonify, send_from_directory, make_response
+from flask import Flask, jsonify, send_from_directory, make_response, request
 from flask_cors import CORS
 import requests
 import xml.etree.ElementTree as ET
@@ -18,14 +18,8 @@ from datetime import datetime, timezone, timedelta
 from bs4 import BeautifulSoup
 
 app = Flask(__name__)
-# FIXED: More permissive CORS for Render deployment
-CORS(app, resources={
-    r"/*": {
-        "origins": "*",
-        "methods": ["GET", "POST", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization", "Accept"]
-    }
-})
+# FIXED: Proper CORS setup for Render
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 # Data storage
 DATA_DIR = "data"
@@ -97,7 +91,7 @@ ALL_STOCKS = {
     "CAP": {"name": "Cash Plus", "sector": "Finance"}
 }
 
-# Cached data with defaults
+# Cached data
 stocks_cache = []
 news_cache = []
 masi_cache = {
@@ -113,7 +107,7 @@ last_update = None
 
 def get_market_status():
     """Check if Moroccan stock market is open"""
-    now = datetime.now(timezone(timedelta(hours=1)))  # Morocco time (UTC+1)
+    now = datetime.now(timezone(timedelta(hours=1)))
     weekday = now.weekday()
     hour = now.hour
     minute = now.minute
@@ -155,7 +149,7 @@ def get_next_market_open(current_time):
         return "Today 09:30"
 
 def scrape_masi_index():
-    """Scrape MASI index from TradingView using BeautifulSoup"""
+    """Scrape MASI index from TradingView"""
     global masi_cache
     print(f"[{datetime.now()}] Scraping MASI index...")
     
@@ -175,7 +169,6 @@ def scrape_masi_index():
         
         soup = BeautifulSoup(response.text, 'html.parser')
         
-        # Find the last price using the specific class
         price_elem = soup.find('span', class_='last-zoF9r75I') or \
                      soup.find('span', class_=lambda x: x and 'last-' in str(x)) or \
                      soup.find('span', {'data-qa-id': 'symbol-last-value'})
@@ -190,7 +183,6 @@ def scrape_masi_index():
             except ValueError:
                 print(f"Could not parse price: {price_text}")
         
-        # Try alternative selectors if first one failed
         if price is None:
             all_spans = soup.find_all('span')
             for span in all_spans:
@@ -206,7 +198,6 @@ def scrape_masi_index():
                     except:
                         continue
         
-        # Look for change percentage
         change_percent = None
         change_elem = soup.find('span', class_=lambda x: x and 'change-' in str(x)) or \
                       soup.find('span', {'data-qa-id': 'symbol-change-percent-value'})
@@ -443,7 +434,7 @@ def background_refresh():
         
         time.sleep(600)
 
-# FIXED: Add CORS headers to all responses
+# FIXED: Proper CORS headers for all responses
 @app.after_request
 def after_request(response):
     response.headers.add('Access-Control-Allow-Origin', '*')
@@ -499,8 +490,6 @@ def api_refresh():
         'market_status': get_market_status(),
         'last_update': last_update
     })
-
-from flask import request
 
 if __name__ == '__main__':
     print("=" * 60)
