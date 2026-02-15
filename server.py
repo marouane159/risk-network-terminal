@@ -148,14 +148,19 @@ def scrape_masi_index():
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.9'
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Referer': 'https://www.investing.com/'
         }
         
         url = "https://www.investing.com/indices/masi"
-        response = requests.get(url, headers=headers, timeout=30)
+        print(f"Fetching: {url}")
+        response = requests.get(url, headers=headers, timeout=30, allow_redirects=True)
+        
+        print(f"Response status: {response.status_code}")
         
         if response.status_code != 200:
             print(f"Failed to fetch MASI: {response.status_code}")
+            print(f"Response text preview: {response.text[:500]}")
             return masi_cache
         
         soup = BeautifulSoup(response.text, 'html.parser')
@@ -177,6 +182,7 @@ def scrape_masi_index():
         # Alternative: Look for any div with "instrument-price" in class
         if price is None:
             price_divs = soup.find_all('div', class_=re.compile(r'instrument-price'))
+            print(f"Found {len(price_divs)} divs with 'instrument-price'")
             for div in price_divs:
                 text = div.get_text().strip()
                 clean_text = text.replace(',', '').replace(' ', '')
@@ -450,6 +456,18 @@ def background_refresh():
         time.sleep(600)  # 10 minutes
 
 # API Routes
+@app.route('/api/health')
+def api_health():
+    """Health check endpoint"""
+    return jsonify({
+        'status': 'healthy',
+        'timestamp': datetime.now().isoformat(),
+        'stocks_count': len(stocks_cache),
+        'news_count': len(news_cache),
+        'masi_price': masi_cache.get('price', 0),
+        'last_update': last_update
+    })
+
 @app.route('/')
 def index():
     return send_from_directory('.', 'index.html')
