@@ -58,7 +58,7 @@
         .dot.offline { background: #ff0000; }
         .dot.sync { background: #ffaa00; animation: pulse 1s infinite; }
         
-        .container { display: grid; grid-template-columns: 1fr 300px; height: calc(100vh - 42px); }
+        .container { display: grid; grid-template-columns: 1fr 350px; height: calc(100vh - 42px); }
         
         .stocks-panel { border-right: 1px solid #222; overflow: hidden; display: flex; flex-direction: column; }
         .panel-header {
@@ -71,11 +71,12 @@
             letter-spacing: 1px;
         }
         
-        /* Table with exact column alignment */
+        /* Table with exact column alignment per TradingView */
         .stock-table { 
             width: 100%; 
             border-collapse: collapse; 
-            table-layout: fixed; /* Critical for alignment */
+            table-layout: fixed;
+            font-size: 10px;
         }
         .stock-table th {
             background: #111;
@@ -90,7 +91,7 @@
             text-overflow: ellipsis;
         }
         .stock-table td {
-            padding: 5px 4px;
+            padding: 4px;
             border-bottom: 1px solid #1a1a1a;
             white-space: nowrap;
             overflow: hidden;
@@ -99,21 +100,25 @@
         }
         .stock-row:hover { background: #1a0f00; }
         
-        /* Exact column widths for alignment */
-        .col-ticker { width: 8%; color: #fff; font-weight: 700; }
-        .col-secteur { width: 14%; color: #aaa; }
-        .col-capital { width: 12%; color: #888; text-align: right; }
-        .col-cours { width: 11%; color: #fff; font-weight: 700; text-align: right; }
-        .col-var { width: 9%; text-align: right; font-weight: 700; }
-        .col-pe { width: 8%; color: #888; text-align: right; }
-        .col-sentiment { width: 14%; text-align: center; }
+        /* Column widths matching TradingView layout */
+        .col-symbol { width: 8%; color: #fff; font-weight: 700; }
+        .col-price { width: 10%; color: #fff; font-weight: 700; text-align: right; }
+        .col-change-pct { width: 9%; text-align: right; font-weight: 700; }
+        .col-change { width: 9%; text-align: right; }
+        .col-rating { width: 10%; text-align: center; }
+        .col-volume { width: 10%; text-align: right; color: #888; }
+        .col-market-cap { width: 11%; text-align: right; color: #888; }
+        .col-pe { width: 8%; text-align: right; color: #888; }
+        .col-eps { width: 8%; text-align: right; color: #888; }
+        .col-employees { width: 9%; text-align: right; color: #666; }
+        .col-sector { width: 18%; color: #aaa; }
         
         .change.up { color: #00ff41; }
         .change.down { color: #ff6600; }
         .change.neutral { color: #888; }
         .no-data { color: #444; font-style: italic; }
         
-        /* Rating badges */
+        /* Rating badges matching TradingView colors */
         .rating {
             display: inline-block;
             padding: 1px 4px;
@@ -131,22 +136,35 @@
         .rating-none { background: transparent; color: #444; border: 1px solid #333; }
         
         .news-panel { background: #050505; overflow: hidden; display: flex; flex-direction: column; }
-        .news-list { overflow-y: auto; flex: 1; }
+        .news-list { overflow-y: auto; flex: 1; padding: 5px; }
         .news-item {
-            padding: 8px 10px;
+            padding: 8px;
             border-bottom: 1px solid #1a1a1a;
-            font-size: 11px;
+            margin-bottom: 5px;
+            background: #0a0a0a;
         }
         .news-time { 
             color: #ff6600; 
             font-size: 9px; 
-            margin-bottom: 3px;
+            margin-bottom: 4px;
             display: flex;
             justify-content: space-between;
         }
-        .news-title { color: #ccc; text-decoration: none; font-size: 11px; }
+        .news-title { 
+            color: #ccc; 
+            text-decoration: none; 
+            font-size: 11px;
+            line-height: 1.4;
+            display: block;
+        }
         .news-title:hover { color: #fff; text-decoration: underline; }
-        .news-cat { color: #666; font-size: 9px; background: #1a1a1a; padding: 1px 4px; }
+        .news-cat { 
+            color: #666; 
+            font-size: 8px; 
+            background: #1a1a1a; 
+            padding: 1px 4px;
+            border-radius: 2px;
+        }
         
         .loading { 
             color: #ff6600; 
@@ -174,13 +192,19 @@
             font-weight: 700;
         }
         
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
         ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-track { background: #000; }
         ::-webkit-scrollbar-thumb { background: #333; }
         
-        @media (max-width: 900px) {
-            .container { grid-template-columns: 1fr; grid-template-rows: 1fr 250px; }
+        @media (max-width: 1000px) {
+            .container { grid-template-columns: 1fr; grid-template-rows: 1fr 200px; }
             body { font-size: 10px; }
+            .col-employees, .col-eps { display: none; }
         }
     </style>
 </head>
@@ -201,7 +225,7 @@
                 <span class="dot" id="apiDot"></span>
                 <span id="apiStatus">CONNECTING...</span>
             </div>
-            <div class="status-item" id="clock">00:00:00</span></div>
+            <div class="status-item" id="clock">00:00:00</div>
         </div>
     </div>
 
@@ -213,17 +237,21 @@
                 <table class="stock-table">
                     <thead>
                         <tr>
-                            <th class="col-ticker">TICKER</th>
-                            <th class="col-secteur">SECTEUR</th>
-                            <th class="col-capital">CAPITAL</th>
-                            <th class="col-cours">COURS</th>
-                            <th class="col-var">VAR %</th>
+                            <th class="col-symbol">SYMBOL</th>
+                            <th class="col-price">PRICE</th>
+                            <th class="col-change-pct">CHG %</th>
+                            <th class="col-change">CHANGE</th>
+                            <th class="col-rating">RATING</th>
+                            <th class="col-volume">VOLUME</th>
+                            <th class="col-market-cap">MKT CAP</th>
                             <th class="col-pe">P/E</th>
-                            <th class="col-sentiment">SENTIMENT</th>
+                            <th class="col-eps">EPS</th>
+                            <th class="col-employees">EMPL</th>
+                            <th class="col-sector">SECTOR</th>
                         </tr>
                     </thead>
                     <tbody id="stockTableBody">
-                        <tr><td colspan="7" class="loading">CONNEXION À L'API...</td></tr>
+                        <tr><td colspan="11" class="loading">CONNEXION À L'API...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -232,17 +260,17 @@
         <!-- News Panel -->
         <div class="news-panel">
             <div class="panel-header" style="display: flex; justify-content: space-between;">
-                <span>◢ MEDIAS24</span>
+                <span>◢ MEDIAS24 • LE BOURSIER</span>
                 <button class="refresh-btn" onclick="fetchAllData()">↻</button>
             </div>
             <div class="news-list" id="newsContainer">
-                <div class="loading">...</div>
+                <div class="loading">Chargement des actualités...</div>
             </div>
         </div>
     </div>
 
     <script>
-        const API_BASE = 'https://risk-network-terminal.onrender.com';
+        const API_BASE = window.location.origin.includes('localhost') ? 'http://localhost:5000' : 'https://risk-network-terminal.onrender.com';
         
         function updateClock() {
             const now = new Date();
@@ -252,14 +280,20 @@
         updateClock();
 
         function getRatingClass(rating) {
-            if (!rating || rating === '—') return 'rating-none';
+            if (!rating || rating === '—' || rating === '-') return 'rating-none';
             const r = rating.toLowerCase();
             if (r.includes('strong buy')) return 'rating-strong-buy';
             if (r.includes('buy') && !r.includes('sell')) return 'rating-buy';
             if (r.includes('strong sell')) return 'rating-strong-sell';
             if (r.includes('sell')) return 'rating-sell';
             if (r.includes('hold')) return 'rating-hold';
-            return 'rating-neutral';
+            if (r.includes('neutral')) return 'rating-neutral';
+            return 'rating-none';
+        }
+
+        function formatNumber(num) {
+            if (!num || num === '—' || num === '-') return '—';
+            return num;
         }
 
         async function fetchStocks() {
@@ -275,73 +309,71 @@
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 
                 const stocks = await response.json();
-                console.log(`Got ${stocks.length} stocks`);
+                console.log(`Loaded ${stocks.length} stocks`);
                 
                 renderStocks(stocks);
                 
                 dot.className = 'dot live';
                 status.textContent = 'LIVE';
                 
-                const liveCount = stocks.filter(s => s.price > 0).length;
-                header.textContent = `◈ MASI ALL SHARES • ${liveCount}/${stocks.length} ACTIFS`;
+                const liveCount = stocks.filter(s => s.has_live_data).length;
+                header.textContent = `◈ MASI ALL SHARES • ${liveCount}/${stocks.length} ACTIFS • ${new Date().toLocaleTimeString('fr-FR')}`;
                 
             } catch (error) {
-                console.error('Error:', error);
+                console.error('Stocks error:', error);
                 dot.className = 'dot offline';
                 status.textContent = 'OFFLINE';
                 document.getElementById('stockTableBody').innerHTML = 
-                    `<tr><td colspan="7" class="error">ERREUR: ${error.message}</td></tr>`;
+                    `<tr><td colspan="11" class="error">ERREUR API: ${error.message}</td></tr>`;
             }
         }
 
         function renderStocks(stocks) {
             const tbody = document.getElementById('stockTableBody');
             if (!stocks || stocks.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" style="padding: 20px; text-align: center;">AUCUNE DONNÉE</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="11" style="padding: 20px; text-align: center;">AUCUNE DONNÉE</td></tr>';
                 return;
             }
 
             let html = '';
             
-            // Sort: active first
-            const sorted = stocks.sort((a, b) => {
-                if (a.price === 0 && b.price > 0) return 1;
-                if (a.price > 0 && b.price === 0) return -1;
-                return a.symbol.localeCompare(b.symbol);
-            });
-            
-            sorted.forEach(stock => {
-                const hasData = stock.price > 0;
-                const changeClass = stock.change > 0 ? 'up' : stock.change < 0 ? 'down' : 'neutral';
-                const sign = stock.change > 0 ? '+' : '';
-                const peDisplay = stock.pe ? stock.pe.toFixed(1) : '—';
+            stocks.forEach(stock => {
+                const hasData = stock.has_live_data;
+                const changeClass = stock.change_percent > 0 ? 'up' : stock.change_percent < 0 ? 'down' : 'neutral';
+                const sign = stock.change_percent > 0 ? '+' : '';
                 const ratingClass = getRatingClass(stock.rating);
                 const ratingText = stock.rating || '—';
-                const sectorText = stock.sector || 'N/A';
-                const capitalText = stock.capital || '—';
                 
                 if (hasData) {
                     html += `
                         <tr class="stock-row">
-                            <td class="col-ticker">${stock.symbol}</td>
-                            <td class="col-secteur" title="${sectorText}">${sectorText}</td>
-                            <td class="col-capital">${capitalText}</td>
-                            <td class="col-cours">${stock.price.toFixed(2)}</td>
-                            <td class="col-var ${changeClass}">${sign}${stock.change.toFixed(2)}%</td>
-                            <td class="col-pe">${peDisplay}</td>
-                            <td class="col-sentiment"><span class="rating ${ratingClass}">${ratingText}</span></td>
+                            <td class="col-symbol">${stock.symbol}</td>
+                            <td class="col-price">${stock.price.toFixed(2)}</td>
+                            <td class="col-change-pct ${changeClass}">${sign}${stock.change_percent.toFixed(2)}%</td>
+                            <td class="col-change ${changeClass}">${sign}${stock.change.toFixed(2)}</td>
+                            <td class="col-rating"><span class="rating ${ratingClass}">${ratingText}</span></td>
+                            <td class="col-volume">${formatNumber(stock.volume)}</td>
+                            <td class="col-market-cap">${formatNumber(stock.market_cap)}</td>
+                            <td class="col-pe">${stock.pe_ratio ? stock.pe_ratio.toFixed(2) : '—'}</td>
+                            <td class="col-eps">${stock.eps ? stock.eps.toFixed(2) : '—'}</td>
+                            <td class="col-employees">${formatNumber(stock.employees)}</td>
+                            <td class="col-sector" title="${stock.sector}">${stock.sector}</td>
                         </tr>
                     `;
                 } else {
                     html += `
-                        <tr class="stock-row" style="opacity: 0.35;">
-                            <td class="col-ticker" style="color: #444;">${stock.symbol}</td>
-                            <td class="col-secteur no-data">—</td>
-                            <td class="col-capital no-data">—</td>
-                            <td class="col-cours no-data">0.00</td>
-                            <td class="col-var no-data">0.00%</td>
+                        <tr class="stock-row" style="opacity: 0.3;">
+                            <td class="col-symbol" style="color: #444;">${stock.symbol}</td>
+                            <td class="col-price no-data">—</td>
+                            <td class="col-change-pct no-data">—</td>
+                            <td class="col-change no-data">—</td>
+                            <td class="col-rating"><span class="rating rating-none">—</span></td>
+                            <td class="col-volume no-data">—</td>
+                            <td class="col-market-cap no-data">—</td>
                             <td class="col-pe no-data">—</td>
-                            <td class="col-sentiment"><span class="rating rating-none">—</span></td>
+                            <td class="col-eps no-data">—</td>
+                            <td class="col-employees no-data">—</td>
+                            <td class="col-sector no-data">—</td>
                         </tr>
                     `;
                 }
@@ -349,68 +381,103 @@
             tbody.innerHTML = html;
         }
 
+        // Simple RSS Fetcher for Medias24 using AllOrigins proxy
         async function fetchNews() {
             const container = document.getElementById('newsContainer');
-            container.innerHTML = '<div class="loading">...</div>';
+            container.innerHTML = '<div class="loading">Chargement...</div>';
             
             const RSS_URL = 'https://medias24.com/categorie/leboursier/actus/feed/';
+            
+            // Try multiple CORS proxies
             const proxies = [
                 'https://api.allorigins.win/raw?url=',
-                'https://api.codetabs.com/v1/proxy?quest='
+                'https://api.codetabs.com/v1/proxy?quest=',
+                'https://corsproxy.io/?'
             ];
             
             for (let proxy of proxies) {
                 try {
-                    const response = await fetch(proxy + encodeURIComponent(RSS_URL));
+                    const response = await fetch(proxy + encodeURIComponent(RSS_URL), {
+                        headers: { 'Accept': 'application/rss+xml, application/xml, text/xml' }
+                    });
+                    
                     if (!response.ok) continue;
                     
                     const xmlText = await response.text();
-                    parseRSS(xmlText);
-                    return;
-                } catch (e) { continue; }
+                    const news = parseRSS(xmlText);
+                    
+                    if (news.length > 0) {
+                        renderNews(news);
+                        return;
+                    }
+                } catch (e) {
+                    console.log(`Proxy failed: ${proxy}`, e);
+                    continue;
+                }
             }
-            container.innerHTML = '<div class="error">RSS ERREUR</div>';
+            
+            container.innerHTML = '<div class="error">Impossible de charger les actualités. CORS restriction.</div>';
         }
 
         function parseRSS(xmlText) {
             const parser = new DOMParser();
             const xml = parser.parseFromString(xmlText, 'text/xml');
             const items = xml.querySelectorAll('item');
+            const news = [];
             
-            let html = '';
-            const now = new Date();
-            
-            items.forEach((item, i) => {
-                if (i >= 10) return;
-                const title = item.querySelector('title')?.textContent || 'Sans titre';
+            items.forEach((item, index) => {
+                if (index >= 6) return; // Only last 6 news
+                
+                const title = item.querySelector('title')?.textContent?.replace('<![CDATA[', '').replace(']]>', '') || 'Sans titre';
                 const link = item.querySelector('link')?.textContent || '#';
                 const pubDate = item.querySelector('pubDate')?.textContent || '';
-                const category = item.querySelector('category')?.textContent || 'INFO';
+                const category = item.querySelector('category')?.textContent?.replace('<![CDATA[', '').replace(']]>', '') || 'INFO';
                 
+                // Calculate relative time
                 let timeText = 'maintenant';
                 if (pubDate) {
                     const date = new Date(pubDate);
-                    const diff = Math.floor((now - date) / 60000);
-                    if (diff < 60) timeText = `${diff}min`;
-                    else if (diff < 1440) timeText = `${Math.floor(diff/60)}h`;
-                    else timeText = `${Math.floor(diff/1440)}j`;
+                    const now = new Date();
+                    const diff = Math.floor((now - date) / 60000); // minutes
+                    
+                    if (diff < 60) timeText = `il y a ${diff}min`;
+                    else if (diff < 1440) timeText = `il y a ${Math.floor(diff/60)}h`;
+                    else timeText = `il y a ${Math.floor(diff/1440)}j`;
                 }
                 
+                news.push({ title, link, timeText, category: category.toUpperCase() });
+            });
+            
+            return news;
+        }
+
+        function renderNews(news) {
+            const container = document.getElementById('newsContainer');
+            let html = '';
+            
+            news.forEach(item => {
                 html += `
                     <div class="news-item">
-                        <div class="news-time"><span>${timeText}</span><span class="news-cat">${category.toUpperCase()}</span></div>
-                        <a href="${link}" target="_blank" class="news-title">${title}</a>
+                        <div class="news-time">
+                            <span>${item.timeText}</span>
+                            <span class="news-cat">${item.category}</span>
+                        </div>
+                        <a href="${item.link}" target="_blank" class="news-title">${item.title}</a>
                     </div>
                 `;
             });
-            document.getElementById('newsContainer').innerHTML = html;
+            
+            container.innerHTML = html;
         }
 
         async function fetchAllData() {
             await Promise.all([fetchStocks(), fetchNews()]);
         }
 
+        // Initial load
         fetchAllData();
+        
+        // Auto refresh every 30 seconds
         setInterval(fetchAllData, 30000);
     </script>
 </body>
