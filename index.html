@@ -564,7 +564,7 @@
         <!-- News Panel -->
         <div class="news-panel">
             <div class="panel-header">
-                <span class="panel-title">◢ RISK NETWORK RADAR</span>
+                <span class="panel-title">◢ MEDIAS24</span>
             </div>
             
             <div class="news-list" id="newsList">
@@ -586,7 +586,8 @@
 
     <script>
         // Configuration - CHANGE THIS TO YOUR RENDER URL
-        const API_BASE = 'https://risk-network-terminal.onrender.com';
+        // Use current origin (works on any domain)
+        const API_BASE = window.location.origin;
         
         // Translations
         const translations = {
@@ -746,12 +747,30 @@
         
         async function fetchAllData() {
             setStatus('sync');
+            console.log('🔄 Fetching data from:', `${API_BASE}/api/all`);
             
             try {
-                const response = await fetch(`${API_BASE}/api/all`);
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const response = await fetch(`${API_BASE}/api/all`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Response error:', errorText);
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
                 
                 const data = await response.json();
+                console.log('✓ Data received:', {
+                    stocks: data.stocks?.length || 0,
+                    news: data.news?.length || 0,
+                    masi: data.masi?.price || 'N/A'
+                });
                 
                 stocksData = data.stocks || [];
                 newsData = data.news || [];
@@ -770,13 +789,22 @@
                 
                 setStatus('live');
             } catch (error) {
-                console.error('Fetch error:', error);
+                console.error('❌ Fetch error:', error);
                 setStatus('offline');
                 
-                // Show error in table
+                // Show detailed error in table
                 const t = translations[currentLang];
                 document.getElementById('stockTableBody').innerHTML = 
-                    `<tr><td colspan="7" class="error">${t.offline} - ${error.message}</td></tr>`;
+                    `<tr><td colspan="7" class="error">
+                        ❌ ${t.offline}<br>
+                        <small>${error.message}</small><br>
+                        <small>API: ${API_BASE}/api/all</small><br>
+                        <small>Check browser console (F12) for details</small>
+                    </td></tr>`;
+                
+                // Show error in news section too
+                document.getElementById('newsList').innerHTML = 
+                    `<div class="loading error">❌ ${t.offline}<br><small>${error.message}</small></div>`;
             }
         }
         
