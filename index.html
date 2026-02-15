@@ -1,81 +1,90 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <title>RISK NETWORK | TERMINAL LIVE</title>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-    <style>
-        body { background: #000; color: #ff6600; font-family: 'JetBrains Mono', monospace; margin: 0; padding: 15px; }
-        .header-bar { border-bottom: 2px solid #ff6600; padding-bottom: 10px; margin-bottom: 20px; font-weight: 800; }
-        
-        /* Grid Alignment Fix */
-        .stock-row {
-            display: grid;
-            grid-template-columns: 100px 120px 120px 80px 140px;
-            padding: 10px;
-            border-bottom: 1px solid #222;
-            font-size: 12px;
-            align-items: center;
-        }
-        .header-row { color: #888; font-size: 11px; text-transform: uppercase; border-bottom: 2px solid #333; }
-        .ticker { color: #fff; font-weight: bold; }
-        .up { color: #00ff41; }
-        .down { color: #ff4444; }
-        .rating { background: #222; padding: 3px 8px; border-radius: 4px; font-size: 10px; text-align: center; }
-    </style>
-</head>
-<body>
-
-<div class="header-bar">▶ RISK NETWORK GROUP TERMINAL | LIVE BOURSE MAROC</div>
-
-<div class="stock-row header-row">
-    <div>Ticker</div>
-    <div>Cours</div>
-    <div>Variation</div>
-    <div>P/E</div>
-    <div>Recommandation</div>
-</div>
-
-<div id="stock-container">
-    <div style="padding: 20px;">Synchronisation en cours...</div>
-</div>
-
-<script>
-    // Replace this with your ACTUAL Render URL
-    const API_URL = 'https://risk-network-terminal.onrender.com/api/stocks';
-
-    async function fetchStocks() {
-        try {
-            const response = await fetch(API_URL);
-            const stocks = await response.json();
-            const container = document.getElementById('stock-container');
-            
-            container.innerHTML = stocks.map(stock => {
-                const isUp = stock.change.includes('+');
-                const colorClass = isUp ? 'up' : stock.change.includes('-') ? 'down' : '';
-                
-                return `
-                    <div class="stock-row">
-                        <div class="ticker">${stock.ticker}</div>
-                        <div>${stock.price}</div>
-                        <div class="${colorClass}">${stock.change}</div>
-                        <div>${stock.pe}</div>
-                        <div><span class="rating">${stock.rating}</span></div>
-                    </div>
-                `;
-            }).join('');
-        } catch (error) {
-            console.error("API Error:", error);
-            document.getElementById('stock-container').innerHTML = '<div style="color: red;">Erreur de connexion au serveur Render.</div>';
-        }
-    }
-
-    // Initial Load
-    fetchStocks();
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="RISK Network Group - Terminal Bourse de Casablanca | Dashboard temps réel pour investisseurs marocains" />
+    <meta name="keywords" content="bourse, casablanca, MASI, actions maroc, trading, investissement" />
+    <meta name="author" content="RISK Network Group" />
+    <meta name="theme-color" content="#000000" />
     
-    // Auto-refresh every 60 seconds
-    setInterval(fetchStocks, 60000);
-</script>
-
-</body>
+    <!-- Open Graph / Social Media -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://risk.ma" />
+    <meta property="og:title" content="RISK Network Terminal | Bourse de Casablanca" />
+    <meta property="og:description" content="Dashboard professionnel pour le suivi de la Bourse de Casablanca en temps réel" />
+    <meta property="og:image" content="https://risk.ma/og-image.jpg" />
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://risk.ma" />
+    <meta property="twitter:title" content="RISK Network Terminal | Bourse de Casablanca" />
+    <meta property="twitter:description" content="Dashboard professionnel pour le suivi de la Bourse de Casablanca en temps réel" />
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📈</text></svg>" />
+    
+    <title>RISK Network Group | Terminal Bourse [LIVE]</title>
+    
+    <style>
+      /* Critical CSS for loading state */
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: #000;
+        color: #e0e0e0;
+        font-family: 'JetBrains Mono', monospace;
+      }
+      #loading {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: #000;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+      }
+      #loading-text {
+        color: #ff6600;
+        font-size: 14px;
+        animation: pulse 1.5s infinite;
+      }
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+      }
+    </style>
+  <base target="_blank">
+</head>
+  <body>
+    <div id="loading">
+      <div id="loading-text">INITIALIZING RISK NETWORK TERMINAL...</div>
+    </div>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Remove loading screen when app is ready
+      window.addEventListener('load', function() {
+        setTimeout(function() {
+          const loading = document.getElementById('loading');
+          if (loading) {
+            loading.style.opacity = '0';
+            loading.style.transition = 'opacity 0.5s';
+            setTimeout(function() {
+              loading.style.display = 'none';
+            }, 500);
+          }
+        }, 500);
+      });
+    </script>
+  </body>
 </html>
