@@ -8,7 +8,6 @@ import os
 import re
 from datetime import datetime, timezone, timedelta
 from bs4 import BeautifulSoup
-import json
 
 app = Flask(__name__)
 CORS(app)
@@ -18,9 +17,7 @@ CORS(app)
 # -----------------------
 stocks_cache = []
 news_cache = []
-hespress_news_cache = []
 masi_cache = {}
-macro_cache = {}
 last_update = None
 
 REFRESH_INTERVAL = 600  # 10 minutes
@@ -46,7 +43,7 @@ def get_market_status():
 
 
 # -----------------------
-# SCRAPE TRADINGVIEW - STOCKS
+# SCRAPE TRADINGVIEW
 # -----------------------
 def scrape_tradingview():
     global stocks_cache
@@ -64,8 +61,7 @@ def scrape_tradingview():
             "change",
             "market_cap_basic",
             "price_earnings_ttm",
-            "Recommend.All",
-            "volume"  # Added volume column
+            "Recommend.All"
         ]
     }
 
@@ -89,7 +85,6 @@ def scrape_tradingview():
 
             pe_value = d[5]
             recommendation = d[6]
-            volume = d[7] if len(d) > 7 else 0
 
             stocks.append({
                 "symbol": d[0],
@@ -99,8 +94,7 @@ def scrape_tradingview():
                 "change": float(d[3]) if d[3] else 0,
                 "pe": float(pe_value) if pe_value else None,
                 "rating": convert_rating(recommendation),
-                "has_live_data": True,
-                "volume": int(volume) if volume else 0
+                "has_live_data": True
             })
 
         stocks_cache = stocks
@@ -130,6 +124,11 @@ def convert_rating(value):
 # MASI - BMCE CAPITAL BOURSE
 # -----------------------
 def scrape_masi():
+    """
+    Scrape MASI index from BMCE Capital Bourse
+    URL: https://www.bmcecapitalbourse.com/bkbbourse/details/1356351,102,608#Tab0
+    Target: <span class="price"><span class="stale">18 573,12</span></span>
+    """
     global masi_cache
 
     url = "https://www.bmcecapitalbourse.com/bkbbourse/details/1356351,102,608#Tab0"
@@ -144,7 +143,11 @@ def scrape_masi():
 
     try:
         session = requests.Session()
+
+        # First get the main page to establish session
         session.get("https://www.bmcecapitalbourse.com/bkbbourse/", headers=headers, timeout=10)
+
+        # Now get the MASI details page
         r = session.get(url, headers=headers, timeout=30)
         r.raise_for_status()
 
@@ -160,8 +163,10 @@ def scrape_masi():
             if stale_span:
                 try:
                     price_text = stale_span.get_text(strip=True)
+                    # French format: "18 573,12" -> convert to float
                     price_text = price_text.replace(" ", "").replace(" ", "").replace(" ", "").replace(",", ".")
                     price = float(price_text)
+                    print(f"Found MASI price (method 1): {price}")
                 except (ValueError, AttributeError) as e:
                     print(f"Error parsing price method 1: {e}")
 
@@ -171,9 +176,11 @@ def scrape_masi():
             for span in stale_spans:
                 try:
                     text = span.get_text(strip=True)
+                    # Look for pattern like "18 573,12" or "18573,12"
                     if re.match(r'\d{1,5}[\s  ]?\d{3},\d{2}', text):
                         price_text = text.replace(" ", "").replace(" ", "").replace(" ", "").replace(",", ".")
                         price = float(price_text)
+                        print(f"Found MASI price (method 2): {price}")
                         break
                 except:
                     pass
@@ -181,25 +188,31 @@ def scrape_masi():
         # Method 3: Look for any element containing MASI-like number (10000-20000 range)
         if price == 0:
             text = soup.get_text()
+            # Look for French number format in MASI range
             matches = re.findall(r'(\d{2}\s?\d{3},\d{2})', text)
             for match in matches:
                 try:
                     val = float(match.replace(" ", "").replace(",", "."))
-                    if 10000 <= val <= 20000:
+                    if 10000 <= val <= 20000:  # MASI range
                         price = val
+                        print(f"Found MASI price (method 3): {price}")
                         break
                 except:
                     pass
 
         # Try to find change percentage
+        # Look for patterns like "-0,39%" or "+0,45%"
         change_matches = re.findall(r'([+-]?\d+[,.]\d+)%', r.text)
         if change_matches:
             try:
+                # Take the first match or look for one near the price
                 change_str = change_matches[0].replace(",", ".")
                 change_percent = float(change_str)
+                print(f"Found MASI change: {change_percent}%")
             except:
                 pass
 
+        # Also try to find change in specific elements
         change_elem = soup.find("span", class_=re.compile("change|variation", re.I))
         if change_elem and change_percent == 0:
             try:
@@ -214,10 +227,12 @@ def scrape_masi():
             "change_percent": change_percent
         }
 
+        print(f"MASI final data: {masi_cache}")
         return masi_cache
 
     except Exception as e:
         print(f"MASI fetch error: {e}")
+        # Return cached data if available
         if masi_cache and masi_cache.get("price", 0) > 0:
             return masi_cache
         return {
@@ -227,6 +242,43 @@ def scrape_masi():
         }
 
 
+# -----------------------
+# NEWS
+# -----------------------
+def scrape_news():
+    global news_cache
+
+    url = "https://risk.ma/feed/"
+
+    try:
+        r = requests.get(url, timeout=15)
+        r.raise_for_status()
+
+        news = []
+        root = ET.fromstring(r.content)
+        items = root.findall(".//item")
+
+        for item in items[:10]:
+            title_elem = item.find("title")
+            link_elem = item.find("link")
+
+            title = title_elem.text if title_elem is not None else ""
+            link = link_elem.text if link_elem is not None else ""
+
+            news.append({
+                "title": title,
+                "link": link,
+                "category": "BOURSE",
+                "time": 0
+            })
+
+        news_cache = news
+        return news_cache
+
+    except Exception as e:
+        print(f"News fetch error: {e}")
+        return news_cache if news_cache else []
+    
 # -----------------------
 # MACRO INDICATORS - TRADINGVIEW ECONOMICS
 # -----------------------
@@ -310,47 +362,6 @@ def scrape_macro_indicators():
 
 
 # -----------------------
-# NEWS - RISK.MA
-# -----------------------
-def scrape_news():
-    global news_cache
-
-    url = "https://risk.ma/feed/"
-
-    try:
-        r = requests.get(url, timeout=15)
-        r.raise_for_status()
-
-        news = []
-        root = ET.fromstring(r.content)
-        items = root.findall(".//item")
-
-        for item in items[:10]:
-            title_elem = item.find("title")
-            link_elem = item.find("link")
-
-            title = title_elem.text if title_elem is not None else ""
-            link = link_elem.text if link_elem is not None else ""
-
-            news.append({
-                "title": title,
-                "link": link,
-                "category": "BOURSE",
-                "time": 0
-            })
-
-        news_cache = news
-        return news_cache
-
-    except Exception as e:
-        print(f"News fetch error: {e}")
-        return news_cache if news_cache else []
-
-
-
-
-
-# -----------------------
 # AUTO REFRESH LOGIC
 # -----------------------
 def refresh_if_needed():
@@ -367,8 +378,6 @@ def refresh_if_needed():
         scrape_tradingview()
         scrape_masi()
         scrape_news()
-        scrape_hespress_economy()
-        scrape_macro_indicators()
         last_update = datetime.utcnow()
 
 
@@ -384,23 +393,12 @@ def index():
 def api_all():
     refresh_if_needed()
 
-    # Calculate top and worst performers
-    performers = {"top": [], "worst": []}
-    if stocks_cache:
-        # Sort by change percentage
-        sorted_stocks = sorted(stocks_cache, key=lambda x: x.get('change', 0), reverse=True)
-        performers["top"] = sorted_stocks[:5]
-        performers["worst"] = sorted_stocks[-5:][::-1]  # Reverse to show worst first
-
     return jsonify({
         "stocks": stocks_cache,
         "news": news_cache,
-        "hespress_news": hespress_news_cache,
         "masi": masi_cache,
-        "macro": macro_cache,
         "market_status": get_market_status(),
-        "last_update": last_update.isoformat() if last_update else None,
-        "performers": performers
+        "last_update": last_update.isoformat() if last_update else None
     })
 
 
