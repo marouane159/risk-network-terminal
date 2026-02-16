@@ -121,33 +121,132 @@ def convert_rating(value):
 
 
 # -----------------------
-# MASI
+# MASI - FIXED VERSION
 # -----------------------
 def scrape_masi():
     global masi_cache
 
     url = "https://www.investing.com/indices/masi"
-    headers = {"User-Agent": "Mozilla/5.0"}
-
-    r = requests.get(url, headers=headers, timeout=30)
-    soup = BeautifulSoup(r.text, "html.parser")
-
-    price_div = soup.find("div", class_=re.compile("instrument-price"))
-
-    price = 0
-    if price_div:
-        try:
-            price = float(price_div.text.replace(",", "").strip())
-        except:
-            pass
-
-    masi_cache = {
-        "symbol": "MASI",
-        "price": price,
-        "change_percent": 0
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.5",
+        "Referer": "https://www.google.com/"
     }
 
-    return masi_cache
+    try:
+        r = requests.get(url, headers=headers, timeout=30)
+        r.raise_for_status()
+
+        soup = BeautifulSoup(r.text, "html.parser")
+
+        price = 0.0
+        change_percent = 0.0
+
+        # Method 1: Try to find the instrument-price div
+        price_div = soup.find("div", class_=re.compile("instrument-price"))
+        if price_div:
+            try:
+                price_text = price_div.get_text(strip=True).replace(",", "").replace(" ", "")
+                price = float(price_text)
+            except (ValueError, AttributeError):
+                pass
+
+        # Method 2: Look for data in script tags (JSON data)
+        if price == 0:
+            scripts = soup.find_all("script")
+            for script in scripts:
+                if script.string and "MASI" in script.string:
+                    # Try to extract price from JSON-like data
+                    price_match = re.search(r'"last"[:\s]+([\d.]+)', script.string)
+                    if price_match:
+                        try:
+                            price = float(price_match.group(1))
+                        except:
+                            pass
+
+                    change_match = re.search(r'"change"[:\s]+([-\d.]+)', script.string)
+                    if change_match:
+                        try:
+                            change_percent = float(change_match.group(1))
+                        except:
+                            pass
+
+                    if price > 0:
+                        break
+
+        # Method 3: Look for specific span or div with price
+        if price == 0:
+            # Try finding by data-test attribute or specific classes
+            price_selectors = [
+                '[data-test="instrument-price-last"]',
+                '.last-price-value',
+                '.text-5xl',
+                'span[data-field="last"]'
+            ]
+
+            for selector in price_selectors:
+                elem = soup.select_one(selector)
+                if elem:
+                    try:
+                        price_text = elem.get_text(strip=True).replace(",", "")
+                        price = float(price_text)
+                        break
+                    except:
+                        pass
+
+        # Extract change percentage if not already found
+        if change_percent == 0:
+            # Look for percentage change
+            change_selectors = [
+                '[data-test="instrument-price-change-percent"]',
+                '.change-percent-value',
+                'span[data-field="change_percent"]'
+            ]
+
+            for selector in change_selectors:
+                elem = soup.select_one(selector)
+                if elem:
+                    try:
+                        change_text = elem.get_text(strip=True).replace("%", "").replace("+", "")
+                        change_percent = float(change_text)
+                        break
+                    except:
+                        pass
+
+        # If still no price, try a broader search
+        if price == 0:
+            # Look for any element containing a number that looks like MASI index (around 1000-15000)
+            text = soup.get_text()
+            matches = re.findall(r'(\d{3,5}[.,]\d{2})', text)
+            for match in matches:
+                try:
+                    val = float(match.replace(",", ""))
+                    if 1000 <= val <= 15000:  # MASI range
+                        price = val
+                        break
+                except:
+                    pass
+
+        masi_cache = {
+            "symbol": "MASI",
+            "price": price,
+            "change_percent": change_percent
+        }
+
+        print(f"MASI fetched: {price} ({change_percent}%)")
+        return masi_cache
+
+    except Exception as e:
+        print(f"MASI fetch error: {e}")
+        # Return cached data if available, otherwise empty
+        if masi_cache and masi_cache.get("price", 0) > 0:
+            return masi_cache
+        return {
+            "symbol": "MASI",
+            "price": 0,
+            "change_percent": 0
+        }
 
 
 # -----------------------
@@ -157,17 +256,21 @@ def scrape_news():
     global news_cache
 
     url = "https://medias24.com/categorie/leboursier/actus/feed/"
-    r = requests.get(url, timeout=15)
 
-    news = []
+    try:
+        r = requests.get(url, timeout=15)
+        r.raise_for_status()
 
-    if r.status_code == 200:
+        news = []
         root = ET.fromstring(r.content)
         items = root.findall(".//item")
 
         for item in items[:8]:
-            title = item.find("title").text if item.find("title") else ""
-            link = item.find("link").text if item.find("link") else ""
+            title_elem = item.find("title")
+            link_elem = item.find("link")
+
+            title = title_elem.text if title_elem is not None else ""
+            link = link_elem.text if link_elem is not None else ""
 
             news.append({
                 "title": title,
@@ -176,8 +279,12 @@ def scrape_news():
                 "time": 0
             })
 
-    news_cache = news
-    return news_cache
+        news_cache = news
+        return news_cache
+
+    except Exception as e:
+        print(f"News fetch error: {e}")
+        return news_cache if news_cache else []
 
 
 # -----------------------
@@ -217,7 +324,7 @@ def api_all():
         "news": news_cache,
         "masi": masi_cache,
         "market_status": get_market_status(),
-        "last_update": last_update
+        "last_update": last_update.isoformat() if last_update else None
     })
 
 
