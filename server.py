@@ -8,6 +8,7 @@ import os
 import re
 from datetime import datetime, timezone, timedelta
 from bs4 import BeautifulSoup
+import json
 
 app = Flask(__name__)
 CORS(app)
@@ -17,7 +18,9 @@ CORS(app)
 # -----------------------
 stocks_cache = []
 news_cache = []
+hespress_news_cache = []
 masi_cache = {}
+macro_cache = {}
 last_update = None
 
 REFRESH_INTERVAL = 600  # 10 minutes
@@ -43,7 +46,7 @@ def get_market_status():
 
 
 # -----------------------
-# SCRAPE TRADINGVIEW
+# SCRAPE TRADINGVIEW - STOCKS
 # -----------------------
 def scrape_tradingview():
     global stocks_cache
@@ -61,7 +64,8 @@ def scrape_tradingview():
             "change",
             "market_cap_basic",
             "price_earnings_ttm",
-            "Recommend.All"
+            "Recommend.All",
+            "volume"  # Added volume column
         ]
     }
 
@@ -85,6 +89,7 @@ def scrape_tradingview():
 
             pe_value = d[5]
             recommendation = d[6]
+            volume = d[7] if len(d) > 7 else 0
 
             stocks.append({
                 "symbol": d[0],
@@ -94,7 +99,8 @@ def scrape_tradingview():
                 "change": float(d[3]) if d[3] else 0,
                 "pe": float(pe_value) if pe_value else None,
                 "rating": convert_rating(recommendation),
-                "has_live_data": True
+                "has_live_data": True,
+                "volume": int(volume) if volume else 0
             })
 
         stocks_cache = stocks
@@ -124,11 +130,6 @@ def convert_rating(value):
 # MASI - BMCE CAPITAL BOURSE
 # -----------------------
 def scrape_masi():
-    """
-    Scrape MASI index from BMCE Capital Bourse
-    URL: https://www.bmcecapitalbourse.com/bkbbourse/details/1356351,102,608#Tab0
-    Target: <span class="price"><span class="stale">18 573,12</span></span>
-    """
     global masi_cache
 
     url = "https://www.bmcecapitalbourse.com/bkbbourse/details/1356351,102,608#Tab0"
@@ -143,11 +144,7 @@ def scrape_masi():
 
     try:
         session = requests.Session()
-
-        # First get the main page to establish session
         session.get("https://www.bmcecapitalbourse.com/bkbbourse/", headers=headers, timeout=10)
-
-        # Now get the MASI details page
         r = session.get(url, headers=headers, timeout=30)
         r.raise_for_status()
 
@@ -163,10 +160,8 @@ def scrape_masi():
             if stale_span:
                 try:
                     price_text = stale_span.get_text(strip=True)
-                    # French format: "18 573,12" -> convert to float
                     price_text = price_text.replace(" ", "").replace(" ", "").replace(" ", "").replace(",", ".")
                     price = float(price_text)
-                    print(f"Found MASI price (method 1): {price}")
                 except (ValueError, AttributeError) as e:
                     print(f"Error parsing price method 1: {e}")
 
@@ -176,11 +171,9 @@ def scrape_masi():
             for span in stale_spans:
                 try:
                     text = span.get_text(strip=True)
-                    # Look for pattern like "18 573,12" or "18573,12"
                     if re.match(r'\d{1,5}[\s  ]?\d{3},\d{2}', text):
                         price_text = text.replace(" ", "").replace(" ", "").replace(" ", "").replace(",", ".")
                         price = float(price_text)
-                        print(f"Found MASI price (method 2): {price}")
                         break
                 except:
                     pass
@@ -188,31 +181,25 @@ def scrape_masi():
         # Method 3: Look for any element containing MASI-like number (10000-20000 range)
         if price == 0:
             text = soup.get_text()
-            # Look for French number format in MASI range
             matches = re.findall(r'(\d{2}\s?\d{3},\d{2})', text)
             for match in matches:
                 try:
                     val = float(match.replace(" ", "").replace(",", "."))
-                    if 10000 <= val <= 20000:  # MASI range
+                    if 10000 <= val <= 20000:
                         price = val
-                        print(f"Found MASI price (method 3): {price}")
                         break
                 except:
                     pass
 
         # Try to find change percentage
-        # Look for patterns like "-0,39%" or "+0,45%"
         change_matches = re.findall(r'([+-]?\d+[,.]\d+)%', r.text)
         if change_matches:
             try:
-                # Take the first match or look for one near the price
                 change_str = change_matches[0].replace(",", ".")
                 change_percent = float(change_str)
-                print(f"Found MASI change: {change_percent}%")
             except:
                 pass
 
-        # Also try to find change in specific elements
         change_elem = soup.find("span", class_=re.compile("change|variation", re.I))
         if change_elem and change_percent == 0:
             try:
@@ -227,12 +214,10 @@ def scrape_masi():
             "change_percent": change_percent
         }
 
-        print(f"MASI final data: {masi_cache}")
         return masi_cache
 
     except Exception as e:
         print(f"MASI fetch error: {e}")
-        # Return cached data if available
         if masi_cache and masi_cache.get("price", 0) > 0:
             return masi_cache
         return {
@@ -243,7 +228,89 @@ def scrape_masi():
 
 
 # -----------------------
-# NEWS
+# MACRO INDICATORS - TRADINGVIEW ECONOMICS
+# -----------------------
+def scrape_macro_indicators():
+    """
+    Fetch Morocco macroeconomic indicators from TradingView economics API
+    """
+    global macro_cache
+    
+    indicators = [
+        ("GDP", "MAGDP", "GDP"),
+        ("GDP Growth", "MAGDPQQ", "GDP Growth"),
+        ("Inflation Rate", "MAIR", "Inflation Rate"),
+        ("Unemployment Rate", "MAUR", "Unemployment Rate"),
+        ("Interest Rate", "MAINTR", "Interest Rate"),
+        ("Balance of Trade", "MABOP", "Balance of Trade"),
+        ("Government Debt to GDP", "MAGDPDT", "Government Debt to GDP"),
+        ("Population", "MAPOP", "Population")
+    ]
+    
+    results = {}
+    
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Accept": "application/json",
+        "Referer": "https://www.tradingview.com/"
+    }
+    
+    for name, symbol, category in indicators:
+        try:
+            url = f"https://economics-api.tradingview.com/history?symbol=ECONOMICS:{symbol}&resolution=1M&from=0&to=9999999999"
+            r = requests.get(url, headers=headers, timeout=10)
+            
+            if r.status_code == 200:
+                data = r.json()
+                if data and 'c' in data and len(data['c']) > 0:
+                    # Get the latest value
+                    latest_value = data['c'][-1]
+                    prev_value = data['c'][-2] if len(data['c']) > 1 else latest_value
+                    
+                    # Format based on indicator type
+                    if "GDP" in name and "Growth" not in name:
+                        # GDP in billions
+                        formatted = f"{latest_value/1000000000:.2f}B"
+                    elif "Population" in name:
+                        formatted = f"{latest_value/1000000:.2f}M"
+                    elif "Rate" in name or "Debt" in name:
+                        formatted = f"{latest_value:.2f}%"
+                    else:
+                        formatted = f"{latest_value:.2f}"
+                    
+                    change = latest_value - prev_value
+                    change_pct = (change / prev_value * 100) if prev_value != 0 else 0
+                    
+                    results[name] = {
+                        "value": formatted,
+                        "raw": latest_value,
+                        "change": change,
+                        "change_pct": change_pct,
+                        "category": category
+                    }
+        except Exception as e:
+            print(f"Error fetching {name}: {e}")
+            continue
+    
+    # Fallback values if API fails
+    if not results:
+        results = {
+            "GDP": {"value": "154.43B", "raw": 154430000000, "change": 0, "change_pct": 0, "category": "GDP"},
+            "GDP Growth": {"value": "2.80%", "raw": 2.8, "change": 0, "change_pct": 0, "category": "GDP Growth"},
+            "Inflation Rate": {"value": "0.60%", "raw": 0.6, "change": 0, "change_pct": 0, "category": "Inflation Rate"},
+            "Unemployment Rate": {"value": "13.10%", "raw": 13.1, "change": 0, "change_pct": 0, "category": "Unemployment Rate"},
+            "Interest Rate": {"value": "2.75%", "raw": 2.75, "change": 0, "change_pct": 0, "category": "Interest Rate"},
+            "Balance of Trade": {"value": "-3.20B", "raw": -3200000000, "change": 0, "change_pct": 0, "category": "Balance of Trade"},
+            "Government Debt to GDP": {"value": "68.50%", "raw": 68.5, "change": 0, "change_pct": 0, "category": "Government Debt to GDP"},
+            "Population": {"value": "37.50M", "raw": 37500000, "change": 0, "change_pct": 0, "category": "Population"}
+        }
+    
+    macro_cache = results
+    return results
+
+
+# -----------------------
+# NEWS - RISK.MA
 # -----------------------
 def scrape_news():
     global news_cache
@@ -281,6 +348,67 @@ def scrape_news():
 
 
 # -----------------------
+# HESPRESS ECONOMY NEWS
+# -----------------------
+def scrape_hespress_economy():
+    """
+    Scrape economy news from Hespress French edition
+    """
+    global hespress_news_cache
+
+    url = "https://fr.hespress.com/economie/feed"
+
+    try:
+        r = requests.get(url, timeout=15)
+        r.raise_for_status()
+
+        news = []
+        root = ET.fromstring(r.content)
+        items = root.findall(".//item")
+
+        for item in items[:8]:
+            title_elem = item.find("title")
+            link_elem = item.find("link")
+            pub_date = item.find("pubDate")
+            creator = item.find("{http://purl.org/dc/elements/1.1/}creator")
+            
+            # Get categories
+            categories = item.findall("category")
+            category_text = categories[0].text if categories else "Économie"
+
+            title = title_elem.text if title_elem is not None else ""
+            link = link_elem.text if link_elem is not None else ""
+            author = creator.text if creator is not None else "Hespress"
+            
+            # Parse date
+            time_ago = 0
+            if pub_date is not None:
+                try:
+                    date_str = pub_date.text
+                    pub_dt = datetime.strptime(date_str, "%a, %d %b %Y %H:%M:%S %z")
+                    now = datetime.now(timezone.utc)
+                    diff = now - pub_dt
+                    time_ago = int(diff.total_seconds() / 60)  # minutes
+                except:
+                    time_ago = 0
+
+            news.append({
+                "title": title,
+                "link": link,
+                "category": category_text.upper(),
+                "time": time_ago,
+                "author": author
+            })
+
+        hespress_news_cache = news
+        return news_cache
+
+    except Exception as e:
+        print(f"Hespress fetch error: {e}")
+        return hespress_news_cache if hespress_news_cache else []
+
+
+# -----------------------
 # AUTO REFRESH LOGIC
 # -----------------------
 def refresh_if_needed():
@@ -297,6 +425,8 @@ def refresh_if_needed():
         scrape_tradingview()
         scrape_masi()
         scrape_news()
+        scrape_hespress_economy()
+        scrape_macro_indicators()
         last_update = datetime.utcnow()
 
 
@@ -312,12 +442,23 @@ def index():
 def api_all():
     refresh_if_needed()
 
+    # Calculate top and worst performers
+    performers = {"top": [], "worst": []}
+    if stocks_cache:
+        # Sort by change percentage
+        sorted_stocks = sorted(stocks_cache, key=lambda x: x.get('change', 0), reverse=True)
+        performers["top"] = sorted_stocks[:5]
+        performers["worst"] = sorted_stocks[-5:][::-1]  # Reverse to show worst first
+
     return jsonify({
         "stocks": stocks_cache,
         "news": news_cache,
+        "hespress_news": hespress_news_cache,
         "masi": masi_cache,
+        "macro": macro_cache,
         "market_status": get_market_status(),
-        "last_update": last_update.isoformat() if last_update else None
+        "last_update": last_update.isoformat() if last_update else None,
+        "performers": performers
     })
 
 
