@@ -12,12 +12,15 @@ from bs4 import BeautifulSoup
 app = Flask(__name__)
 CORS(app)
 
+# -----------------------
+# GLOBAL CACHE
+# -----------------------
 stocks_cache = []
 news_cache = []
 masi_cache = {}
 last_update = None
 
-REFRESH_INTERVAL = 600
+REFRESH_INTERVAL = 600  # 10 minutes
 
 
 # -----------------------
@@ -40,7 +43,7 @@ def get_market_status():
 
 
 # -----------------------
-# TRADINGVIEW API
+# SCRAPE TRADINGVIEW
 # -----------------------
 def scrape_tradingview():
     global stocks_cache
@@ -62,16 +65,26 @@ def scrape_tradingview():
         ]
     }
 
-    headers = {"User-Agent": "Mozilla/5.0"}
+    headers = {
+        "User-Agent": "Mozilla/5.0",
+        "Content-Type": "application/json"
+    }
 
     try:
         r = requests.post(url, json=payload, headers=headers, timeout=30)
-        data = r.json()
 
+        if r.status_code != 200:
+            print("TradingView API error:", r.status_code)
+            return stocks_cache
+
+        data = r.json()
         stocks = []
 
         for item in data.get("data", []):
             d = item.get("d", [])
+
+            pe_value = d[5]
+            recommendation = d[6]
 
             stocks.append({
                 "symbol": d[0],
@@ -79,21 +92,22 @@ def scrape_tradingview():
                 "capital": f"{round(d[4] / 1_000_000_000, 2)}B MAD" if d[4] else "—",
                 "price": float(d[2]) if d[2] else 0,
                 "change": float(d[3]) if d[3] else 0,
-                "pe": float(d[5]) if d[5] else None,
-                "rating": convert_rating(d[6]),
+                "pe": float(pe_value) if pe_value else None,
+                "rating": convert_rating(recommendation),
+                "has_live_data": True
             })
 
         stocks_cache = stocks
-        return stocks
-
-    except Exception as e:
-        print("TradingView error:", e)
         return stocks_cache
 
+    except Exception as e:
+        print("TradingView fetch error:", e)
+        return stocks_cache
 
 def convert_rating(value):
     if value is None:
         return "—"
+
     if value >= 0.5:
         return "Strong Buy"
     elif value >= 0.1:
@@ -107,41 +121,125 @@ def convert_rating(value):
 
 
 # -----------------------
-# MASI (REAL CHANGE %)
+# MASI - BMCE CAPITAL BOURSE
 # -----------------------
 def scrape_masi():
+    """
+    Scrape MASI index from BMCE Capital Bourse
+    URL: https://www.bmcecapitalbourse.com/bkbbourse/details/1356351,102,608#Tab0
+    Target: <span class="price"><span class="stale">18 573,12</span></span>
+    """
     global masi_cache
 
-    url = "https://www.investing.com/indices/masi"
-    headers = {"User-Agent": "Mozilla/5.0"}
+    url = "https://www.bmcecapitalbourse.com/bkbbourse/details/1356351,102,608#Tab0"
+
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Accept-Language": "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Referer": "https://www.bmcecapitalbourse.com/",
+        "Connection": "keep-alive",
+    }
 
     try:
-        r = requests.get(url, headers=headers, timeout=30)
+        session = requests.Session()
+
+        # First get the main page to establish session
+        session.get("https://www.bmcecapitalbourse.com/bkbbourse/", headers=headers, timeout=10)
+
+        # Now get the MASI details page
+        r = session.get(url, headers=headers, timeout=30)
+        r.raise_for_status()
+
         soup = BeautifulSoup(r.text, "html.parser")
 
-        price_div = soup.find("div", class_=re.compile("instrument-price"))
-        change_span = soup.find("span", class_=re.compile("instrument-price_change-percent"))
+        price = 0.0
+        change_percent = 0.0
 
-        price = 0
-        change = 0
+        # Method 1: Look for the specific structure <span class="price"><span class="stale">VALUE</span></span>
+        price_span = soup.find("span", class_="price")
+        if price_span:
+            stale_span = price_span.find("span", class_="stale")
+            if stale_span:
+                try:
+                    price_text = stale_span.get_text(strip=True)
+                    # French format: "18 573,12" -> convert to float
+                    price_text = price_text.replace(" ", "").replace(" ", "").replace(" ", "").replace(",", ".")
+                    price = float(price_text)
+                    print(f"Found MASI price (method 1): {price}")
+                except (ValueError, AttributeError) as e:
+                    print(f"Error parsing price method 1: {e}")
 
-        if price_div:
-            price = float(price_div.text.replace(",", "").strip())
+        # Method 2: Look for any span with class "stale" containing numbers
+        if price == 0:
+            stale_spans = soup.find_all("span", class_="stale")
+            for span in stale_spans:
+                try:
+                    text = span.get_text(strip=True)
+                    # Look for pattern like "18 573,12" or "18573,12"
+                    if re.match(r'\d{1,5}[\s  ]?\d{3},\d{2}', text):
+                        price_text = text.replace(" ", "").replace(" ", "").replace(" ", "").replace(",", ".")
+                        price = float(price_text)
+                        print(f"Found MASI price (method 2): {price}")
+                        break
+                except:
+                    pass
 
-        if change_span:
-            change_text = change_span.text.replace("%", "").replace("(", "").replace(")", "")
-            change = float(change_text)
+        # Method 3: Look for any element containing MASI-like number (10000-20000 range)
+        if price == 0:
+            text = soup.get_text()
+            # Look for French number format in MASI range
+            matches = re.findall(r'(\d{2}\s?\d{3},\d{2})', text)
+            for match in matches:
+                try:
+                    val = float(match.replace(" ", "").replace(",", "."))
+                    if 10000 <= val <= 20000:  # MASI range
+                        price = val
+                        print(f"Found MASI price (method 3): {price}")
+                        break
+                except:
+                    pass
+
+        # Try to find change percentage
+        # Look for patterns like "-0,39%" or "+0,45%"
+        change_matches = re.findall(r'([+-]?\d+[,.]\d+)%', r.text)
+        if change_matches:
+            try:
+                # Take the first match or look for one near the price
+                change_str = change_matches[0].replace(",", ".")
+                change_percent = float(change_str)
+                print(f"Found MASI change: {change_percent}%")
+            except:
+                pass
+
+        # Also try to find change in specific elements
+        change_elem = soup.find("span", class_=re.compile("change|variation", re.I))
+        if change_elem and change_percent == 0:
+            try:
+                change_text = change_elem.get_text(strip=True).replace(",", ".").replace("+", "").replace("%", "")
+                change_percent = float(change_text)
+            except:
+                pass
 
         masi_cache = {
             "symbol": "MASI",
             "price": price,
-            "change_percent": change
+            "change_percent": change_percent
         }
 
-    except Exception as e:
-        print("MASI error:", e)
+        print(f"MASI final data: {masi_cache}")
+        return masi_cache
 
-    return masi_cache
+    except Exception as e:
+        print(f"MASI fetch error: {e}")
+        # Return cached data if available
+        if masi_cache and masi_cache.get("price", 0) > 0:
+            return masi_cache
+        return {
+            "symbol": "MASI",
+            "price": 0,
+            "change_percent": 0
+        }
 
 
 # -----------------------
@@ -151,26 +249,39 @@ def scrape_news():
     global news_cache
 
     url = "https://medias24.com/categorie/leboursier/actus/feed/"
-    r = requests.get(url, timeout=15)
 
-    news = []
+    try:
+        r = requests.get(url, timeout=15)
+        r.raise_for_status()
 
-    if r.status_code == 200:
+        news = []
         root = ET.fromstring(r.content)
         items = root.findall(".//item")
 
-        for item in items[:6]:
-            title = item.find("title").text if item.find("title") else ""
-            link = item.find("link").text if item.find("link") else ""
+        for item in items[:8]:
+            title_elem = item.find("title")
+            link_elem = item.find("link")
 
-            news.append({"title": title, "link": link})
+            title = title_elem.text if title_elem is not None else ""
+            link = link_elem.text if link_elem is not None else ""
 
-    news_cache = news
-    return news
+            news.append({
+                "title": title,
+                "link": link,
+                "category": "BOURSE",
+                "time": 0
+            })
+
+        news_cache = news
+        return news_cache
+
+    except Exception as e:
+        print(f"News fetch error: {e}")
+        return news_cache if news_cache else []
 
 
 # -----------------------
-# REFRESH
+# AUTO REFRESH LOGIC
 # -----------------------
 def refresh_if_needed():
     global last_update
@@ -182,6 +293,7 @@ def refresh_if_needed():
         should_refresh = diff > REFRESH_INTERVAL
 
     if should_refresh:
+        print("Refreshing data...")
         scrape_tradingview()
         scrape_masi()
         scrape_news()
@@ -200,20 +312,18 @@ def index():
 def api_all():
     refresh_if_needed()
 
-    # TOP GAINERS / LOSERS
-    sorted_stocks = sorted(stocks_cache, key=lambda x: x["change"], reverse=True)
-
     return jsonify({
         "stocks": stocks_cache,
-        "top_gainers": sorted_stocks[:5],
-        "top_losers": sorted_stocks[-5:],
         "news": news_cache,
         "masi": masi_cache,
         "market_status": get_market_status(),
-        "last_update": last_update
+        "last_update": last_update.isoformat() if last_update else None
     })
 
 
+# -----------------------
+# RENDER ENTRYPOINT
+# -----------------------
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
