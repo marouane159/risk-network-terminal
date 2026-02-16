@@ -18,7 +18,7 @@ CORS(app)
 stocks_cache = []
 news_cache = []
 masi_cache = {}
-macro_cache = {}  # ADDED: Initialize macro cache
+macro_cache = {}
 last_update = None
 
 REFRESH_INTERVAL = 600  # 10 minutes
@@ -62,7 +62,8 @@ def scrape_tradingview():
             "change",
             "market_cap_basic",
             "price_earnings_ttm",
-            "Recommend.All"
+            "Recommend.All",
+            "volume"  # ADDED: Volume column
         ]
     }
 
@@ -86,6 +87,7 @@ def scrape_tradingview():
 
             pe_value = d[5]
             recommendation = d[6]
+            volume_value = d[7] if len(d) > 7 else None  # ADDED: Get volume
 
             stocks.append({
                 "symbol": d[0],
@@ -94,6 +96,7 @@ def scrape_tradingview():
                 "price": float(d[2]) if d[2] else 0,
                 "change": float(d[3]) if d[3] else 0,
                 "pe": float(pe_value) if pe_value else None,
+                "volume": int(volume_value) if volume_value else 0,  # ADDED: Volume as integer
                 "rating": convert_rating(recommendation),
                 "has_live_data": True
             })
@@ -379,7 +382,7 @@ def refresh_if_needed():
         scrape_tradingview()
         scrape_masi()
         scrape_news()
-        scrape_macro_indicators()  # ADDED: Scrape macro indicators
+        scrape_macro_indicators()
         last_update = datetime.utcnow()
 
 
@@ -400,7 +403,7 @@ def api_all():
         "news": news_cache,
         "masi": masi_cache,
         "market_status": get_market_status(),
-        "macros": macro_cache,  # ADDED: Include macro data
+        "macros": macro_cache,
         "last_update": last_update.isoformat() if last_update else None
     })
 
