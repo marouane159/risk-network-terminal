@@ -347,65 +347,7 @@ def scrape_news():
         return news_cache if news_cache else []
 
 
-# -----------------------
-# HESPRESS ECONOMY NEWS
-# -----------------------
-def scrape_hespress_economy():
-    """
-    Scrape economy news from Hespress French edition
-    """
-    global hespress_news_cache
 
-    url = "https://risk.ma"
-
-    try:
-        r = requests.get(url, timeout=15)
-        r.raise_for_status()
-
-        news = []
-        root = ET.fromstring(r.content)
-        items = root.findall(".//item")
-
-        for item in items[:8]:
-            title_elem = item.find("title")
-            link_elem = item.find("link")
-            pub_date = item.find("pubDate")
-            creator = item.find("{http://purl.org/dc/elements/1.1/}creator")
-            
-            # Get categories
-            categories = item.findall("category")
-            category_text = categories[0].text if categories else "Économie"
-
-            title = title_elem.text if title_elem is not None else ""
-            link = link_elem.text if link_elem is not None else ""
-            author = creator.text if creator is not None else "Hespress"
-            
-            # Parse date
-            time_ago = 0
-            if pub_date is not None:
-                try:
-                    date_str = pub_date.text
-                    pub_dt = datetime.strptime(date_str, "%a, %d %b %Y %H:%M:%S %z")
-                    now = datetime.now(timezone.utc)
-                    diff = now - pub_dt
-                    time_ago = int(diff.total_seconds() / 60)  # minutes
-                except:
-                    time_ago = 0
-
-            news.append({
-                "title": title,
-                "link": link,
-                "category": category_text.upper(),
-                "time": time_ago,
-                "author": author
-            })
-
-        hespress_news_cache = news
-        return news_cache
-
-    except Exception as e:
-        print(f"Hespress fetch error: {e}")
-        return hespress_news_cache if hespress_news_cache else []
 
 
 # -----------------------
