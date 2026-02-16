@@ -1,124 +1,54 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Risk Network Terminal</title>
-
 <style>
-:root {
-    --bg:#0f1117;
-    --card:#1a1d26;
-    --border:#2a2e39;
-    --text:#e6e6e6;
-    --muted:#8c8c8c;
-    --up:#00c853;
-    --down:#ff1744;
-}
-
-body{
-    margin:0;
-    font-family:Arial, sans-serif;
-    background:var(--bg);
-    color:var(--text);
-}
-
-header{
-    padding:20px;
-    border-bottom:1px solid var(--border);
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-}
-
-.card{
-    background:var(--card);
-    margin:20px;
-    padding:20px;
-    border-radius:8px;
-}
-
-table{
-    width:100%;
-    border-collapse:collapse;
-}
-
-th,td{
-    padding:8px;
-    border-bottom:1px solid var(--border);
-    font-size:13px;
-}
-
-th{
-    color:var(--muted);
-    cursor:pointer;
-}
-
-.up{color:var(--up);}
-.down{color:var(--down);}
-
-#disclaimer{
-    position:fixed;
-    bottom:10px;
-    left:50%;
-    transform:translateX(-50%);
-    background:#ff1744;
-    padding:8px 14px;
-    border-radius:20px;
-    font-size:12px;
-    animation:flash 1.2s infinite;
-}
-
-@keyframes flash{
-    0%{opacity:1;}
-    50%{opacity:0.3;}
-    100%{opacity:1;}
-}
-
-.filter-box{
-    margin-bottom:10px;
-}
-
-input{
-    padding:6px;
-    background:#111;
-    border:1px solid var(--border);
-    color:white;
-}
+body{background:#0f1117;color:#e6e6e6;font-family:Arial;margin:0}
+.card{background:#1a1d26;margin:15px;padding:15px;border-radius:6px}
+h3{margin-top:0}
+.up{color:#00c853}
+.down{color:#ff1744}
+table{width:100%;border-collapse:collapse}
+th,td{padding:6px;border-bottom:1px solid #2a2e39;font-size:13px}
+th{cursor:pointer;color:#aaa}
+#disclaimer{position:fixed;bottom:10px;left:50%;transform:translateX(-50%);
+background:#ff1744;padding:6px 12px;border-radius:20px;
+animation:flash 1.5s infinite;font-size:12px}
+@keyframes flash{0%{opacity:1}50%{opacity:0.3}100%{opacity:1}}
 </style>
 </head>
 <body>
 
-<header>
-    <h2>Risk Network Terminal</h2>
-    <div id="marketStatus">Loading...</div>
-</header>
-
 <div class="card">
-    <h3>MASI</h3>
-    <div id="masiContainer">Loading...</div>
+<h3>MASI</h3>
+<div id="masi"></div>
 </div>
 
 <div class="card">
-    <div class="filter-box">
-        <input type="text" id="symbolFilter" placeholder="Filter by symbol..." onkeyup="applyFilters()">
-        <input type="text" id="sectorFilter" placeholder="Filter by sector..." onkeyup="applyFilters()">
-    </div>
+<h3>Top Gainers</h3>
+<div id="gainers"></div>
+</div>
 
-    <table>
-        <thead>
-            <tr>
-                <th onclick="sortTable('symbol')">Symbol</th>
-                <th onclick="sortTable('sector')">Sector</th>
-                <th onclick="sortTable('capital')">Market Cap</th>
-                <th onclick="sortTable('price')">Price</th>
-                <th onclick="sortTable('change')">Change</th>
-                <th onclick="sortTable('pe')">P/E</th>
-                <th onclick="sortTable('rating')">Rating</th>
-            </tr>
-        </thead>
-        <tbody id="stockTable"></tbody>
-    </table>
+<div class="card">
+<h3>Top Losers</h3>
+<div id="losers"></div>
+</div>
+
+<div class="card">
+<h3>All Stocks</h3>
+<table>
+<thead>
+<tr>
+<th onclick="sortTable('symbol')">Symbol</th>
+<th onclick="sortTable('sector')">Sector</th>
+<th onclick="sortTable('price')">Price</th>
+<th onclick="sortTable('change')">Change</th>
+<th onclick="sortTable('pe')">P/E</th>
+</tr>
+</thead>
+<tbody id="stocks"></tbody>
+</table>
 </div>
 
 <div id="disclaimer">
@@ -126,106 +56,68 @@ input{
 </div>
 
 <script>
-let stocks = [];
-let currentSort = {column:null, asc:true};
+let stocks=[]
+let currentSort={col:null,asc:true}
 
 async function fetchData(){
-    try{
-        const res = await fetch('/api/all');
-        const data = await res.json();
+const res=await fetch('/api/all')
+const data=await res.json()
 
-        updateMarketStatus(data.market_status);
-        renderMASI(data.masi);
-        stocks = data.stocks || [];
-        renderStocks(stocks);
+renderMASI(data.masi)
+renderTop(data.top_gainers,'gainers')
+renderTop(data.top_losers,'losers')
 
-    }catch(e){
-        document.getElementById('marketStatus').innerText="HORS LIGNE";
-    }
+stocks=data.stocks||[]
+renderStocks(stocks)
 }
 
-function updateMarketStatus(status){
-    const el=document.getElementById('marketStatus');
-    if(!status){el.innerText="HORS LIGNE";return;}
-    el.innerText=status.is_open?"Market Open":"Market Closed";
+function renderMASI(m){
+if(!m)return
+const sign=m.change_percent>=0?'+':''
+document.getElementById('masi').innerHTML=
+`${m.symbol} ${m.price.toFixed(2)} 
+<span class="${m.change_percent>=0?'up':'down'}">
+${sign}${m.change_percent.toFixed(2)}%</span>`
 }
 
-function renderMASI(masi){
-    const container=document.getElementById('masiContainer');
-
-    if(!masi || typeof masi.price !== "number"){
-        container.innerText="No MASI data";
-        return;
-    }
-
-    const change = typeof masi.change_percent==="number" ? masi.change_percent : 0;
-    const sign = change>=0?"+":"";
-    const color = change>=0?"up":"down";
-
-    container.innerHTML=`
-        <strong>${masi.symbol}</strong> 
-        ${masi.price.toFixed(2)} 
-        <span class="${color}">${sign}${change.toFixed(2)}%</span>
-    `;
+function renderTop(list,id){
+let html=''
+list.forEach(s=>{
+html+=`${s.symbol} (${s.change.toFixed(2)}%)<br>`
+})
+document.getElementById(id).innerHTML=html
 }
 
 function renderStocks(data){
-    const tbody=document.getElementById('stockTable');
-    tbody.innerHTML="";
-
-    data.forEach(s=>{
-        const tr=document.createElement('tr');
-
-        tr.innerHTML=`
-            <td>${s.symbol}</td>
-            <td>${s.sector}</td>
-            <td>${s.capital}</td>
-            <td>${s.price.toFixed(2)}</td>
-            <td class="${s.change>=0?'up':'down'}">${s.change.toFixed(2)}%</td>
-            <td>${s.pe ? s.pe.toFixed(2) : "—"}</td>
-            <td>${s.rating}</td>
-        `;
-        tbody.appendChild(tr);
-    });
+let html=''
+data.forEach(s=>{
+html+=`<tr>
+<td>${s.symbol}</td>
+<td>${s.sector}</td>
+<td>${s.price.toFixed(2)}</td>
+<td class="${s.change>=0?'up':'down'}">${s.change.toFixed(2)}%</td>
+<td>${s.pe?s.pe.toFixed(2):'—'}</td>
+</tr>`
+})
+document.getElementById('stocks').innerHTML=html
 }
 
-function applyFilters(){
-    const symbolFilter=document.getElementById('symbolFilter').value.toLowerCase();
-    const sectorFilter=document.getElementById('sectorFilter').value.toLowerCase();
+function sortTable(col){
+if(currentSort.col===col){currentSort.asc=!currentSort.asc}
+else{currentSort.col=col;currentSort.asc=true}
 
-    const filtered=stocks.filter(s=>
-        s.symbol.toLowerCase().includes(symbolFilter) &&
-        s.sector.toLowerCase().includes(sectorFilter)
-    );
-
-    renderStocks(filtered);
+stocks.sort((a,b)=>{
+let A=a[col]||0
+let B=b[col]||0
+if(A<B)return currentSort.asc?-1:1
+if(A>B)return currentSort.asc?1:-1
+return 0
+})
+renderStocks(stocks)
 }
 
-function sortTable(column){
-    if(currentSort.column===column){
-        currentSort.asc=!currentSort.asc;
-    }else{
-        currentSort.column=column;
-        currentSort.asc=true;
-    }
-
-    stocks.sort((a,b)=>{
-        let valA=a[column]||0;
-        let valB=b[column]||0;
-
-        if(typeof valA==="string") valA=valA.toLowerCase();
-        if(typeof valB==="string") valB=valB.toLowerCase();
-
-        if(valA<valB) return currentSort.asc?-1:1;
-        if(valA>valB) return currentSort.asc?1:-1;
-        return 0;
-    });
-
-    renderStocks(stocks);
-}
-
-fetchData();
-setInterval(fetchData,600000);
+fetchData()
+setInterval(fetchData,600000)
 </script>
 
 </body>
