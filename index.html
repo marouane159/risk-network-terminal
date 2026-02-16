@@ -1,6 +1,33 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
+    <script>
+  (function() {
+    var password = prompt("BETA ACCESS: RISK NETWORK GROUP members only. Please enter the access key:");
+    
+    if (password !== "Bloomberg") {
+      alert("Access Denied. Redirecting...");
+      // Change the URL below to wherever you want non-members to go
+      window.location.href = "https://google.com"; 
+    }
+  })();
+</script>
+
+<style>
+  /* Optional: Hides the page content until the script runs */
+  body { display: none; }
+  body[data-authorized="true"] { display: block; }
+</style>
+
+<script>
+  // If the password matches, this script reveals the body
+  if (sessionStorage.getItem('accessGranted') === 'true' || password === "Bloomberg") {
+    document.addEventListener("DOMContentLoaded", function() {
+      document.body.style.display = "block";
+      sessionStorage.setItem('accessGranted', 'true');
+    });
+  }
+</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RISK NETWORK GROUP | Terminal Bourse [LIVE]</title>
