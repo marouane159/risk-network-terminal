@@ -92,64 +92,39 @@ def scrape_tradingview():
 
     headers = {
         "User-Agent": "Mozilla/5.0",
-        "Content-Type": "application/json",
-        "Origin": "https://www.tradingview.com",
-        "Referer": "https://www.tradingview.com/"
+        "Content-Type": "application/json"
     }
 
     try:
         r = requests.post(url, json=payload, headers=headers, timeout=30)
 
         if r.status_code != 200:
-            print("TradingView error:", r.status_code)
+            print("TradingView API error:", r.status_code)
             return
 
         data = r.json()
-
-        if "data" not in data:
-            print("No data returned from TradingView")
-            return
-
         stocks = []
 
-        for item in data["data"]:
-            d = item["d"]
+        for item in data.get("data", []):
+            d = item.get("d", [])
+
+            volume = d[7] if d[7] else 0
 
             stocks.append({
                 "symbol": d[0],
-                "sector": d[1] or "—",
+                "sector": d[1] if d[1] else "—",
                 "capital": round(d[4] / 1_000_000_000, 2) if d[4] else 0,
-                "price": float(d[2]) if d[2] else 0.0,
-                "change": float(d[3]) if d[3] else 0.0,
+                "price": float(d[2]) if d[2] else 0,
+                "change": float(d[3]) if d[3] else 0,
                 "pe": round(d[5], 2) if d[5] else None,
                 "rating": convert_rating(d[6]),
-                "volume_raw": d[7] or 0,
-                "volume": round(d[7] / 1_000_000, 2) if d[7] else 0,
+                "volume_raw": volume,
+                "volume": round(volume / 1_000_000, 2) if volume else 0,
                 "dividend_yield": round(d[8], 2) if d[8] else None,
                 "high_52w": round(d[9], 2) if d[9] else None,
                 "low_52w": round(d[10], 2) if d[10] else None,
                 "has_live_data": True
             })
-
-        stocks_cache = stocks
-
-        # ===== Summary =====
-        advancers = len([s for s in stocks if s["change"] > 0])
-        decliners = len([s for s in stocks if s["change"] < 0])
-        neutral = len([s for s in stocks if s["change"] == 0])
-
-        market_summary_cache = {
-            "advancers": advancers,
-            "decliners": decliners,
-            "neutral": neutral,
-            "top_gainers": sorted(stocks, key=lambda x: x["change"], reverse=True)[:5],
-            "top_losers": sorted(stocks, key=lambda x: x["change"])[:5],
-            "top_volume": sorted(stocks, key=lambda x: x["volume_raw"], reverse=True)[:5]
-        }
-
-    except Exception as e:
-        print("TradingView fetch error:", e)
-
 
         # ===== MARKET STATISTICS =====
         advancers = len([s for s in stocks if s["change"] > 0])
