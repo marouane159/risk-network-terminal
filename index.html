@@ -1,33 +1,42 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <script>
-  (function() {
-    var password = prompt("BETA ACCESS: RISK NETWORK GROUP members only. Please enter the access key:");
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RISK NETWORK GROUP | Terminal Bourse [LIVE]</title>
     
-    if (password !== "Bloomberg") {
-      alert("Access Denied. Redirecting...");
-      // Change the URL below to wherever you want non-members to go
-      window.location.href = "https://google.com"; 
-    }
-  })();
-</script>
+    <script>
+        // 1. PASSWORD GATE LOGIC
+        (function() {
+            const gateKey = "Bloomberg";
+            // Check if they already logged in this session
+            if (sessionStorage.getItem('accessGranted') !== 'true') {
+                var password = prompt("BETA ACCESS: RISK NETWORK GROUP members only.\nPlease enter the access key:");
+                
+                if (password === gateKey) {
+                    sessionStorage.setItem('accessGranted', 'true');
+                } else {
+                    alert("Access Denied. Redirecting...");
+                    window.location.href = "https://google.com";
+                }
+            }
+        })();
+    </script>
 
-<style>
-  /* Optional: Hides the page content until the script runs */
-  body { display: none; }
-  body[data-authorized="true"] { display: block; }
-</style>
+    <style>
+        /* 2. HIDE CONTENT UNTIL AUTHORIZED */
+        body { display: none; }
+        .authorized body { display: block !important; }
+    </style>
 
-<script>
-  // If the password matches, this script reveals the body
-  if (sessionStorage.getItem('accessGranted') === 'true' || password === "Bloomberg") {
-    document.addEventListener("DOMContentLoaded", function() {
-      document.body.style.display = "block";
-      sessionStorage.setItem('accessGranted', 'true');
-    });
-  }
-</script>
+    <script>
+        // 3. REVEAL CONTENT LOGIC
+        if (sessionStorage.getItem('accessGranted') === 'true') {
+            document.documentElement.classList.add('authorized');
+            // This ensures the CSS "display: block" hits immediately
+            document.write('<style>body { display: block !important; }</style>');
+        }
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RISK NETWORK GROUP | Terminal Bourse [LIVE]</title>
