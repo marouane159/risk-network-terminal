@@ -248,7 +248,7 @@ def scrape_masi():
 def scrape_news():
     global news_cache
 
-    url = "https://medias24.com/categorie/leboursier/actus/feed/"
+    url = "https://risk.ma/feed/"
 
     try:
         r = requests.get(url, timeout=15)
