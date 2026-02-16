@@ -18,6 +18,7 @@ CORS(app)
 stocks_cache = []
 news_cache = []
 masi_cache = {}
+macro_cache = {}  # ADDED: Initialize macro cache
 last_update = None
 
 REFRESH_INTERVAL = 600  # 10 minutes
@@ -378,6 +379,7 @@ def refresh_if_needed():
         scrape_tradingview()
         scrape_masi()
         scrape_news()
+        scrape_macro_indicators()  # ADDED: Scrape macro indicators
         last_update = datetime.utcnow()
 
 
@@ -398,6 +400,7 @@ def api_all():
         "news": news_cache,
         "masi": masi_cache,
         "market_status": get_market_status(),
+        "macros": macro_cache,  # ADDED: Include macro data
         "last_update": last_update.isoformat() if last_update else None
     })
 
