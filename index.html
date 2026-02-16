@@ -4,42 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RISK NETWORK GROUP | Terminal Bourse [LIVE]</title>
-    
-    <script>
-        // 1. PASSWORD GATE LOGIC
-        (function() {
-            const gateKey = "Bloomberg";
-            // Check if they already logged in this session
-            if (sessionStorage.getItem('accessGranted') !== 'true') {
-                var password = prompt("BETA ACCESS: RISK NETWORK GROUP members only.\nPlease enter the access key:");
-                
-                if (password === gateKey) {
-                    sessionStorage.setItem('accessGranted', 'true');
-                } else {
-                    alert("Access Denied. Redirecting...");
-                    window.location.href = "https://google.com";
-                }
-            }
-        })();
-    </script>
-
-    <style>
-        /* 2. HIDE CONTENT UNTIL AUTHORIZED */
-        body { display: none; }
-        .authorized body { display: block !important; }
-    </style>
-
-    <script>
-        // 3. REVEAL CONTENT LOGIC
-        if (sessionStorage.getItem('accessGranted') === 'true') {
-            document.documentElement.classList.add('authorized');
-            // This ensures the CSS "display: block" hits immediately
-            document.write('<style>body { display: block !important; }</style>');
-        }
-    </script>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RISK NETWORK GROUP | Terminal Bourse [LIVE]</title>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -56,6 +20,7 @@
             --up: #00ff41;
             --down: #ff4444;
             --border: #222222;
+            --twitter-blue: #1d9bf0;
         }
 
         [data-theme="light"] {
@@ -270,18 +235,27 @@
             color: var(--text-secondary);
         }
 
-        /* Main Container */
+        /* Main Container - Updated 3-column layout */
         .container {
             display: grid;
-            grid-template-columns: 1fr 320px;
+            grid-template-columns: 1fr 320px 320px;
             height: calc(100vh - 130px);
         }
 
-        /* Stocks Panel */
+        /* Stocks Panel - Left column, full height */
         .stocks-panel {
             border-right: 1px solid var(--border);
             display: flex;
             flex-direction: column;
+            overflow: hidden;
+            grid-row: 1 / span 2;
+        }
+
+        /* Right column panels */
+        .right-column {
+            display: flex;
+            flex-direction: column;
+            border-left: 1px solid var(--border);
             overflow: hidden;
         }
 
@@ -446,6 +420,32 @@
             position: sticky;
             top: 0;
             z-index: 10;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.2s;
+        }
+
+        .stock-table th:hover {
+            background: rgba(255, 102, 0, 0.1);
+            color: var(--accent);
+        }
+
+        .stock-table th.sortable::after {
+            content: " ⇅";
+            color: var(--text-muted);
+            font-size: 8px;
+        }
+
+        .stock-table th.sort-asc::after {
+            content: " ▲";
+            color: var(--accent);
+            font-size: 8px;
+        }
+
+        .stock-table th.sort-desc::after {
+            content: " ▼";
+            color: var(--accent);
+            font-size: 8px;
         }
 
         .stock-table th.hidden-column,
@@ -457,7 +457,8 @@
         .stock-table th.col-cap,
         .stock-table th.col-price,
         .stock-table th.col-change,
-        .stock-table th.col-pe {
+        .stock-table th.col-pe,
+        .stock-table th.col-volume {
             text-align: right;
         }
 
@@ -468,7 +469,8 @@
         .stock-table td.col-cap,
         .stock-table td.col-price,
         .stock-table td.col-change,
-        .stock-table td.col-pe {
+        .stock-table td.col-pe,
+        .stock-table td.col-volume {
             text-align: right;
         }
 
@@ -522,6 +524,11 @@
         .change.up { color: var(--up); }
         .change.down { color: var(--down); }
         .change.neutral { color: var(--text-muted); }
+
+        .volume {
+            color: var(--text-secondary);
+            font-size: 11px;
+        }
 
         .pe {
             color: var(--text-secondary);
@@ -596,12 +603,18 @@
             display: block;
         }
 
-        /* News Panel */
+        /* News Panels */
         .news-panel {
             background: var(--bg-secondary);
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            flex: 1;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .news-panel:last-child {
+            border-bottom: none;
         }
 
         .news-list {
@@ -651,6 +664,181 @@
         .news-title:hover {
             color: var(--accent);
         }
+
+        /* Twitter/X Feed Panel */
+        .twitter-panel {
+            background: var(--bg-secondary);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            flex: 1;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .twitter-header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .twitter-icon {
+            color: var(--twitter-blue);
+            font-size: 14px;
+        }
+
+        .twitter-timeline {
+            flex: 1;
+            overflow: hidden;
+            background: var(--bg-primary);
+        }
+
+        .twitter-timeline iframe {
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        /* Macro Indicators Widget */
+        .macro-panel {
+            background: var(--bg-secondary);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .macro-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            padding: 10px;
+            overflow: auto;
+        }
+
+        .macro-item {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .macro-label {
+            color: var(--text-muted);
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .macro-value {
+            color: var(--text-primary);
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .macro-change {
+            font-size: 9px;
+            font-weight: 600;
+        }
+
+        .macro-change.up { color: var(--up); }
+        .macro-change.down { color: var(--down); }
+        .macro-change.neutral { color: var(--text-muted); }
+
+        /* Top/Worst Performers Widget */
+        .performers-panel {
+            background: var(--bg-secondary);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border-bottom: 1px solid var(--border);
+            max-height: 280px;
+        }
+
+        .performers-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .performer-tab {
+            flex: 1;
+            padding: 8px;
+            background: var(--bg-tertiary);
+            border: none;
+            color: var(--text-secondary);
+            font-family: inherit;
+            font-size: 10px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.2s;
+        }
+
+        .performer-tab.active {
+            background: var(--accent);
+            color: #000;
+            font-weight: 700;
+        }
+
+        .performer-tab:hover:not(.active) {
+            background: rgba(255, 102, 0, 0.1);
+            color: var(--accent);
+        }
+
+        .performers-list {
+            flex: 1;
+            overflow: auto;
+            padding: 8px;
+        }
+
+        .performer-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            border-bottom: 1px solid var(--border);
+            transition: background 0.2s;
+        }
+
+        .performer-item:hover {
+            background: rgba(255, 102, 0, 0.05);
+        }
+
+        .performer-rank {
+            color: var(--text-muted);
+            font-size: 10px;
+            width: 20px;
+        }
+
+        .performer-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .performer-symbol {
+            font-weight: 700;
+            color: var(--text-primary);
+            font-size: 11px;
+        }
+
+        .performer-sector {
+            color: var(--text-secondary);
+            font-size: 9px;
+        }
+
+        .performer-change {
+            font-weight: 700;
+            font-size: 12px;
+        }
+
+        .performer-change.up { color: var(--up); }
+        .performer-change.down { color: var(--down); }
 
         /* Market Info Footer */
         .market-info {
@@ -715,11 +903,37 @@
         }
 
         /* Responsive */
+        @media (max-width: 1400px) {
+            .container {
+                grid-template-columns: 1fr 280px 280px;
+            }
+        }
+
+        @media (max-width: 1200px) {
+            .container {
+                grid-template-columns: 1fr 300px;
+                grid-template-rows: 1fr 1fr;
+            }
+            
+            .stocks-panel {
+                grid-row: 1 / span 2;
+            }
+            
+            .right-column {
+                border-left: none;
+            }
+            
+            .performers-panel {
+                max-height: 200px;
+            }
+        }
+
         @media (max-width: 900px) {
             .container {
                 grid-template-columns: 1fr;
-                grid-template-rows: 1fr 250px;
+                grid-template-rows: auto auto auto auto;
                 height: calc(100vh - 170px);
+                overflow-y: auto;
             }
 
             .header-center {
@@ -729,6 +943,12 @@
             .stocks-panel {
                 border-right: none;
                 border-bottom: 1px solid var(--border);
+                grid-row: auto;
+                height: 50vh;
+            }
+
+            .right-column {
+                border-left: none;
             }
 
             .socials-bar {
@@ -749,6 +969,11 @@
                 right: -50px;
                 min-width: 180px;
             }
+            
+            .twitter-panel, .macro-panel, .performers-panel {
+                height: 300px;
+                max-height: none;
+            }
         }
 
         /* RTL Support */
@@ -761,10 +986,12 @@
         [dir="rtl"] .stock-table th.col-price,
         [dir="rtl"] .stock-table th.col-change,
         [dir="rtl"] .stock-table th.col-pe,
+        [dir="rtl"] .stock-table th.col-volume,
         [dir="rtl"] .stock-table td.col-cap,
         [dir="rtl"] .stock-table td.col-price,
         [dir="rtl"] .stock-table td.col-change,
-        [dir="rtl"] .stock-table td.col-pe {
+        [dir="rtl"] .stock-table td.col-pe,
+        [dir="rtl"] .stock-table td.col-volume {
             text-align: left !important;
         }
     </style>
@@ -835,10 +1062,10 @@
     </header>
 
     <div class="container" id="mainContainer">
-        <!-- Stocks Panel -->
+        <!-- Stocks Panel - Left Column (Full Height) -->
         <div class="stocks-panel">
             <div class="panel-header">
-                <span class="panel-title" id="stocksTitle">◈ @dogofallstreets</span>
+                <span class="panel-title" id="stocksTitle">◈ MASI ALL SHARES</span>
                 <div class="panel-actions">
                     <input type="text" class="search-box" id="searchBox" placeholder="Filtrer par symbole...">
 
@@ -869,12 +1096,16 @@
                                 <label for="col-toggle-change">Var %</label>
                             </div>
                             <div class="column-filter-item">
+                                <input type="checkbox" id="col-toggle-volume" checked data-column="col-volume">
+                                <label for="col-toggle-volume">Volume</label>
+                            </div>
+                            <div class="column-filter-item">
                                 <input type="checkbox" id="col-toggle-pe" checked data-column="col-pe">
                                 <label for="col-toggle-pe">P/E</label>
                             </div>
                             <div class="column-filter-item">
                                 <input type="checkbox" id="col-toggle-rating" checked data-column="col-rating">
-                                <label for="col-toggle-rating">Sentiment de marché</label>
+                                <label for="col-toggle-rating">Sentiment</label>
                             </div>
                         </div>
                     </div>
@@ -888,14 +1119,15 @@
                 <table class="stock-table">
                     <thead>
                         <tr>
-                            <th class="col-symbol" style="width: 12%" id="colSymbol">Ticker</th>
-                            <th class="col-sector" style="width: 18%" id="colSector">Secteur</th>
-                            <th class="col-cap" style="width: 16%" id="colCap">Capitalisation</th>
-                            <th class="col-price" style="width: 12%" id="colPrice">Cours</th>
-                            <th class="col-change" style="width: 10%" id="colChange">Var %</th>
-                            <th class="col-pe" style="width: 8%" id="colPE">P/E</th>
-                            <th class="col-rating sentiment-header" style="width: 18%" id="colRating">
-                                Sentiment de marché
+                            <th class="col-symbol sortable" style="width: 12%" id="colSymbol" data-sort="symbol" data-type="string">Ticker</th>
+                            <th class="col-sector sortable" style="width: 16%" id="colSector" data-sort="sector" data-type="string">Secteur</th>
+                            <th class="col-cap sortable" style="width: 14%" id="colCap" data-sort="capital" data-type="number">Capitalisation</th>
+                            <th class="col-price sortable" style="width: 11%" id="colPrice" data-sort="price" data-type="number">Cours</th>
+                            <th class="col-change sortable" style="width: 10%" id="colChange" data-sort="change" data-type="number">Var %</th>
+                            <th class="col-volume sortable" style="width: 12%" id="colVolume" data-sort="volume" data-type="number">Volume</th>
+                            <th class="col-pe sortable" style="width: 8%" id="colPE" data-sort="pe" data-type="number">P/E</th>
+                            <th class="col-rating sentiment-header" style="width: 17%" id="colRating">
+                                Sentiment
                                 <div class="sentiment-tooltip">
                                     Basé sur un résumé de +20 indicateurs techniques<br>
                                     <span class="legal-note">⚠️ Ne constitue pas un conseil financier</span>
@@ -904,34 +1136,89 @@
                         </tr>
                     </thead>
                     <tbody id="stockTableBody">
-                        <tr><td colspan="7" class="loading" id="loadingMsg">Loading...</td></tr>
+                        <tr><td colspan="8" class="loading" id="loadingMsg">Loading...</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
 
-        <!-- News Panel -->
-        <div class="news-panel">
-            <div class="panel-header">
-                <span class="panel-title">◢ RISK NETWORK RADAR</span>
-            </div>
-
-            <div class="news-list" id="newsList">
-                <div class="loading" id="newsLoading">Loading...</div>
-            </div>
-
-            <div class="market-info">
-                <div class="market-info-row">
-                    <span class="market-info-label" id="hoursLabel">Market Hours:</span>
-                    <span>09:30 - 15:40</span>
+        <!-- Middle Column: Hespress Economy News + Twitter -->
+        <div class="right-column">
+            <!-- Hespress Economy News -->
+            <div class="news-panel">
+                <div class="panel-header">
+                    <span class="panel-title">◢ HESPRESS ÉCONOMIE</span>
                 </div>
-                <div class="market-info-row">
-                    <span class="market-info-label" id="daysLabel">Mon-Fri</span>
-                    <span id="nextOpen"></span>
+                <div class="news-list" id="hespressNewsList">
+                    <div class="loading" id="hespressLoading">Loading...</div>
+                </div>
+            </div>
+
+            <!-- Twitter/X Feed @dogofallstreets -->
+            <div class="twitter-panel">
+                <div class="twitter-header">
+                    <span class="twitter-icon">𝕏</span>
+                    <span class="panel-title">@dogofallstreets</span>
+                </div>
+                <div class="twitter-timeline" id="twitterTimeline">
+                    <a class="twitter-timeline" 
+                       data-height="100%" 
+                       data-theme="dark"
+                       data-chrome="noheader nofooter noborders transparent"
+                       href="https://twitter.com/dogofallstreets?ref_src=twsrc%5Etfw">
+                        Tweets by dogofallstreets
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Performers + Macro Indicators + RISK News -->
+        <div class="right-column">
+            <!-- Top/Worst Performers Widget -->
+            <div class="performers-panel">
+                <div class="performers-tabs">
+                    <button class="performer-tab active" id="topTab" onclick="switchPerformersTab('top')">Top 5</button>
+                    <button class="performer-tab" id="worstTab" onclick="switchPerformersTab('worst')">Worst 5</button>
+                </div>
+                <div class="performers-list" id="performersList">
+                    <div class="loading">Loading...</div>
+                </div>
+            </div>
+
+            <!-- Macro Indicators Widget -->
+            <div class="macro-panel">
+                <div class="panel-header">
+                    <span class="panel-title">◈ MAROC MACRO</span>
+                </div>
+                <div class="macro-grid" id="macroGrid">
+                    <div class="loading" style="grid-column: 1 / -1;">Loading...</div>
+                </div>
+            </div>
+
+            <!-- RISK Network Radar -->
+            <div class="news-panel" style="flex: 1;">
+                <div class="panel-header">
+                    <span class="panel-title">◢ RISK NETWORK RADAR</span>
+                </div>
+                <div class="news-list" id="newsList">
+                    <div class="loading" id="newsLoading">Loading...</div>
+                </div>
+                <div class="market-info">
+                    <div class="market-info-row">
+                        <span class="market-info-label" id="hoursLabel">Market Hours:</span>
+                        <span>09:30 - 15:40</span>
+                    </div>
+                    <div class="market-info-row">
+                        <span class="market-info-label" id="daysLabel">Mon-Fri</span>
+                        <span id="nextOpen"></span>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Twitter Widget Script -->
+    <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 
     <script>
         // Configuration - CHANGE THIS TO YOUR RENDER URL
@@ -946,8 +1233,9 @@
                 capitalisation: 'Capitalisation',
                 cours: 'Cours',
                 change: 'Var %',
+                volume: 'Volume',
                 pe: 'P/E',
-                sentiment: 'Sentiment de marché',
+                sentiment: 'Sentiment',
                 marketOpen: 'MARCHÉ OUVERT',
                 marketClosed: 'MARCHÉ FERMÉ',
                 hours: 'Horaires:',
@@ -970,7 +1258,19 @@
                 searchPlaceholder: 'Filtrer par symbole...',
                 columnsBtn: '☰ Colonnes',
                 sentimentTooltip: 'Basé sur un résumé de +20 indicateurs techniques',
-                sentimentLegal: '⚠️ Ne constitue pas un conseil financier'
+                sentimentLegal: '⚠️ Ne constitue pas un conseil financier',
+                macroTitle: '◈ MAROC MACRO',
+                gdp: 'PIB',
+                gdpGrowth: 'Croissance PIB',
+                inflation: 'Inflation',
+                unemployment: 'Chômage',
+                interestRate: 'Taux Directeur',
+                tradeBalance: 'Balance Com.',
+                debtToGdp: 'Dette/PIB',
+                population: 'Population',
+                top5: 'Top 5',
+                worst5: 'Worst 5',
+                noData: 'Aucune donnée'
             },
             en: {
                 stocksTitle: '◈ MASI ALL SHARES',
@@ -979,8 +1279,9 @@
                 capitalisation: 'Market Cap',
                 cours: 'Price',
                 change: 'Change %',
+                volume: 'Volume',
                 pe: 'P/E',
-                sentiment: 'Market Sentiment',
+                sentiment: 'Sentiment',
                 marketOpen: 'MARKET OPEN',
                 marketClosed: 'MARKET CLOSED',
                 hours: 'Hours:',
@@ -1003,7 +1304,19 @@
                 searchPlaceholder: 'Filter by symbol...',
                 columnsBtn: '☰ Columns',
                 sentimentTooltip: 'Based on summary of +20 technical indicators',
-                sentimentLegal: '⚠️ Not financial advice'
+                sentimentLegal: '⚠️ Not financial advice',
+                macroTitle: '◈ MOROCCO MACRO',
+                gdp: 'GDP',
+                gdpGrowth: 'GDP Growth',
+                inflation: 'Inflation',
+                unemployment: 'Unemployment',
+                interestRate: 'Interest Rate',
+                tradeBalance: 'Trade Bal.',
+                debtToGdp: 'Debt/GDP',
+                population: 'Population',
+                top5: 'Top 5',
+                worst5: 'Worst 5',
+                noData: 'No data'
             },
             ar: {
                 stocksTitle: '◈ جميع أسهم ماسي',
@@ -1012,8 +1325,9 @@
                 capitalisation: 'القيمة السوقية',
                 cours: 'السعر',
                 change: 'التغيير %',
+                volume: 'الحجم',
                 pe: 'P/E',
-                sentiment: 'مشاعر السوق',
+                sentiment: 'المشاعر',
                 marketOpen: 'السوق مفتوح',
                 marketClosed: 'السوق مغلق',
                 hours: 'الساعات:',
@@ -1036,7 +1350,19 @@
                 searchPlaceholder: 'تصفية حسب الرمز...',
                 columnsBtn: '☰ الأعمدة',
                 sentimentTooltip: 'بناءً على ملخص +20 مؤشراً تقنياً',
-                sentimentLegal: '⚠️ لا يشكل نصيحة مالية'
+                sentimentLegal: '⚠️ لا يشكل نصيحة مالية',
+                macroTitle: '◈ المؤشرات الكلية',
+                gdp: 'الناتج المحلي',
+                gdpGrowth: 'نمو الناتج',
+                inflation: 'التضخم',
+                unemployment: 'البطالة',
+                interestRate: 'سعر الفائدة',
+                tradeBalance: 'الميزان التجاري',
+                debtToGdp: 'الدين/الناتج',
+                population: 'السكان',
+                top5: 'أفضل 5',
+                worst5: 'أسوأ 5',
+                noData: 'لا توجد بيانات'
             }
         };
 
@@ -1045,9 +1371,14 @@
         let currentTheme = 'dark';
         let stocksData = [];
         let newsData = [];
+        let hespressNewsData = [];
         let masiData = null;
         let marketStatusData = null;
+        let macroData = null;
+        let performersData = { top: [], worst: [] };
         let searchFilter = '';
+        let currentSort = { column: null, direction: 'asc' };
+        let currentPerformersTab = 'top';
 
         // Column visibility state
         let columnVisibility = {
@@ -1056,6 +1387,7 @@
             'col-cap': true,
             'col-price': true,
             'col-change': true,
+            'col-volume': true,
             'col-pe': true,
             'col-rating': true
         };
@@ -1072,6 +1404,10 @@
                 updateTranslations();
                 renderStocks();
                 renderNews();
+                renderHespressNews();
+                renderMacro();
+                renderPerformers();
+                updateTwitterTheme();
             });
 
             // Theme toggle
@@ -1108,6 +1444,28 @@
                 });
             });
 
+            // Sort headers
+            document.querySelectorAll('.stock-table th.sortable').forEach(th => {
+                th.addEventListener('click', function() {
+                    const sortKey = this.getAttribute('data-sort');
+                    const sortType = this.getAttribute('data-type');
+                    
+                    if (currentSort.column === sortKey) {
+                        // Toggle direction
+                        currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        currentSort.column = sortKey;
+                        currentSort.direction = 'desc'; // Default to desc for numbers, asc for strings
+                        if (sortType === 'string') {
+                            currentSort.direction = 'asc';
+                        }
+                    }
+                    
+                    updateSortIndicators();
+                    renderStocks();
+                });
+            });
+
             // Initial fetch
             fetchAllData();
 
@@ -1125,6 +1483,18 @@
             currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
             document.body.setAttribute('data-theme', currentTheme);
             document.getElementById('themeBtn').textContent = currentTheme === 'dark' ? '☀️' : '🌙';
+            updateTwitterTheme();
+        }
+
+        function updateTwitterTheme() {
+            // Twitter widget theme update would require reload
+        }
+
+        function switchPerformersTab(tab) {
+            currentPerformersTab = tab;
+            document.getElementById('topTab').classList.toggle('active', tab === 'top');
+            document.getElementById('worstTab').classList.toggle('active', tab === 'worst');
+            renderPerformers();
         }
 
         function updateTranslations() {
@@ -1135,6 +1505,7 @@
             document.getElementById('colCap').textContent = t.capitalisation;
             document.getElementById('colPrice').textContent = t.cours;
             document.getElementById('colChange').textContent = t.change;
+            document.getElementById('colVolume').textContent = t.volume;
             document.getElementById('colPE').textContent = t.pe;
             document.getElementById('colRating').childNodes[0].textContent = t.sentiment + ' ';
             document.getElementById('hoursLabel').textContent = t.hours;
@@ -1142,8 +1513,11 @@
             document.getElementById('refreshBtn').textContent = t.refresh;
             document.getElementById('loadingMsg').textContent = t.loading;
             document.getElementById('newsLoading').textContent = t.loading;
+            document.getElementById('hespressLoading').textContent = t.loading;
             document.getElementById('searchBox').placeholder = t.searchPlaceholder;
             document.getElementById('columnFilterBtn').textContent = t.columnsBtn;
+            document.getElementById('topTab').textContent = t.top5;
+            document.getElementById('worstTab').textContent = t.worst5;
 
             // Update tooltip content
             const tooltip = document.querySelector('.sentiment-tooltip');
@@ -1156,24 +1530,23 @@
             }
         }
 
-        function updateColumnVisibility() {
-            // Update headers
-            document.querySelectorAll('.stock-table th').forEach(th => {
-                const colClass = Array.from(th.classList).find(c => c.startsWith('col-'));
-                if (colClass && columnVisibility[colClass] === false) {
-                    th.classList.add('hidden-column');
-                } else {
-                    th.classList.remove('hidden-column');
+        function updateSortIndicators() {
+            document.querySelectorAll('.stock-table th.sortable').forEach(th => {
+                th.classList.remove('sort-asc', 'sort-desc');
+                const sortKey = th.getAttribute('data-sort');
+                if (sortKey === currentSort.column) {
+                    th.classList.add(currentSort.direction === 'asc' ? 'sort-asc' : 'sort-desc');
                 }
             });
+        }
 
-            // Update data cells
-            document.querySelectorAll('.stock-table td').forEach(td => {
-                const colClass = Array.from(td.classList).find(c => c.startsWith('col-'));
+        function updateColumnVisibility() {
+            document.querySelectorAll('.stock-table th, .stock-table td').forEach(cell => {
+                const colClass = Array.from(cell.classList).find(c => c.startsWith('col-'));
                 if (colClass && columnVisibility[colClass] === false) {
-                    td.classList.add('hidden-column');
+                    cell.classList.add('hidden-column');
                 } else {
-                    td.classList.remove('hidden-column');
+                    cell.classList.remove('hidden-column');
                 }
             });
         }
@@ -1189,12 +1562,18 @@
 
                 stocksData = data.stocks || [];
                 newsData = data.news || [];
+                hespressNewsData = data.hespress_news || [];
                 masiData = data.masi;
                 marketStatusData = data.market_status;
+                macroData = data.macro || {};
+                performersData = data.performers || { top: [], worst: [] };
 
                 renderStocks();
                 renderNews();
+                renderHespressNews();
                 renderMasi();
+                renderMacro();
+                renderPerformers();
                 updateMarketStatus(marketStatusData);
 
                 if (data.last_update) {
@@ -1207,10 +1586,9 @@
                 console.error('Fetch error:', error);
                 setStatus('offline');
 
-                // Show error in table
                 const t = translations[currentLang];
                 document.getElementById('stockTableBody').innerHTML = 
-                    `<tr><td colspan="7" class="error">${t.offline} - ${error.message}</td></tr>`;
+                    `<tr><td colspan="8" class="error">${t.offline} - ${error.message}</td></tr>`;
             }
         }
 
@@ -1267,22 +1645,171 @@
             }
         }
 
+        function renderPerformers() {
+            const container = document.getElementById('performersList');
+            const t = translations[currentLang];
+            const data = performersData[currentPerformersTab] || [];
+
+            if (data.length === 0) {
+                container.innerHTML = `<div class="loading">${t.noData}</div>`;
+                return;
+            }
+
+            let html = '';
+            data.forEach((stock, index) => {
+                const changeClass = stock.change >= 0 ? 'up' : 'down';
+                const sign = stock.change >= 0 ? '+' : '';
+                
+                html += `
+                    <div class="performer-item">
+                        <span class="performer-rank">${index + 1}</span>
+                        <div class="performer-info">
+                            <span class="performer-symbol">${stock.symbol}</span>
+                            <span class="performer-sector">${stock.sector}</span>
+                        </div>
+                        <span class="performer-change ${changeClass}">${sign}${stock.change.toFixed(2)}%</span>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function renderMacro() {
+            const container = document.getElementById('macroGrid');
+            const t = translations[currentLang];
+
+            if (!macroData || Object.keys(macroData).length === 0) {
+                container.innerHTML = `<div class="loading" style="grid-column: 1 / -1;">${t.loading}</div>`;
+                return;
+            }
+
+            const indicators = [
+                { key: 'GDP', label: t.gdp, format: 'value' },
+                { key: 'GDP Growth', label: t.gdpGrowth, format: 'pct' },
+                { key: 'Inflation Rate', label: t.inflation, format: 'pct' },
+                { key: 'Unemployment Rate', label: t.unemployment, format: 'pct' },
+                { key: 'Interest Rate', label: t.interestRate, format: 'pct' },
+                { key: 'Balance of Trade', label: t.tradeBalance, format: 'value' },
+                { key: 'Government Debt to GDP', label: t.debtToGdp, format: 'pct' },
+                { key: 'Population', label: t.population, format: 'value' }
+            ];
+
+            let html = '';
+            indicators.forEach(ind => {
+                const data = macroData[ind.key];
+                if (data) {
+                    const changeClass = data.change > 0 ? 'up' : data.change < 0 ? 'down' : 'neutral';
+                    const sign = data.change > 0 ? '+' : '';
+                    
+                    html += `
+                        <div class="macro-item">
+                            <span class="macro-label">${ind.label}</span>
+                            <span class="macro-value">${data.value}</span>
+                            <span class="macro-change ${changeClass}">
+                                ${sign}${data.change_pct.toFixed(2)}%
+                            </span>
+                        </div>
+                    `;
+                }
+            });
+
+            container.innerHTML = html || `<div class="no-data" style="grid-column: 1 / -1;">No data</div>`;
+        }
+
+        function formatVolume(volume) {
+            if (volume >= 1000000) {
+                return (volume / 1000000).toFixed(2) + 'M';
+            } else if (volume >= 1000) {
+                return (volume / 1000).toFixed(2) + 'K';
+            }
+            return volume.toString();
+        }
+
+        function parseCapital(capitalStr) {
+            // Parse "12.5B MAD" to number
+            if (!capitalStr || capitalStr === '—') return 0;
+            const match = capitalStr.match(/([\d.]+)([BKMT]?)/);
+            if (match) {
+                const num = parseFloat(match[1]);
+                const unit = match[2];
+                if (unit === 'B') return num * 1000000000;
+                if (unit === 'M') return num * 1000000;
+                if (unit === 'K') return num * 1000;
+                return num;
+            }
+            return 0;
+        }
+
+        function sortData(data) {
+            if (!currentSort.column) return data;
+
+            return [...data].sort((a, b) => {
+                let valA, valB;
+
+                switch (currentSort.column) {
+                    case 'symbol':
+                        valA = a.symbol;
+                        valB = b.symbol;
+                        break;
+                    case 'sector':
+                        valA = a.sector;
+                        valB = b.sector;
+                        break;
+                    case 'capital':
+                        valA = parseCapital(a.capital);
+                        valB = parseCapital(b.capital);
+                        break;
+                    case 'price':
+                        valA = a.price;
+                        valB = b.price;
+                        break;
+                    case 'change':
+                        valA = a.change;
+                        valB = b.change;
+                        break;
+                    case 'volume':
+                        valA = a.volume || 0;
+                        valB = b.volume || 0;
+                        break;
+                    case 'pe':
+                        valA = a.pe || 0;
+                        valB = b.pe || 0;
+                        break;
+                    default:
+                        return 0;
+                }
+
+                if (typeof valA === 'string') {
+                    valA = valA.toLowerCase();
+                    valB = valB.toLowerCase();
+                }
+
+                if (valA < valB) return currentSort.direction === 'asc' ? -1 : 1;
+                if (valA > valB) return currentSort.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+
         function renderStocks() {
             const tbody = document.getElementById('stockTableBody');
             const t = translations[currentLang];
 
             if (stocksData.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="no-data">${t.loading}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8" class="no-data">${t.loading}</td></tr>`;
                 return;
             }
 
             // Filter stocks based on search
-            const filteredStocks = stocksData.filter(stock => 
+            let filteredStocks = stocksData.filter(stock => 
                 stock.symbol.toUpperCase().includes(searchFilter)
             );
 
+            // Sort data
+            filteredStocks = sortData(filteredStocks);
+
             if (filteredStocks.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="no-data">Aucun résultat</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8" class="no-data">Aucun résultat</td></tr>`;
                 return;
             }
 
@@ -1295,6 +1822,7 @@
                 const peDisplay = stock.pe ? stock.pe.toFixed(1) : '—';
                 const ratingClass = getRatingClass(stock.rating);
                 const ratingText = getRatingText(stock.rating, t);
+                const volumeDisplay = hasData ? formatVolume(stock.volume || 0) : '—';
 
                 html += `
                     <tr class="stock-row ${hasData ? '' : 'inactive'}">
@@ -1303,6 +1831,7 @@
                         <td class="col-cap capital">${stock.capital}</td>
                         <td class="col-price price">${hasData ? stock.price.toFixed(2) : '—'}</td>
                         <td class="col-change change ${changeClass}">${hasData ? sign + stock.change.toFixed(2) + '%' : '—'}</td>
+                        <td class="col-volume volume">${volumeDisplay}</td>
                         <td class="col-pe pe">${peDisplay}</td>
                         <td class="col-rating"><span class="rating ${ratingClass}">${ratingText}</span></td>
                     </tr>
@@ -1354,6 +1883,34 @@
             let html = '';
 
             newsData.slice(0, 8).forEach(item => {
+                const timeText = formatTimeAgo(item.time, t);
+
+                html += `
+                    <div class="news-item">
+                        <div class="news-meta">
+                            <span class="news-time">${timeText}</span>
+                            <span class="news-category">${item.category}</span>
+                        </div>
+                        <a href="${item.link}" target="_blank" class="news-title">${item.title}</a>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function renderHespressNews() {
+            const container = document.getElementById('hespressNewsList');
+            const t = translations[currentLang];
+
+            if (hespressNewsData.length === 0) {
+                container.innerHTML = `<div class="loading">${t.loading}</div>`;
+                return;
+            }
+
+            let html = '';
+
+            hespressNewsData.forEach(item => {
                 const timeText = formatTimeAgo(item.time, t);
 
                 html += `
