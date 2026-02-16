@@ -4,17 +4,13 @@ from flask import Flask, jsonify, send_from_directory
 from flask_cors import CORS
 import requests
 import xml.etree.ElementTree as ET
-import os
-import re
 from datetime import datetime, timezone, timedelta
-from bs4 import BeautifulSoup
+import os
+from statistics import mean
 
 app = Flask(__name__)
 CORS(app)
 
-# -----------------------
-# GLOBAL CACHE
-# -----------------------
 stocks_cache = []
 news_cache = []
 masi_cache = {}
@@ -23,9 +19,10 @@ last_update = None
 REFRESH_INTERVAL = 600  # 10 minutes
 
 
-# -----------------------
+# ==============================
 # MARKET STATUS
-# -----------------------
+# ==============================
+
 def get_market_status():
     now = datetime.now(timezone(timedelta(hours=1)))
     weekday = now.weekday()
@@ -42,67 +39,9 @@ def get_market_status():
     }
 
 
-# -----------------------
-# SCRAPE TRADINGVIEW (REAL FIX)
-# -----------------------
-def scrape_tradingview():
-    global stocks_cache
-
-    url = "https://scanner.tradingview.com/morocco/scan"
-
-    payload = {
-        "filter": [],
-        "options": {"lang": "en"},
-        "symbols": {"query": {"types": []}, "tickers": []},
-        "columns": [
-            "name",
-            "sector",
-            "close",
-            "change",
-            "market_cap_basic",
-            "price_earnings_ttm",
-            "Recommend.All"
-        ]
-    }
-
-    headers = {
-        "User-Agent": "Mozilla/5.0",
-        "Content-Type": "application/json"
-    }
-
-    try:
-        r = requests.post(url, json=payload, headers=headers, timeout=30)
-
-        if r.status_code != 200:
-            print("TradingView API error:", r.status_code)
-            return stocks_cache
-
-        data = r.json()
-        stocks = []
-
-        for item in data.get("data", []):
-            d = item.get("d", [])
-
-            pe_value = d[5]
-            recommendation = d[6]
-
-            stocks.append({
-                "symbol": d[0],
-                "sector": d[1] if d[1] else "—",
-                "capital": f"{round(d[4] / 1_000_000_000, 2)}B MAD" if d[4] else "—",
-                "price": float(d[2]) if d[2] else 0,
-                "change": float(d[3]) if d[3] else 0,
-                "pe": float(pe_value) if pe_value else None,
-                "rating": convert_rating(recommendation),
-                "has_live_data": True
-            })
-
-        stocks_cache = stocks
-        return stocks_cache
-
-    except Exception as e:
-        print("TradingView fetch error:", e)
-        return stocks_cache
+# ==============================
+# RATING CONVERTER
+# ==============================
 
 def convert_rating(value):
     if value is None:
@@ -120,39 +59,105 @@ def convert_rating(value):
         return "Strong Sell"
 
 
-# -----------------------
+# ==============================
+# TRADINGVIEW API
+# ==============================
+
+def scrape_tradingview():
+    global stocks_cache
+
+    url = "https://scanner.tradingview.com/morocco/scan"
+
+    payload = {
+        "filter": [],
+        "options": {"lang": "en"},
+        "symbols": {"query": {"types": []}, "tickers": []},
+        "columns": [
+            "name",
+            "sector",
+            "close",
+            "change",
+            "market_cap_basic",
+            "price_earnings_ttm",
+            "Recommend.All",
+            "volume",
+            "dividend_yield_recent",
+            "52_week_high",
+            "52_week_low"
+        ]
+    }
+
+    headers = {
+        "User-Agent": "Mozilla/5.0",
+        "Content-Type": "application/json"
+    }
+
+    r = requests.post(url, json=payload, headers=headers, timeout=30)
+    data = r.json()
+
+    stocks = []
+
+    for item in data.get("data", []):
+        d = item.get("d", [])
+
+        stocks.append({
+            "symbol": d[0],
+            "sector": d[1] if d[1] else "—",
+            "price": float(d[2]) if d[2] else 0,
+            "change": float(d[3]) if d[3] else 0,
+            "market_cap": d[4] if d[4] else 0,
+            "pe": round(d[5], 2) if d[5] else None,
+            "rating_raw": d[6],
+            "rating": convert_rating(d[6]),
+            "volume": d[7] if d[7] else 0,
+            "dividend_yield": round(d[8], 2) if d[8] else None,
+            "high_52w": round(d[9], 2) if d[9] else None,
+            "low_52w": round(d[10], 2) if d[10] else None,
+            "has_live_data": True
+        })
+
+    stocks_cache = stocks
+    return stocks
+
+
+# ==============================
 # MASI
-# -----------------------
+# ==============================
+
 def scrape_masi():
     global masi_cache
 
-    url = "https://www.investing.com/indices/masi"
-    headers = {"User-Agent": "Mozilla/5.0"}
+    url = "https://scanner.tradingview.com/morocco/scan"
 
-    r = requests.get(url, headers=headers, timeout=30)
-    soup = BeautifulSoup(r.text, "html.parser")
-
-    price_div = soup.find("div", class_=re.compile("instrument-price"))
-
-    price = 0
-    if price_div:
-        try:
-            price = float(price_div.text.replace(",", "").strip())
-        except:
-            pass
-
-    masi_cache = {
-        "symbol": "MASI",
-        "price": price,
-        "change_percent": 0
+    payload = {
+        "symbols": {"tickers": ["INDEX:MASI"], "query": {"types": []}},
+        "columns": ["close", "change"]
     }
+
+    headers = {
+        "User-Agent": "Mozilla/5.0",
+        "Content-Type": "application/json"
+    }
+
+    r = requests.post(url, json=payload, headers=headers, timeout=30)
+    data = r.json()
+
+    if "data" in data and len(data["data"]) > 0:
+        d = data["data"][0]["d"]
+
+        masi_cache = {
+            "symbol": "MASI",
+            "price": float(d[0]),
+            "change_percent": float(d[1])
+        }
 
     return masi_cache
 
 
-# -----------------------
+# ==============================
 # NEWS
-# -----------------------
+# ==============================
+
 def scrape_news():
     global news_cache
 
@@ -177,12 +182,62 @@ def scrape_news():
             })
 
     news_cache = news
-    return news_cache
+    return news
 
 
-# -----------------------
-# AUTO REFRESH LOGIC
-# -----------------------
+# ==============================
+# ANALYTICS ENGINE
+# ==============================
+
+def compute_market_analytics(stocks):
+
+    gainers = sorted(stocks, key=lambda x: x["change"], reverse=True)[:5]
+    losers = sorted(stocks, key=lambda x: x["change"])[:5]
+    most_active = sorted(stocks, key=lambda x: x["volume"], reverse=True)[:5]
+
+    advancers = len([s for s in stocks if s["change"] > 0])
+    decliners = len([s for s in stocks if s["change"] < 0])
+
+    bullish = sorted(
+        [s for s in stocks if s["rating_raw"] is not None],
+        key=lambda x: x["rating_raw"],
+        reverse=True
+    )[:5]
+
+    bearish = sorted(
+        [s for s in stocks if s["rating_raw"] is not None],
+        key=lambda x: x["rating_raw"]
+    )[:5]
+
+    sector_map = {}
+    for s in stocks:
+        if s["sector"] not in sector_map:
+            sector_map[s["sector"]] = []
+        sector_map[s["sector"]].append(s["change"])
+
+    sector_performance = {
+        sector: round(mean(changes), 2)
+        for sector, changes in sector_map.items()
+    }
+
+    return {
+        "gainers": gainers,
+        "losers": losers,
+        "most_active": most_active,
+        "market_breadth": {
+            "advancers": advancers,
+            "decliners": decliners
+        },
+        "top_bullish": bullish,
+        "top_bearish": bearish,
+        "sector_performance": sector_performance
+    }
+
+
+# ==============================
+# REFRESH CONTROL
+# ==============================
+
 def refresh_if_needed():
     global last_update
 
@@ -193,16 +248,18 @@ def refresh_if_needed():
         should_refresh = diff > REFRESH_INTERVAL
 
     if should_refresh:
-        print("Refreshing data...")
-        scrape_tradingview()
+        print("Refreshing full market engine...")
+        stocks = scrape_tradingview()
         scrape_masi()
         scrape_news()
+        compute_market_analytics(stocks)
         last_update = datetime.utcnow()
 
 
-# -----------------------
+# ==============================
 # ROUTES
-# -----------------------
+# ==============================
+
 @app.route("/")
 def index():
     return send_from_directory(".", "index.html")
@@ -212,18 +269,22 @@ def index():
 def api_all():
     refresh_if_needed()
 
+    analytics = compute_market_analytics(stocks_cache)
+
     return jsonify({
         "stocks": stocks_cache,
         "news": news_cache,
         "masi": masi_cache,
         "market_status": get_market_status(),
+        "analytics": analytics,
         "last_update": last_update
     })
 
 
-# -----------------------
-# RENDER ENTRYPOINT
-# -----------------------
+# ==============================
+# ENTRYPOINT
+# ==============================
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
