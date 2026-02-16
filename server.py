@@ -4,18 +4,18 @@ from flask import Flask, jsonify, send_from_directory
 from flask_cors import CORS
 import requests
 import xml.etree.ElementTree as ET
-from datetime import datetime, timezone, timedelta
 import os
+import re
+from datetime import datetime, timezone, timedelta
+from bs4 import BeautifulSoup
 
 app = Flask(__name__)
 CORS(app)
 
-# =========================================
+# -----------------------
 # GLOBAL CACHE
-# =========================================
-
+# -----------------------
 stocks_cache = []
-market_summary_cache = {}
 news_cache = []
 masi_cache = {}
 last_update = None
@@ -23,10 +23,9 @@ last_update = None
 REFRESH_INTERVAL = 600  # 10 minutes
 
 
-# =========================================
-# MARKET STATUS (Morocco)
-# =========================================
-
+# -----------------------
+# MARKET STATUS
+# -----------------------
 def get_market_status():
     now = datetime.now(timezone(timedelta(hours=1)))
     weekday = now.weekday()
@@ -43,31 +42,11 @@ def get_market_status():
     }
 
 
-# =========================================
-# RATING CONVERTER
-# =========================================
-
-def convert_rating(value):
-    if value is None:
-        return "—"
-    if value >= 0.5:
-        return "Strong Buy"
-    elif value >= 0.1:
-        return "Buy"
-    elif value > -0.1:
-        return "Neutral"
-    elif value > -0.5:
-        return "Sell"
-    else:
-        return "Strong Sell"
-
-
-# =========================================
-# TRADINGVIEW MOROCCO SCANNER
-# =========================================
-
+# -----------------------
+# SCRAPE TRADINGVIEW (REAL FIX)
+# -----------------------
 def scrape_tradingview():
-    global stocks_cache, market_summary_cache
+    global stocks_cache
 
     url = "https://scanner.tradingview.com/morocco/scan"
 
@@ -82,11 +61,7 @@ def scrape_tradingview():
             "change",
             "market_cap_basic",
             "price_earnings_ttm",
-            "Recommend.All",
-            "volume",
-            "dividend_yield_recent",
-            "52_week_high",
-            "52_week_low"
+            "Recommend.All"
         ]
     }
 
@@ -100,7 +75,7 @@ def scrape_tradingview():
 
         if r.status_code != 200:
             print("TradingView API error:", r.status_code)
-            return
+            return stocks_cache
 
         data = r.json()
         stocks = []
@@ -108,106 +83,76 @@ def scrape_tradingview():
         for item in data.get("data", []):
             d = item.get("d", [])
 
-            volume = d[7] if d[7] else 0
+            pe_value = d[5]
+            recommendation = d[6]
 
             stocks.append({
                 "symbol": d[0],
                 "sector": d[1] if d[1] else "—",
-                "capital": round(d[4] / 1_000_000_000, 2) if d[4] else 0,
+                "capital": f"{round(d[4] / 1_000_000_000, 2)}B MAD" if d[4] else "—",
                 "price": float(d[2]) if d[2] else 0,
                 "change": float(d[3]) if d[3] else 0,
-                "pe": round(d[5], 2) if d[5] else None,
-                "rating": convert_rating(d[6]),
-                "volume_raw": volume,
-                "volume": round(volume / 1_000_000, 2) if volume else 0,
-                "dividend_yield": round(d[8], 2) if d[8] else None,
-                "high_52w": round(d[9], 2) if d[9] else None,
-                "low_52w": round(d[10], 2) if d[10] else None,
+                "pe": float(pe_value) if pe_value else None,
+                "rating": convert_rating(recommendation),
                 "has_live_data": True
             })
 
-        # ===== MARKET STATISTICS =====
-        advancers = len([s for s in stocks if s["change"] > 0])
-        decliners = len([s for s in stocks if s["change"] < 0])
-        neutral = len([s for s in stocks if s["change"] == 0])
-
-        # ===== TOP GAINERS / LOSERS =====
-        top_gainers = sorted(stocks, key=lambda x: x["change"], reverse=True)[:5]
-        top_losers = sorted(stocks, key=lambda x: x["change"])[:5]
-        top_volume = sorted(stocks, key=lambda x: x["volume_raw"], reverse=True)[:5]
-
-        # ===== SECTOR BREAKDOWN =====
-        sector_breakdown = {}
-        for s in stocks:
-            sector = s["sector"]
-            sector_breakdown.setdefault(sector, 0)
-            sector_breakdown[sector] += 1
-
-        # ===== VOLUME SPIKES (top 10% volume) =====
-        volumes = [s["volume_raw"] for s in stocks if s["volume_raw"] > 0]
-        avg_volume = sum(volumes) / len(volumes) if volumes else 0
-
-        volume_spikes = [
-            s for s in stocks
-            if s["volume_raw"] > avg_volume * 2
-        ]
-
         stocks_cache = stocks
-
-        market_summary_cache = {
-            "advancers": advancers,
-            "decliners": decliners,
-            "neutral": neutral,
-            "top_gainers": top_gainers,
-            "top_losers": top_losers,
-            "top_volume": top_volume,
-            "volume_spikes": volume_spikes[:5],
-            "sector_breakdown": sector_breakdown
-        }
+        return stocks_cache
 
     except Exception as e:
         print("TradingView fetch error:", e)
+        return stocks_cache
+
+def convert_rating(value):
+    if value is None:
+        return "—"
+
+    if value >= 0.5:
+        return "Strong Buy"
+    elif value >= 0.1:
+        return "Buy"
+    elif value > -0.1:
+        return "Neutral"
+    elif value > -0.5:
+        return "Sell"
+    else:
+        return "Strong Sell"
 
 
-# =========================================
-# MASI FROM TRADINGVIEW
-# =========================================
-
+# -----------------------
+# MASI
+# -----------------------
 def scrape_masi():
     global masi_cache
 
-    url = "https://scanner.tradingview.com/morocco/scan"
+    url = "https://www.investing.com/indices/masi"
+    headers = {"User-Agent": "Mozilla/5.0"}
 
-    payload = {
-        "symbols": {"tickers": ["INDEX:MASI"], "query": {"types": []}},
-        "columns": ["close", "change"]
+    r = requests.get(url, headers=headers, timeout=30)
+    soup = BeautifulSoup(r.text, "html.parser")
+
+    price_div = soup.find("div", class_=re.compile("instrument-price"))
+
+    price = 0
+    if price_div:
+        try:
+            price = float(price_div.text.replace(",", "").strip())
+        except:
+            pass
+
+    masi_cache = {
+        "symbol": "MASI",
+        "price": price,
+        "change_percent": 0
     }
 
-    headers = {
-        "User-Agent": "Mozilla/5.0",
-        "Content-Type": "application/json"
-    }
-
-    try:
-        r = requests.post(url, json=payload, headers=headers, timeout=30)
-        data = r.json()
-
-        if "data" in data and len(data["data"]) > 0:
-            d = data["data"][0]["d"]
-            masi_cache = {
-                "symbol": "MASI",
-                "price": float(d[0]),
-                "change_percent": float(d[1])
-            }
-
-    except Exception as e:
-        print("MASI fetch error:", e)
+    return masi_cache
 
 
-# =========================================
+# -----------------------
 # NEWS
-# =========================================
-
+# -----------------------
 def scrape_news():
     global news_cache
 
@@ -232,12 +177,12 @@ def scrape_news():
             })
 
     news_cache = news
+    return news_cache
 
 
-# =========================================
-# AUTO REFRESH
-# =========================================
-
+# -----------------------
+# AUTO REFRESH LOGIC
+# -----------------------
 def refresh_if_needed():
     global last_update
 
@@ -248,17 +193,16 @@ def refresh_if_needed():
         should_refresh = diff > REFRESH_INTERVAL
 
     if should_refresh:
-        print("Refreshing full market system...")
+        print("Refreshing data...")
         scrape_tradingview()
         scrape_masi()
         scrape_news()
         last_update = datetime.utcnow()
 
 
-# =========================================
+# -----------------------
 # ROUTES
-# =========================================
-
+# -----------------------
 @app.route("/")
 def index():
     return send_from_directory(".", "index.html")
@@ -270,7 +214,6 @@ def api_all():
 
     return jsonify({
         "stocks": stocks_cache,
-        "market_summary": market_summary_cache,
         "news": news_cache,
         "masi": masi_cache,
         "market_status": get_market_status(),
@@ -278,10 +221,9 @@ def api_all():
     })
 
 
-# =========================================
-# ENTRYPOINT (Render Compatible)
-# =========================================
-
+# -----------------------
+# RENDER ENTRYPOINT
+# -----------------------
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
