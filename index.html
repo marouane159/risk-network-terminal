@@ -800,77 +800,90 @@
         }
         
         function renderMasi() {
-            if (!masiData) return;
-            
-            const display = document.getElementById('masiDisplay');
-            const price = document.getElementById('masiPrice');
-            const change = document.getElementById('masiChange');
-            
-            display.style.display = 'flex';
-            price.textContent = masiData.price.toFixed(2);
-            
-            const changeValue = masiData.change_percent || 0;
-            const sign = changeValue >= 0 ? '+' : '';
-            change.textContent = `${sign}${changeValue.toFixed(2)}%`;
-            change.style.color = changeValue >= 0 ? 'var(--up)' : 'var(--down)';
-        }
+    if (!masiData || typeof masiData.price !== 'number') return;
+    
+    const display = document.getElementById('masiDisplay');
+    const price = document.getElementById('masiPrice');
+    const change = document.getElementById('masiChange');
+    
+    display.style.display = 'flex';
+    price.textContent = masiData.price.toFixed(2);
+    
+    const changeValue = typeof masiData.change_percent === 'number' ? masiData.change_percent : 0;
+    const sign = changeValue >= 0 ? '+' : '';
+    
+    change.textContent = `${sign}${changeValue.toFixed(2)}%`;
+    change.style.color = changeValue >= 0 ? 'var(--up)' : 'var(--down)';
+}
+
         
-        function updateMarketStatus(status) {
-            const t = translations[currentLang];
-            const dot = document.getElementById('marketDot');
-            const text = document.getElementById('marketText');
-            const container = document.getElementById('marketStatus');
-            const nextOpen = document.getElementById('nextOpen');
-            
-            if (status.is_open) {
-                container.className = 'market-status market-open';
-                text.textContent = t.marketOpen;
-                nextOpen.textContent = '';
-            } else {
-                container.className = 'market-status market-closed';
-                text.textContent = t.marketClosed;
-                nextOpen.textContent = `${t.nextOpen} ${status.next_open}`;
-            }
-        }
+       function updateMarketStatus(status) {
+    if (!status) return;
+
+    const t = translations[currentLang];
+    const text = document.getElementById('marketText');
+    const container = document.getElementById('marketStatus');
+    const nextOpen = document.getElementById('nextOpen');
+    
+    if (status.is_open) {
+        container.className = 'market-status market-open';
+        text.textContent = t.marketOpen;
+        nextOpen.textContent = '';
+    } else {
+        container.className = 'market-status market-closed';
+        text.textContent = t.marketClosed;
+        nextOpen.textContent = status.next_open ? `${t.nextOpen} ${status.next_open}` : '';
+    }
+}
+
         
-        function renderStocks() {
-            const tbody = document.getElementById('stockTableBody');
-            const t = translations[currentLang];
-            
-            if (stocksData.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="no-data">${t.loading}</td></tr>`;
-                return;
-            }
-            
-            let html = '';
-            
-            stocksData.forEach(stock => {
-                const hasData = stock.has_live_data;
-                const changeClass = stock.change > 0 ? 'up' : stock.change < 0 ? 'down' : 'neutral';
-                const sign = stock.change > 0 ? '+' : '';
-                const peDisplay = stock.pe ? stock.pe.toFixed(1) : '—';
-                const ratingClass = getRatingClass(stock.rating);
-                const ratingText = getRatingText(stock.rating, t);
-                
-                html += `
-                    <tr class="stock-row ${hasData ? '' : 'inactive'}">
-                        <td class="symbol">${stock.symbol}</td>
-                        <td class="sector" title="${stock.sector}">${stock.sector}</td>
-                        <td class="capital">${stock.capital}</td>
-                        <td class="price">${hasData ? stock.price.toFixed(2) : '—'}</td>
-                        <td class="change ${changeClass}">${hasData ? sign + stock.change.toFixed(2) + '%' : '—'}</td>
-                        <td class="pe">${peDisplay}</td>
-                        <td><span class="rating ${ratingClass}">${ratingText}</span></td>
-                    </tr>
-                `;
-            });
-            
-            tbody.innerHTML = html;
-            
-            // Update title with count
-            const liveCount = stocksData.filter(s => s.has_live_data).length;
-            document.getElementById('stocksTitle').textContent = `${t.stocksTitle} • ${liveCount}/${stocksData.length}`;
-        }
+      function renderStocks() {
+    const tbody = document.getElementById('stockTableBody');
+    const t = translations[currentLang];
+    
+    if (!stocksData || stocksData.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="no-data">${t.loading}</td></tr>`;
+        return;
+    }
+    
+    let html = '';
+    
+    stocksData.forEach(stock => {
+        const hasData = stock.has_live_data === true;
+        
+        const price = typeof stock.price === 'number' ? stock.price.toFixed(2) : '—';
+        const changeValue = typeof stock.change === 'number' ? stock.change : 0;
+        const changeDisplay = typeof stock.change === 'number'
+            ? (changeValue >= 0 ? '+' : '') + changeValue.toFixed(2) + '%'
+            : '—';
+        
+        const changeClass = changeValue > 0 ? 'up' : changeValue < 0 ? 'down' : 'neutral';
+        
+        const peDisplay = typeof stock.pe === 'number' ? stock.pe.toFixed(1) : '—';
+        
+        const ratingClass = getRatingClass(stock.rating);
+        const ratingText = getRatingText(stock.rating, t);
+        
+        html += `
+            <tr class="stock-row ${hasData ? '' : 'inactive'}">
+                <td class="symbol">${stock.symbol || '—'}</td>
+                <td class="sector" title="${stock.sector || ''}">${stock.sector || '—'}</td>
+                <td class="capital">${stock.capital ?? '—'}</td>
+                <td class="price">${hasData ? price : '—'}</td>
+                <td class="change ${changeClass}">${hasData ? changeDisplay : '—'}</td>
+                <td class="pe">${peDisplay}</td>
+                <td><span class="rating ${ratingClass}">${ratingText}</span></td>
+            </tr>
+        `;
+    });
+    
+    tbody.innerHTML = html;
+    
+    const liveCount = stocksData.filter(s => s.has_live_data).length;
+    document.getElementById('stocksTitle').textContent =
+        `${t.stocksTitle} • ${liveCount}/${stocksData.length}`;
+}
+
         
         function getRatingClass(rating) {
             if (!rating || rating === '—') return 'rating-none';
