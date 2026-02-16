@@ -20,7 +20,6 @@
             --up: #00ff41;
             --down: #ff4444;
             --border: #222222;
-            --twitter-blue: #1d9bf0;
         }
 
         [data-theme="light"] {
@@ -235,27 +234,18 @@
             color: var(--text-secondary);
         }
 
-        /* Main Container - Updated 3-column layout */
+        /* Main Container */
         .container {
             display: grid;
-            grid-template-columns: 1fr 320px 320px;
+            grid-template-columns: 1fr 320px;
             height: calc(100vh - 130px);
         }
 
-        /* Stocks Panel - Left column, full height */
+        /* Stocks Panel */
         .stocks-panel {
             border-right: 1px solid var(--border);
             display: flex;
             flex-direction: column;
-            overflow: hidden;
-            grid-row: 1 / span 2;
-        }
-
-        /* Right column panels */
-        .right-column {
-            display: flex;
-            flex-direction: column;
-            border-left: 1px solid var(--border);
             overflow: hidden;
         }
 
@@ -397,6 +387,113 @@
             cursor: not-allowed;
         }
 
+        /* Mini Movers Widget */
+        .mini-movers {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            padding: 8px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .mover-group {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 8px;
+            min-height: 86px;
+        }
+
+        .mover-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 6px;
+        }
+
+        .mover-title {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+        }
+
+        .mover-list {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .mover-item {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 6px;
+            align-items: center;
+            font-size: 11px;
+            padding: 3px 0;
+        }
+
+        .mover-symbol {
+            color: var(--text-primary);
+            font-weight: 700;
+        }
+
+        .mover-change {
+            font-weight: 600;
+            text-align: right;
+        }
+
+        .mover-change.up { color: var(--up); }
+        .mover-change.down { color: var(--down); }
+
+        /* Advanced Filter Bar */
+        .filter-bar {
+            display: none;
+            gap: 8px;
+            padding: 8px;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border);
+            align-items: center;
+        }
+
+        .filter-bar.show { display: flex; flex-wrap: wrap; }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            padding: 4px 6px;
+            border-radius: 4px;
+        }
+
+        .filter-group label { font-size: 10px; color: var(--text-secondary); }
+        .filter-group input, .filter-group select {
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 11px;
+            padding: 2px 4px;
+            width: 80px;
+        }
+        .filter-group input[type="number"] { width: 70px; }
+
+        .filter-clear {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 10px;
+        }
+        .filter-clear:hover { border-color: var(--accent); color: var(--accent); }
+
         /* Table */
         .table-container {
             flex: 1;
@@ -420,32 +517,11 @@
             position: sticky;
             top: 0;
             z-index: 10;
-            cursor: pointer;
+        }
+
+        .stock-table th.sortable { 
+            cursor: pointer; 
             user-select: none;
-            transition: background 0.2s;
-        }
-
-        .stock-table th:hover {
-            background: rgba(255, 102, 0, 0.1);
-            color: var(--accent);
-        }
-
-        .stock-table th.sortable::after {
-            content: " ⇅";
-            color: var(--text-muted);
-            font-size: 8px;
-        }
-
-        .stock-table th.sort-asc::after {
-            content: " ▲";
-            color: var(--accent);
-            font-size: 8px;
-        }
-
-        .stock-table th.sort-desc::after {
-            content: " ▼";
-            color: var(--accent);
-            font-size: 8px;
         }
 
         .stock-table th.hidden-column,
@@ -453,12 +529,18 @@
             display: none;
         }
 
+        /* Sort Indicator */
+        .sort-indicator {
+            margin-left: 4px; 
+            font-size: 9px; 
+            color: var(--text-secondary);
+        }
+
         /* Column specific alignments */
         .stock-table th.col-cap,
         .stock-table th.col-price,
         .stock-table th.col-change,
-        .stock-table th.col-pe,
-        .stock-table th.col-volume {
+        .stock-table th.col-pe {
             text-align: right;
         }
 
@@ -469,8 +551,7 @@
         .stock-table td.col-cap,
         .stock-table td.col-price,
         .stock-table td.col-change,
-        .stock-table td.col-pe,
-        .stock-table td.col-volume {
+        .stock-table td.col-pe {
             text-align: right;
         }
 
@@ -524,11 +605,6 @@
         .change.up { color: var(--up); }
         .change.down { color: var(--down); }
         .change.neutral { color: var(--text-muted); }
-
-        .volume {
-            color: var(--text-secondary);
-            font-size: 11px;
-        }
 
         .pe {
             color: var(--text-secondary);
@@ -603,18 +679,12 @@
             display: block;
         }
 
-        /* News Panels */
+        /* News Panel */
         .news-panel {
             background: var(--bg-secondary);
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            flex: 1;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .news-panel:last-child {
-            border-bottom: none;
         }
 
         .news-list {
@@ -664,181 +734,6 @@
         .news-title:hover {
             color: var(--accent);
         }
-
-        /* Twitter/X Feed Panel */
-        .twitter-panel {
-            background: var(--bg-secondary);
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            flex: 1;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .twitter-header {
-            background: var(--bg-secondary);
-            border-bottom: 1px solid var(--border);
-            padding: 8px 12px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .twitter-icon {
-            color: var(--twitter-blue);
-            font-size: 14px;
-        }
-
-        .twitter-timeline {
-            flex: 1;
-            overflow: hidden;
-            background: var(--bg-primary);
-        }
-
-        .twitter-timeline iframe {
-            width: 100% !important;
-            height: 100% !important;
-        }
-
-        /* Macro Indicators Widget */
-        .macro-panel {
-            background: var(--bg-secondary);
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .macro-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-            padding: 10px;
-            overflow: auto;
-        }
-
-        .macro-item {
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border);
-            border-radius: 4px;
-            padding: 10px;
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-
-        .macro-label {
-            color: var(--text-muted);
-            font-size: 9px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .macro-value {
-            color: var(--text-primary);
-            font-size: 14px;
-            font-weight: 700;
-        }
-
-        .macro-change {
-            font-size: 9px;
-            font-weight: 600;
-        }
-
-        .macro-change.up { color: var(--up); }
-        .macro-change.down { color: var(--down); }
-        .macro-change.neutral { color: var(--text-muted); }
-
-        /* Top/Worst Performers Widget */
-        .performers-panel {
-            background: var(--bg-secondary);
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            border-bottom: 1px solid var(--border);
-            max-height: 280px;
-        }
-
-        .performers-tabs {
-            display: flex;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .performer-tab {
-            flex: 1;
-            padding: 8px;
-            background: var(--bg-tertiary);
-            border: none;
-            color: var(--text-secondary);
-            font-family: inherit;
-            font-size: 10px;
-            cursor: pointer;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            transition: all 0.2s;
-        }
-
-        .performer-tab.active {
-            background: var(--accent);
-            color: #000;
-            font-weight: 700;
-        }
-
-        .performer-tab:hover:not(.active) {
-            background: rgba(255, 102, 0, 0.1);
-            color: var(--accent);
-        }
-
-        .performers-list {
-            flex: 1;
-            overflow: auto;
-            padding: 8px;
-        }
-
-        .performer-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px;
-            border-bottom: 1px solid var(--border);
-            transition: background 0.2s;
-        }
-
-        .performer-item:hover {
-            background: rgba(255, 102, 0, 0.05);
-        }
-
-        .performer-rank {
-            color: var(--text-muted);
-            font-size: 10px;
-            width: 20px;
-        }
-
-        .performer-info {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-        }
-
-        .performer-symbol {
-            font-weight: 700;
-            color: var(--text-primary);
-            font-size: 11px;
-        }
-
-        .performer-sector {
-            color: var(--text-secondary);
-            font-size: 9px;
-        }
-
-        .performer-change {
-            font-weight: 700;
-            font-size: 12px;
-        }
-
-        .performer-change.up { color: var(--up); }
-        .performer-change.down { color: var(--down); }
 
         /* Market Info Footer */
         .market-info {
@@ -903,37 +798,11 @@
         }
 
         /* Responsive */
-        @media (max-width: 1400px) {
-            .container {
-                grid-template-columns: 1fr 280px 280px;
-            }
-        }
-
-        @media (max-width: 1200px) {
-            .container {
-                grid-template-columns: 1fr 300px;
-                grid-template-rows: 1fr 1fr;
-            }
-            
-            .stocks-panel {
-                grid-row: 1 / span 2;
-            }
-            
-            .right-column {
-                border-left: none;
-            }
-            
-            .performers-panel {
-                max-height: 200px;
-            }
-        }
-
         @media (max-width: 900px) {
             .container {
                 grid-template-columns: 1fr;
-                grid-template-rows: auto auto auto auto;
+                grid-template-rows: 1fr 250px;
                 height: calc(100vh - 170px);
-                overflow-y: auto;
             }
 
             .header-center {
@@ -943,12 +812,6 @@
             .stocks-panel {
                 border-right: none;
                 border-bottom: 1px solid var(--border);
-                grid-row: auto;
-                height: 50vh;
-            }
-
-            .right-column {
-                border-left: none;
             }
 
             .socials-bar {
@@ -969,10 +832,17 @@
                 right: -50px;
                 min-width: 180px;
             }
-            
-            .twitter-panel, .macro-panel, .performers-panel {
-                height: 300px;
-                max-height: none;
+
+            .mini-movers {
+                grid-template-columns: 1fr;
+            }
+
+            .filter-bar {
+                gap: 6px;
+            }
+
+            .filter-group input, .filter-group select {
+                width: 70px;
             }
         }
 
@@ -986,14 +856,77 @@
         [dir="rtl"] .stock-table th.col-price,
         [dir="rtl"] .stock-table th.col-change,
         [dir="rtl"] .stock-table th.col-pe,
-        [dir="rtl"] .stock-table th.col-volume,
         [dir="rtl"] .stock-table td.col-cap,
         [dir="rtl"] .stock-table td.col-price,
         [dir="rtl"] .stock-table td.col-change,
-        [dir="rtl"] .stock-table td.col-pe,
-        [dir="rtl"] .stock-table td.col-volume {
+        [dir="rtl"] .stock-table td.col-pe {
             text-align: left !important;
         }
+    /* Morocco Macro Indicators Panel */
+.macro-panel {
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    max-height: 40%;
+}
+
+.macro-list {
+    flex: 1;
+    overflow: auto;
+    padding: 8px;
+}
+
+.macro-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.2s;
+}
+
+.macro-item:hover {
+    background: rgba(255, 102, 0, 0.05);
+}
+
+.macro-name {
+    color: var(--text-secondary);
+    font-size: 11px;
+}
+
+.macro-value {
+    color: var(--text-primary);
+    font-weight: 700;
+    font-size: 12px;
+}
+
+.macro-change {
+    font-size: 11px;
+    font-weight: 600;
+    text-align: right;
+}
+
+.macro-change.up {
+    color: var(--up);
+}
+
+.macro-change.down {
+    color: var(--down);
+}
+
+.macro-category {
+    font-size: 9px;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+@media (max-width: 900px) {
+    .macro-panel {
+        max-height: 50%;
+    }
+}
+
     </style>
 <base target="_blank">
 </head>
@@ -1029,7 +962,7 @@
 
     <header class="header">
         <div class="logo">▶ RISK NETWORK GROUP</div>
-
+        
         <div class="header-center">
             <div class="masi-display" id="masiDisplay" style="display: none;">
                 <span class="masi-label">MASI</span>
@@ -1062,10 +995,10 @@
     </header>
 
     <div class="container" id="mainContainer">
-        <!-- Stocks Panel - Left Column (Full Height) -->
+        <!-- Stocks Panel -->
         <div class="stocks-panel">
             <div class="panel-header">
-                <span class="panel-title" id="stocksTitle">AUTO UPDATE..</span>
+                <span class="panel-title" id="stocksTitle">◈ LIVE DATA</span>
                 <div class="panel-actions">
                     <input type="text" class="search-box" id="searchBox" placeholder="Filtrer par symbole...">
 
@@ -1096,113 +1029,145 @@
                                 <label for="col-toggle-change">Var %</label>
                             </div>
                             <div class="column-filter-item">
-                                <input type="checkbox" id="col-toggle-volume" checked data-column="col-volume">
-                                <label for="col-toggle-volume">Volume</label>
-                            </div>
-                            <div class="column-filter-item">
                                 <input type="checkbox" id="col-toggle-pe" checked data-column="col-pe">
                                 <label for="col-toggle-pe">P/E</label>
                             </div>
                             <div class="column-filter-item">
                                 <input type="checkbox" id="col-toggle-rating" checked data-column="col-rating">
-                                <label for="col-toggle-rating">Sentiment</label>
+                                <label for="col-toggle-rating">Sentiment de marché</label>
                             </div>
                         </div>
                     </div>
 
+                    <button class="control-btn" id="toggleFilterBar">Filtres</button>
                     <span class="last-update" id="lastUpdate"></span>
                     <button class="refresh-btn" id="refreshBtn" onclick="fetchAllData()">↻</button>
                 </div>
             </div>
 
+            <!-- Mini Movers Widget -->
+            <div class="mini-movers" id="miniMovers">
+                <div class="mover-group">
+                    <div class="mover-header">
+                        <div class="mover-title">Top 5 Gainers</div>
+                    </div>
+                    <div class="mover-list" id="topGainersList"></div>
+                </div>
+                <div class="mover-group">
+                    <div class="mover-header">
+                        <div class="mover-title">Top 5 Losers</div>
+                    </div>
+                    <div class="mover-list" id="topLosersList"></div>
+                </div>
+            </div>
+
+            <!-- Advanced Filter Bar -->
+            <div class="filter-bar" id="filterBar">
+                <div class="filter-group">
+                    <label>Ticker</label>
+                    <input type="text" id="filterTicker" placeholder="ex: ATW">
+                </div>
+                <div class="filter-group">
+                    <label>Change % min</label>
+                    <input type="number" id="filterChangeMin" step="0.01" placeholder="-100">
+                </div>
+                <div class="filter-group">
+                    <label>Change % max</label>
+                    <input type="number" id="filterChangeMax" step="0.01" placeholder="100">
+                </div>
+                <div class="filter-group">
+                    <label>P/E min</label>
+                    <input type="number" id="filterPeMin" step="0.1" placeholder="0">
+                </div>
+                <div class="filter-group">
+                    <label>P/E max</label>
+                    <input type="number" id="filterPeMax" step="0.1" placeholder="100">
+                </div>
+                <div class="filter-group">
+                    <label>Secteur</label>
+                    <select id="filterSector">
+                        <option value="">Tous</option>
+                    </select>
+                </div>
+                <button class="filter-clear" id="clearFilters">Effacer</button>
+            </div>
+
             <div class="table-container">
-                <table class="stock-table">
+                <table class="stock-table" id="stockTable">
                     <thead>
                         <tr>
-                            <th class="col-symbol sortable" style="width: 12%" id="colSymbol" data-sort="symbol" data-type="string">Ticker</th>
-                            <th class="col-sector sortable" style="width: 16%" id="colSector" data-sort="sector" data-type="string">Secteur</th>
-                            <th class="col-cap sortable" style="width: 14%" id="colCap" data-sort="capital" data-type="number">Capitalisation</th>
-                            <th class="col-price sortable" style="width: 11%" id="colPrice" data-sort="price" data-type="number">Cours</th>
-                            <th class="col-change sortable" style="width: 10%" id="colChange" data-sort="change" data-type="number">Var %</th>
-                            <th class="col-volume sortable" style="width: 12%" id="colVolume" data-sort="volume" data-type="number">Volume</th>
-                            <th class="col-pe sortable" style="width: 8%" id="colPE" data-sort="pe" data-type="number">P/E</th>
-                            <th class="col-rating sentiment-header" style="width: 17%" id="colRating">
-                                Sentiment
+                            <th class="col-symbol sortable" data-key="symbol" data-type="string" style="width: 12%" id="colSymbol">
+                                Ticker <span class="sort-indicator" id="sort-col-symbol">↕</span>
+                            </th>
+                            <th class="col-sector sortable" data-key="sector" data-type="string" style="width: 18%" id="colSector">
+                                Secteur <span class="sort-indicator" id="sort-col-sector">↕</span>
+                            </th>
+                            <th class="col-cap sortable" data-key="cap" data-type="string" style="width: 16%" id="colCap">
+                                Capitalisation <span class="sort-indicator" id="sort-col-cap">↕</span>
+                            </th>
+                            <th class="col-price sortable" data-key="price" data-type="number" style="width: 12%" id="colPrice">
+                                Cours <span class="sort-indicator" id="sort-col-price">↕</span>
+                            </th>
+                            <th class="col-change sortable" data-key="change" data-type="number" style="width: 10%" id="colChange">
+                                Var % <span class="sort-indicator" id="sort-col-change">↕</span>
+                            </th>
+                            <th class="col-pe sortable" data-key="pe" data-type="number" style="width: 8%" id="colPE">
+                                P/E <span class="sort-indicator" id="sort-col-pe">↕</span>
+                            </th>
+                            <th class="col-rating sentiment-header sortable" data-key="rating" data-type="string" style="width: 18%" id="colRating">
+                                Sentiment de marché
                                 <div class="sentiment-tooltip">
                                     Basé sur un résumé de +20 indicateurs techniques<br>
                                     <span class="legal-note">⚠️ Ne constitue pas un conseil financier</span>
                                 </div>
+                                <span class="sort-indicator" id="sort-col-rating">↕</span>
                             </th>
                         </tr>
                     </thead>
                     <tbody id="stockTableBody">
-                        <tr><td colspan="8" class="loading" id="loadingMsg">Loading...</td></tr>
+                        <tr><td colspan="7" class="loading" id="loadingMsg">Loading...</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
+        
 
-        <!-- Middle Column: Hespress Economy News + Twitter -->
-        <div class="right-column">
-            <!-- Hespress Economy News -->
-            <div class="news-panel">
-                <div class="panel-header">
-                    <span class="panel-title">RISK NETWORK RADAT</span>
-                </div>
-                <div class="news-list" id="hespressNewsList">
-                    <div class="loading" id="hespressLoading">Loading...</div>
-                </div>
+        <!-- News Panel -->
+        <div class="news-panel">
+            <div class="panel-header">
+                <span class="panel-title">◢ RISK NETWORK RADAR</span>
             </div>
 
-           
-
-        <!-- Right Column: Performers + Macro Indicators + RISK News -->
-        <div class="right-column">
-            <!-- Top/Worst Performers Widget -->
-            <div class="performers-panel">
-                <div class="performers-tabs">
-                    <button class="performer-tab active" id="topTab" onclick="switchPerformersTab('top')">Top 5</button>
-                    <button class="performer-tab" id="worstTab" onclick="switchPerformersTab('worst')">Worst 5</button>
-                </div>
-                <div class="performers-list" id="performersList">
-                    <div class="loading">Loading...</div>
-                </div>
+            <div class="news-list" id="newsList">
+                <div class="loading" id="newsLoading">Loading...</div>
             </div>
 
-            <!-- Macro Indicators Widget -->
-            <div class="macro-panel">
-                <div class="panel-header">
-                    <span class="panel-title">◈ Maroc Macro</span>
+            <div class="market-info">
+                <div class="market-info-row">
+                    <span class="market-info-label" id="hoursLabel">Market Hours:</span>
+                    <span>09:30 - 15:40</span>
                 </div>
-                <div class="macro-grid" id="macroGrid">
-                    <div class="loading" style="grid-column: 1 / -1;">Loading...</div>
-                </div>
-            </div>
-
-            <!-- RISK Network Radar -->
-            <div class="news-panel" style="flex: 1;">
-                <div class="panel-header">
-                    <span class="panel-title">◢ RISK NETWORK RADAR</span>
-                </div>
-                <div class="news-list" id="newsList">
-                    <div class="loading" id="newsLoading">Loading...</div>
-                </div>
-                <div class="market-info">
-                    <div class="market-info-row">
-                        <span class="market-info-label" id="hoursLabel">Market Hours:</span>
-                        <span>09:30 - 15:40</span>
-                    </div>
-                    <div class="market-info-row">
-                        <span class="market-info-label" id="daysLabel">Mon-Fri</span>
-                        <span id="nextOpen"></span>
-                    </div>
+                <div class="market-info-row">
+                    <span class="market-info-label" id="daysLabel">Mon-Fri</span>
+                    <span id="nextOpen"></span>
                 </div>
             </div>
+            <!-- Morocco Macro Indicators Panel -->
+<div class="macro-panel">
+    <div class="panel-header">
+        <span class="panel-title">◢ MOROCCO MACRO INDICATORS</span>
+        <button class="refresh-btn" id="refreshMacroBtn" onclick="fetchMacroData()">↻</button>
+    </div>
+    <div class="macro-list" id="macroList">
+        <div class="loading" id="macroLoading">Loading...</div>
+    </div>
+</div>
         </div>
+        
     </div>
 
-    <!-- Twitter Widget Script -->
-    <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+
 
     <script>
         // Configuration - CHANGE THIS TO YOUR RENDER URL
@@ -1217,9 +1182,8 @@
                 capitalisation: 'Capitalisation',
                 cours: 'Cours',
                 change: 'Var %',
-                volume: 'Volume',
                 pe: 'P/E',
-                sentiment: 'Sentiment',
+                sentiment: 'Sentiment de marché',
                 marketOpen: 'MARCHÉ OUVERT',
                 marketClosed: 'MARCHÉ FERMÉ',
                 hours: 'Horaires:',
@@ -1243,18 +1207,10 @@
                 columnsBtn: '☰ Colonnes',
                 sentimentTooltip: 'Basé sur un résumé de +20 indicateurs techniques',
                 sentimentLegal: '⚠️ Ne constitue pas un conseil financier',
-                macroTitle: '◈ MAROC MACRO',
-                gdp: 'PIB',
-                gdpGrowth: 'Croissance PIB',
-                inflation: 'Inflation',
-                unemployment: 'Chômage',
-                interestRate: 'Taux Directeur',
-                tradeBalance: 'Balance Com.',
-                debtToGdp: 'Dette/PIB',
-                population: 'Population',
-                top5: 'Top 5',
-                worst5: 'Worst 5',
-                noData: 'Aucune donnée'
+                topGainers: 'Top 5 Gainers',
+                topLosers: 'Top 5 Losers',
+                filtersBtn: 'Filtres',
+                clearFilters: 'Effacer'
             },
             en: {
                 stocksTitle: '◈ MASI ALL SHARES',
@@ -1263,9 +1219,8 @@
                 capitalisation: 'Market Cap',
                 cours: 'Price',
                 change: 'Change %',
-                volume: 'Volume',
                 pe: 'P/E',
-                sentiment: 'Sentiment',
+                sentiment: 'Market Sentiment',
                 marketOpen: 'MARKET OPEN',
                 marketClosed: 'MARKET CLOSED',
                 hours: 'Hours:',
@@ -1289,18 +1244,10 @@
                 columnsBtn: '☰ Columns',
                 sentimentTooltip: 'Based on summary of +20 technical indicators',
                 sentimentLegal: '⚠️ Not financial advice',
-                macroTitle: '◈ MOROCCO MACRO',
-                gdp: 'GDP',
-                gdpGrowth: 'GDP Growth',
-                inflation: 'Inflation',
-                unemployment: 'Unemployment',
-                interestRate: 'Interest Rate',
-                tradeBalance: 'Trade Bal.',
-                debtToGdp: 'Debt/GDP',
-                population: 'Population',
-                top5: 'Top 5',
-                worst5: 'Worst 5',
-                noData: 'No data'
+                topGainers: 'Top 5 Gainers',
+                topLosers: 'Top 5 Losers',
+                filtersBtn: 'Filters',
+                clearFilters: 'Clear'
             },
             ar: {
                 stocksTitle: '◈ جميع أسهم ماسي',
@@ -1309,9 +1256,8 @@
                 capitalisation: 'القيمة السوقية',
                 cours: 'السعر',
                 change: 'التغيير %',
-                volume: 'الحجم',
                 pe: 'P/E',
-                sentiment: 'المشاعر',
+                sentiment: 'مشاعر السوق',
                 marketOpen: 'السوق مفتوح',
                 marketClosed: 'السوق مغلق',
                 hours: 'الساعات:',
@@ -1335,18 +1281,10 @@
                 columnsBtn: '☰ الأعمدة',
                 sentimentTooltip: 'بناءً على ملخص +20 مؤشراً تقنياً',
                 sentimentLegal: '⚠️ لا يشكل نصيحة مالية',
-                macroTitle: '◈ المؤشرات الكلية',
-                gdp: 'الناتج المحلي',
-                gdpGrowth: 'نمو الناتج',
-                inflation: 'التضخم',
-                unemployment: 'البطالة',
-                interestRate: 'سعر الفائدة',
-                tradeBalance: 'الميزان التجاري',
-                debtToGdp: 'الدين/الناتج',
-                population: 'السكان',
-                top5: 'أفضل 5',
-                worst5: 'أسوأ 5',
-                noData: 'لا توجد بيانات'
+                topGainers: 'أفضل 5',
+                topLosers: 'أسوأ 5',
+                filtersBtn: 'تصفية',
+                clearFilters: 'مسح'
             }
         };
 
@@ -1355,14 +1293,8 @@
         let currentTheme = 'dark';
         let stocksData = [];
         let newsData = [];
-        let hespressNewsData = [];
         let masiData = null;
         let marketStatusData = null;
-        let macroData = null;
-        let performersData = { top: [], worst: [] };
-        let searchFilter = '';
-        let currentSort = { column: null, direction: 'asc' };
-        let currentPerformersTab = 'top';
 
         // Column visibility state
         let columnVisibility = {
@@ -1371,9 +1303,19 @@
             'col-cap': true,
             'col-price': true,
             'col-change': true,
-            'col-volume': true,
             'col-pe': true,
             'col-rating': true
+        };
+
+        // Sorting/Filtering state
+        const sortState = { key: 'change', direction: 'desc', type: 'number' }; // default sort by change desc
+        const filterState = {
+            ticker: '',
+            changeMin: null,
+            changeMax: null,
+            peMin: null,
+            peMax: null,
+            sector: ''
         };
 
         // Initialize
@@ -1386,22 +1328,11 @@
                 currentLang = e.target.value;
                 document.getElementById('mainContainer').dir = currentLang === 'ar' ? 'rtl' : 'ltr';
                 updateTranslations();
-                renderStocks();
-                renderNews();
-                renderHespressNews();
-                renderMacro();
-                renderPerformers();
-                updateTwitterTheme();
+                applyAll();
             });
 
             // Theme toggle
             document.getElementById('themeBtn').addEventListener('click', toggleTheme);
-
-            // Search filter
-            document.getElementById('searchBox').addEventListener('input', function(e) {
-                searchFilter = e.target.value.toUpperCase();
-                renderStocks();
-            });
 
             // Column filter toggle
             const columnFilterBtn = document.getElementById('columnFilterBtn');
@@ -1412,7 +1343,6 @@
                 columnFilterDropdown.classList.toggle('show');
             });
 
-            // Close dropdown when clicking outside
             document.addEventListener('click', function(e) {
                 if (!columnFilterDropdown.contains(e.target) && e.target !== columnFilterBtn) {
                     columnFilterDropdown.classList.remove('show');
@@ -1428,26 +1358,41 @@
                 });
             });
 
-            // Sort headers
-            document.querySelectorAll('.stock-table th.sortable').forEach(th => {
-                th.addEventListener('click', function() {
-                    const sortKey = this.getAttribute('data-sort');
-                    const sortType = this.getAttribute('data-type');
-                    
-                    if (currentSort.column === sortKey) {
-                        // Toggle direction
-                        currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+            // Sort on header click
+            document.querySelectorAll('th.sortable').forEach(th => {
+                th.addEventListener('click', () => {
+                    const key = th.getAttribute('data-key');
+                    const type = th.getAttribute('data-type');
+                    if (sortState.key === key) {
+                        sortState.direction = sortState.direction === 'asc' ? 'desc' : 'asc';
                     } else {
-                        currentSort.column = sortKey;
-                        currentSort.direction = 'desc'; // Default to desc for numbers, asc for strings
-                        if (sortType === 'string') {
-                            currentSort.direction = 'asc';
-                        }
+                        sortState.key = key;
+                        sortState.type = type || 'string';
+                        sortState.direction = type === 'number' ? 'desc' : 'asc';
                     }
-                    
-                    updateSortIndicators();
                     renderStocks();
+                    updateSortIndicators();
                 });
+            });
+
+            // Toggle Filter Bar
+            document.getElementById('toggleFilterBar').addEventListener('click', () => {
+                document.getElementById('filterBar').classList.toggle('show');
+            });
+
+            // Advanced filter events
+            document.getElementById('filterTicker').addEventListener('input', onFilterChange);
+            document.getElementById('filterChangeMin').addEventListener('input', onFilterChange);
+            document.getElementById('filterChangeMax').addEventListener('input', onFilterChange);
+            document.getElementById('filterPeMin').addEventListener('input', onFilterChange);
+            document.getElementById('filterPeMax').addEventListener('input', onFilterChange);
+            document.getElementById('filterSector').addEventListener('change', onFilterChange);
+            document.getElementById('clearFilters').addEventListener('click', clearFilters);
+
+            // Original ticker search still applies
+            document.getElementById('searchBox').addEventListener('input', function(e) {
+                filterState.ticker = e.target.value.toUpperCase();
+                renderStocks();
             });
 
             // Initial fetch
@@ -1455,6 +1400,9 @@
 
             // Auto refresh every 10 minutes
             setInterval(fetchAllData, 600000);
+
+            // Default sort by change desc
+            updateSortIndicators();
         });
 
         function updateClock() {
@@ -1467,42 +1415,28 @@
             currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
             document.body.setAttribute('data-theme', currentTheme);
             document.getElementById('themeBtn').textContent = currentTheme === 'dark' ? '☀️' : '🌙';
-            updateTwitterTheme();
-        }
-
-        function updateTwitterTheme() {
-            // Twitter widget theme update would require reload
-        }
-
-        function switchPerformersTab(tab) {
-            currentPerformersTab = tab;
-            document.getElementById('topTab').classList.toggle('active', tab === 'top');
-            document.getElementById('worstTab').classList.toggle('active', tab === 'worst');
-            renderPerformers();
         }
 
         function updateTranslations() {
             const t = translations[currentLang];
             document.getElementById('stocksTitle').textContent = t.stocksTitle;
-            document.getElementById('colSymbol').textContent = t.ticker;
-            document.getElementById('colSector').textContent = t.secteur;
-            document.getElementById('colCap').textContent = t.capitalisation;
-            document.getElementById('colPrice').textContent = t.cours;
-            document.getElementById('colChange').textContent = t.change;
-            document.getElementById('colVolume').textContent = t.volume;
-            document.getElementById('colPE').textContent = t.pe;
+            document.getElementById('colSymbol').childNodes[0].textContent = t.ticker + ' ';
+            document.getElementById('colSector').childNodes[0].textContent = t.secteur + ' ';
+            document.getElementById('colCap').childNodes[0].textContent = t.capitalisation + ' ';
+            document.getElementById('colPrice').childNodes[0].textContent = t.cours + ' ';
+            document.getElementById('colChange').childNodes[0].textContent = t.change + ' ';
+            document.getElementById('colPE').childNodes[0].textContent = t.pe + ' ';
             document.getElementById('colRating').childNodes[0].textContent = t.sentiment + ' ';
             document.getElementById('hoursLabel').textContent = t.hours;
             document.getElementById('daysLabel').textContent = t.days;
             document.getElementById('refreshBtn').textContent = t.refresh;
             document.getElementById('loadingMsg').textContent = t.loading;
             document.getElementById('newsLoading').textContent = t.loading;
-            document.getElementById('hespressLoading').textContent = t.loading;
             document.getElementById('searchBox').placeholder = t.searchPlaceholder;
             document.getElementById('columnFilterBtn').textContent = t.columnsBtn;
-            document.getElementById('topTab').textContent = t.top5;
-            document.getElementById('worstTab').textContent = t.worst5;
-
+            document.getElementById('toggleFilterBar').textContent = t.filtersBtn;
+            document.getElementById('clearFilters').textContent = t.clearFilters;
+            
             // Update tooltip content
             const tooltip = document.querySelector('.sentiment-tooltip');
             if (tooltip) {
@@ -1514,25 +1448,81 @@
             }
         }
 
-        function updateSortIndicators() {
-            document.querySelectorAll('.stock-table th.sortable').forEach(th => {
-                th.classList.remove('sort-asc', 'sort-desc');
-                const sortKey = th.getAttribute('data-sort');
-                if (sortKey === currentSort.column) {
-                    th.classList.add(currentSort.direction === 'asc' ? 'sort-asc' : 'sort-desc');
+        function updateColumnVisibility() {
+            document.querySelectorAll('.stock-table th').forEach(th => {
+                const colClass = Array.from(th.classList).find(c => c.startsWith('col-'));
+                if (colClass && columnVisibility[colClass] === false) {
+                    th.classList.add('hidden-column');
+                } else {
+                    th.classList.remove('hidden-column');
+                }
+            });
+            document.querySelectorAll('.stock-table td').forEach(td => {
+                const colClass = Array.from(td.classList).find(c => c.startsWith('col-'));
+                if (colClass && columnVisibility[colClass] === false) {
+                    td.classList.add('hidden-column');
+                } else {
+                    td.classList.remove('hidden-column');
                 }
             });
         }
 
-        function updateColumnVisibility() {
-            document.querySelectorAll('.stock-table th, .stock-table td').forEach(cell => {
-                const colClass = Array.from(cell.classList).find(c => c.startsWith('col-'));
-                if (colClass && columnVisibility[colClass] === false) {
-                    cell.classList.add('hidden-column');
-                } else {
-                    cell.classList.remove('hidden-column');
-                }
+        function updateSortIndicators() {
+            document.querySelectorAll('.sort-indicator').forEach(el => {
+                el.textContent = '↕';
+                el.style.color = 'var(--text-secondary)';
             });
+            const active = document.getElementById(`sort-col-${sortState.key}`);
+            if (active) {
+                active.textContent = sortState.direction === 'asc' ? '▲' : '▼';
+                active.style.color = 'var(--accent)';
+            }
+        }
+
+        function onFilterChange() {
+            const tTicker = document.getElementById('filterTicker').value.trim().toUpperCase();
+            const cMin = parseFloat(document.getElementById('filterChangeMin').value);
+            const cMax = parseFloat(document.getElementById('filterChangeMax').value);
+            const pMin = parseFloat(document.getElementById('filterPeMin').value);
+            const pMax = parseFloat(document.getElementById('filterPeMax').value);
+            const sector = document.getElementById('filterSector').value;
+
+            filterState.ticker = tTicker;
+            filterState.changeMin = isNaN(cMin) ? null : cMin;
+            filterState.changeMax = isNaN(cMax) ? null : cMax;
+            filterState.peMin = isNaN(pMin) ? null : pMin;
+            filterState.peMax = isNaN(pMax) ? null : pMax;
+            filterState.sector = sector;
+
+            renderStocks();
+        }
+
+        function clearFilters() {
+            document.getElementById('filterTicker').value = '';
+            document.getElementById('filterChangeMin').value = '';
+            document.getElementById('filterChangeMax').value = '';
+            document.getElementById('filterPeMin').value = '';
+            document.getElementById('filterPeMax').value = '';
+            document.getElementById('filterSector').value = '';
+            filterState.ticker = '';
+            filterState.changeMin = null;
+            filterState.changeMax = null;
+            filterState.peMin = null;
+            filterState.peMax = null;
+            filterState.sector = '';
+            renderStocks();
+        }
+
+        function populateSectorFilter() {
+            const sectors = Array.from(new Set(stocksData.map(s => s.sector).filter(Boolean))).sort((a, b) => a.localeCompare(b, currentLang));
+            const select = document.getElementById('filterSector');
+            const current = select.value;
+            select.innerHTML = '<option value="">Tous</option>' + sectors.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+            if (sectors.includes(current)) select.value = current;
+        }
+
+        function escapeHtml(str) {
+            return (str || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
         }
 
         async function fetchAllData() {
@@ -1544,21 +1534,22 @@
 
                 const data = await response.json();
 
-                stocksData = data.stocks || [];
+                stocksData = (data.stocks || []).map(s => ({
+                    ...s,
+                    cap: s.capital || '',
+                    pe: typeof s.pe === 'number' ? s.pe : (s.pe ? parseFloat(s.pe) : null)
+                }));
                 newsData = data.news || [];
-                hespressNewsData = data.hespress_news || [];
                 masiData = data.masi;
                 marketStatusData = data.market_status;
-                macroData = data.macro || {};
-                performersData = data.performers || { top: [], worst: [] };
+
+                populateSectorFilter();
 
                 renderStocks();
                 renderNews();
-                renderHespressNews();
                 renderMasi();
-                renderMacro();
-                renderPerformers();
                 updateMarketStatus(marketStatusData);
+                updateMoversWidget();
 
                 if (data.last_update) {
                     const date = new Date(data.last_update);
@@ -1572,7 +1563,7 @@
 
                 const t = translations[currentLang];
                 document.getElementById('stockTableBody').innerHTML = 
-                    `<tr><td colspan="8" class="error">${t.offline} - ${error.message}</td></tr>`;
+                    `<tr><td colspan="7" class="error">${t.offline} - ${error.message}</td></tr>`;
             }
         }
 
@@ -1629,150 +1620,57 @@
             }
         }
 
-        function renderPerformers() {
-            const container = document.getElementById('performersList');
-            const t = translations[currentLang];
-            const data = performersData[currentPerformersTab] || [];
-
-            if (data.length === 0) {
-                container.innerHTML = `<div class="loading">${t.noData}</div>`;
-                return;
-            }
-
-            let html = '';
-            data.forEach((stock, index) => {
-                const changeClass = stock.change >= 0 ? 'up' : 'down';
-                const sign = stock.change >= 0 ? '+' : '';
-                
-                html += `
-                    <div class="performer-item">
-                        <span class="performer-rank">${index + 1}</span>
-                        <div class="performer-info">
-                            <span class="performer-symbol">${stock.symbol}</span>
-                            <span class="performer-sector">${stock.sector}</span>
-                        </div>
-                        <span class="performer-change ${changeClass}">${sign}${stock.change.toFixed(2)}%</span>
-                    </div>
-                `;
-            });
-
-            container.innerHTML = html;
+        function applyAll() {
+            renderStocks();
+            updateColumnVisibility();
+            updateSortIndicators();
+            updateMoversWidget();
         }
 
-        function renderMacro() {
-            const container = document.getElementById('macroGrid');
-            const t = translations[currentLang];
+        function getFilteredSortedStocks() {
+            const hasLive = s => s.has_live_data;
 
-            if (!macroData || Object.keys(macroData).length === 0) {
-                container.innerHTML = `<div class="loading" style="grid-column: 1 / -1;">${t.loading}</div>`;
-                return;
-            }
+            let list = stocksData.filter(s => hasLive(s));
 
-            const indicators = [
-                { key: 'GDP', label: t.gdp, format: 'value' },
-                { key: 'GDP Growth', label: t.gdpGrowth, format: 'pct' },
-                { key: 'Inflation Rate', label: t.inflation, format: 'pct' },
-                { key: 'Unemployment Rate', label: t.unemployment, format: 'pct' },
-                { key: 'Interest Rate', label: t.interestRate, format: 'pct' },
-                { key: 'Balance of Trade', label: t.tradeBalance, format: 'value' },
-                { key: 'Government Debt to GDP', label: t.debtToGdp, format: 'pct' },
-                { key: 'Population', label: t.population, format: 'value' }
-            ];
+            const f = filterState;
+            list = list.filter(s => {
+                if (f.ticker && !s.symbol.toUpperCase().includes(f.ticker)) return false;
+                if (f.sector && s.sector !== f.sector) return false;
+                const change = typeof s.change === 'number' ? s.change : parseFloat(s.change);
+                if (f.changeMin !== null && !(change >= f.changeMin)) return false;
+                if (f.changeMax !== null && !(change <= f.changeMax)) return false;
+                const pe = typeof s.pe === 'number' ? s.pe : (s.pe != null ? parseFloat(s.pe) : null);
+                if (pe == null && (f.peMin !== null || f.peMax !== null)) return false;
+                if (f.peMin !== null && !(pe >= f.peMin)) return false;
+                if (f.peMax !== null && !(pe <= f.peMax)) return false;
+                return true;
+            });
 
-            let html = '';
-            indicators.forEach(ind => {
-                const data = macroData[ind.key];
-                if (data) {
-                    const changeClass = data.change > 0 ? 'up' : data.change < 0 ? 'down' : 'neutral';
-                    const sign = data.change > 0 ? '+' : '';
-                    
-                    html += `
-                        <div class="macro-item">
-                            <span class="macro-label">${ind.label}</span>
-                            <span class="macro-value">${data.value}</span>
-                            <span class="macro-change ${changeClass}">
-                                ${sign}${data.change_pct.toFixed(2)}%
-                            </span>
-                        </div>
-                    `;
+            // Sorting
+            const key = sortState.key;
+            const dir = sortState.direction === 'asc' ? 1 : -1;
+            const type = sortState.type;
+
+            list.sort((a, b) => {
+                let va = a[key];
+                let vb = b[key];
+
+                if (type === 'number') {
+                    va = typeof va === 'number' ? va : parseFloat(va);
+                    vb = typeof vb === 'number' ? vb : parseFloat(vb);
+                    if (isNaN(va) && isNaN(vb)) return 0;
+                    if (isNaN(va)) return 1;
+                    if (isNaN(vb)) return -1;
+                    return (va - vb) * dir;
+                } else {
+                    va = (va || '').toString().toLowerCase();
+                    vb = (vb || '').toString().toLowerCase();
+                    if (va === vb) return 0;
+                    return (va < vb ? -1 : 1) * dir;
                 }
             });
 
-            container.innerHTML = html || `<div class="no-data" style="grid-column: 1 / -1;">No data</div>`;
-        }
-
-        function formatVolume(volume) {
-            if (volume >= 1000000) {
-                return (volume / 1000000).toFixed(2) + 'M';
-            } else if (volume >= 1000) {
-                return (volume / 1000).toFixed(2) + 'K';
-            }
-            return volume.toString();
-        }
-
-        function parseCapital(capitalStr) {
-            // Parse "12.5B MAD" to number
-            if (!capitalStr || capitalStr === '—') return 0;
-            const match = capitalStr.match(/([\d.]+)([BKMT]?)/);
-            if (match) {
-                const num = parseFloat(match[1]);
-                const unit = match[2];
-                if (unit === 'B') return num * 1000000000;
-                if (unit === 'M') return num * 1000000;
-                if (unit === 'K') return num * 1000;
-                return num;
-            }
-            return 0;
-        }
-
-        function sortData(data) {
-            if (!currentSort.column) return data;
-
-            return [...data].sort((a, b) => {
-                let valA, valB;
-
-                switch (currentSort.column) {
-                    case 'symbol':
-                        valA = a.symbol;
-                        valB = b.symbol;
-                        break;
-                    case 'sector':
-                        valA = a.sector;
-                        valB = b.sector;
-                        break;
-                    case 'capital':
-                        valA = parseCapital(a.capital);
-                        valB = parseCapital(b.capital);
-                        break;
-                    case 'price':
-                        valA = a.price;
-                        valB = b.price;
-                        break;
-                    case 'change':
-                        valA = a.change;
-                        valB = b.change;
-                        break;
-                    case 'volume':
-                        valA = a.volume || 0;
-                        valB = b.volume || 0;
-                        break;
-                    case 'pe':
-                        valA = a.pe || 0;
-                        valB = b.pe || 0;
-                        break;
-                    default:
-                        return 0;
-                }
-
-                if (typeof valA === 'string') {
-                    valA = valA.toLowerCase();
-                    valB = valB.toLowerCase();
-                }
-
-                if (valA < valB) return currentSort.direction === 'asc' ? -1 : 1;
-                if (valA > valB) return currentSort.direction === 'asc' ? 1 : -1;
-                return 0;
-            });
+            return list;
         }
 
         function renderStocks() {
@@ -1780,42 +1678,36 @@
             const t = translations[currentLang];
 
             if (stocksData.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" class="no-data">${t.loading}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" class="no-data">${t.loading}</td></tr>`;
                 return;
             }
 
-            // Filter stocks based on search
-            let filteredStocks = stocksData.filter(stock => 
-                stock.symbol.toUpperCase().includes(searchFilter)
-            );
+            const list = getFilteredSortedStocks();
 
-            // Sort data
-            filteredStocks = sortData(filteredStocks);
-
-            if (filteredStocks.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" class="no-data">Aucun résultat</td></tr>`;
+            if (list.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="no-data">Aucun résultat</td></tr>`;
                 return;
             }
 
             let html = '';
 
-            filteredStocks.forEach(stock => {
+            list.forEach(stock => {
                 const hasData = stock.has_live_data;
-                const changeClass = stock.change > 0 ? 'up' : stock.change < 0 ? 'down' : 'neutral';
-                const sign = stock.change > 0 ? '+' : '';
-                const peDisplay = stock.pe ? stock.pe.toFixed(1) : '—';
+                const changeValue = typeof stock.change === 'number' ? stock.change : parseFloat(stock.change);
+                const changeClass = changeValue > 0 ? 'up' : changeValue < 0 ? 'down' : 'neutral';
+                const sign = changeValue > 0 ? '+' : '';
+                const peVal = typeof stock.pe === 'number' ? stock.pe : (stock.pe != null ? parseFloat(stock.pe) : null);
+                const peDisplay = peVal != null && !isNaN(peVal) ? peVal.toFixed(1) : '—';
                 const ratingClass = getRatingClass(stock.rating);
                 const ratingText = getRatingText(stock.rating, t);
-                const volumeDisplay = hasData ? formatVolume(stock.volume || 0) : '—';
 
                 html += `
                     <tr class="stock-row ${hasData ? '' : 'inactive'}">
-                        <td class="col-symbol symbol">${stock.symbol}</td>
-                        <td class="col-sector sector" title="${stock.sector}">${stock.sector}</td>
-                        <td class="col-cap capital">${stock.capital}</td>
-                        <td class="col-price price">${hasData ? stock.price.toFixed(2) : '—'}</td>
-                        <td class="col-change change ${changeClass}">${hasData ? sign + stock.change.toFixed(2) + '%' : '—'}</td>
-                        <td class="col-volume volume">${volumeDisplay}</td>
+                        <td class="col-symbol symbol" title="${escapeHtml(stock.symbol)}">${escapeHtml(stock.symbol)}</td>
+                        <td class="col-sector sector" title="${escapeHtml(stock.sector)}">${escapeHtml(stock.sector)}</td>
+                        <td class="col-cap capital">${escapeHtml(stock.capital)}</td>
+                        <td class="col-price price">${hasData ? (typeof stock.price === 'number' ? stock.price.toFixed(2) : parseFloat(stock.price).toFixed(2)) : '—'}</td>
+                        <td class="col-change change ${changeClass}">${hasData ? sign + (isNaN(changeValue) ? '0.00' : changeValue.toFixed(2)) + '%' : '—'}</td>
                         <td class="col-pe pe">${peDisplay}</td>
                         <td class="col-rating"><span class="rating ${ratingClass}">${ratingText}</span></td>
                     </tr>
@@ -1824,13 +1716,50 @@
 
             tbody.innerHTML = html;
 
-            // Apply current column visibility
             updateColumnVisibility();
 
-            // Update title with count
-            const liveCount = filteredStocks.filter(s => s.has_live_data).length;
-            const totalText = searchFilter ? `${filteredStocks.length}/${stocksData.length}` : `${liveCount}/${stocksData.length}`;
-            document.getElementById('stocksTitle').textContent = `${t.stocksTitle} • ${totalText}`;
+            const liveCount = list.length;
+            document.getElementById('stocksTitle').textContent = `${t.stocksTitle} • ${liveCount}/${stocksData.filter(s => s.has_live_data).length}`;
+        }
+
+        function updateMoversWidget() {
+            const t = translations[currentLang];
+
+            const liveStocks = stocksData.filter(s => s.has_live_data);
+            const withChange = liveStocks
+                .map(s => ({ symbol: s.symbol, change: typeof s.change === 'number' ? s.change : parseFloat(s.change) }))
+                .filter(s => !isNaN(s.change));
+
+            const topGainers = [...withChange].sort((a, b) => b.change - a.change).slice(0, 5);
+            const topLosers = [...withChange].sort((a, b) => a.change - b.change).slice(0, 5);
+
+            const gainersHtml = topGainers.map(s => {
+                const cls = s.change >= 0 ? 'up' : 'down';
+                const sign = s.change >= 0 ? '+' : '';
+                return `
+                    <div class="mover-item">
+                        <span class="mover-symbol">${escapeHtml(s.symbol)}</span>
+                        <span class="mover-change ${cls}">${sign}${s.change.toFixed(2)}%</span>
+                    </div>
+                `;
+            }).join('') || `<div class="no-data">${t.loading}</div>`;
+
+            const losersHtml = topLosers.map(s => {
+                const cls = s.change >= 0 ? 'up' : 'down';
+                const sign = s.change >= 0 ? '+' : '';
+                return `
+                    <div class="mover-item">
+                        <span class="mover-symbol">${escapeHtml(s.symbol)}</span>
+                        <span class="mover-change ${cls}">${sign}${s.change.toFixed(2)}%</span>
+                    </div>
+                `;
+            }).join('') || `<div class="no-data">${t.loading}</div>`;
+
+            document.querySelectorAll('.mover-title')[0].textContent = t.topGainers;
+            document.querySelectorAll('.mover-title')[1].textContent = t.topLosers;
+
+            document.getElementById('topGainersList').innerHTML = gainersHtml;
+            document.getElementById('topLosersList').innerHTML = losersHtml;
         }
 
         function getRatingClass(rating) {
@@ -1873,37 +1802,9 @@
                     <div class="news-item">
                         <div class="news-meta">
                             <span class="news-time">${timeText}</span>
-                            <span class="news-category">${item.category}</span>
+                            <span class="news-category">${escapeHtml(item.category)}</span>
                         </div>
-                        <a href="${item.link}" target="_blank" class="news-title">${item.title}</a>
-                    </div>
-                `;
-            });
-
-            container.innerHTML = html;
-        }
-
-        function renderHespressNews() {
-            const container = document.getElementById('hespressNewsList');
-            const t = translations[currentLang];
-
-            if (hespressNewsData.length === 0) {
-                container.innerHTML = `<div class="loading">${t.loading}</div>`;
-                return;
-            }
-
-            let html = '';
-
-            hespressNewsData.forEach(item => {
-                const timeText = formatTimeAgo(item.time, t);
-
-                html += `
-                    <div class="news-item">
-                        <div class="news-meta">
-                            <span class="news-time">${timeText}</span>
-                            <span class="news-category">${item.category}</span>
-                        </div>
-                        <a href="${item.link}" target="_blank" class="news-title">${item.title}</a>
+                        <a href="${item.link}" target="_blank" class="news-title">${escapeHtml(item.title)}</a>
                     </div>
                 `;
             });
