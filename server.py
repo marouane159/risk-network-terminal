@@ -258,7 +258,7 @@ def scrape_news():
         root = ET.fromstring(r.content)
         items = root.findall(".//item")
 
-        for item in items[:8]:
+        for item in items[:10]:
             title_elem = item.find("title")
             link_elem = item.find("link")
 
