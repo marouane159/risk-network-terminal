@@ -47,7 +47,7 @@
             transition: background 0.3s, color 0.3s;
         }
 
-        /* HIGH CONTRAST DISCLAIMER - Black BG, Orange text flashing to White */
+        /* HIGH CONTRAST DISCLAIMER */
         .disclaimer-banner {
             background: #000000;
             border-bottom: 3px solid #ff6600;
@@ -293,6 +293,74 @@
             color: var(--text-muted);
         }
 
+        /* Column Filter Dropdown */
+        .column-filter-container {
+            position: relative;
+        }
+
+        .column-filter-btn {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 11px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .column-filter-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .column-filter-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 5px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 8px;
+            min-width: 200px;
+            z-index: 100;
+            display: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+
+        .column-filter-dropdown.show {
+            display: block;
+        }
+
+        .column-filter-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 8px;
+            cursor: pointer;
+            border-radius: 3px;
+            transition: background 0.2s;
+        }
+
+        .column-filter-item:hover {
+            background: rgba(255, 102, 0, 0.1);
+        }
+
+        .column-filter-item input[type="checkbox"] {
+            cursor: pointer;
+        }
+
+        .column-filter-item label {
+            cursor: pointer;
+            flex: 1;
+            font-size: 11px;
+        }
+
         .last-update {
             color: var(--text-muted);
             font-size: 10px;
@@ -344,14 +412,31 @@
             z-index: 10;
         }
 
-        .stock-table th:nth-child(3),
-        .stock-table th:nth-child(4),
-        .stock-table th:nth-child(5),
-        .stock-table th:nth-child(6) {
+        .stock-table th.hidden-column,
+        .stock-table td.hidden-column {
+            display: none;
+        }
+
+        /* Column specific alignments */
+        .stock-table th.col-cap,
+        .stock-table th.col-price,
+        .stock-table th.col-change,
+        .stock-table th.col-pe {
             text-align: right;
         }
 
-        .stock-table th:nth-child(7) {
+        .stock-table th.col-rating {
+            text-align: center;
+        }
+
+        .stock-table td.col-cap,
+        .stock-table td.col-price,
+        .stock-table td.col-change,
+        .stock-table td.col-pe {
+            text-align: right;
+        }
+
+        .stock-table td.col-rating {
             text-align: center;
         }
 
@@ -361,17 +446,6 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-        }
-
-        .stock-table td:nth-child(3),
-        .stock-table td:nth-child(4),
-        .stock-table td:nth-child(5),
-        .stock-table td:nth-child(6) {
-            text-align: right;
-        }
-
-        .stock-table td:nth-child(7) {
-            text-align: center;
         }
 
         .stock-row:hover {
@@ -433,6 +507,58 @@
         .rating-sell { background: #ff8844; color: #000; }
         .rating-strong-sell { background: var(--down); color: #fff; }
         .rating-none { background: transparent; border: 1px solid var(--border); color: var(--text-muted); }
+
+        /* Sentiment Column Header with Tooltip */
+        .sentiment-header {
+            position: relative;
+            cursor: help;
+        }
+
+        .sentiment-header::after {
+            content: "ⓘ";
+            margin-left: 4px;
+            color: var(--accent);
+            font-size: 9px;
+        }
+
+        .sentiment-tooltip {
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-secondary);
+            border: 1px solid var(--accent);
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 10px;
+            color: var(--text-primary);
+            width: 250px;
+            z-index: 100;
+            display: none;
+            margin-top: 5px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+
+        .sentiment-header:hover .sentiment-tooltip {
+            display: block;
+        }
+
+        .sentiment-tooltip::before {
+            content: "";
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 5px solid transparent;
+            border-bottom-color: var(--accent);
+        }
+
+        .sentiment-tooltip .legal-note {
+            color: var(--accent);
+            font-weight: 600;
+            margin-top: 4px;
+            display: block;
+        }
 
         /* News Panel */
         .news-panel {
@@ -582,6 +708,11 @@
                 font-size: 10px;
                 padding: 8px;
             }
+
+            .column-filter-dropdown {
+                right: -50px;
+                min-width: 180px;
+            }
         }
 
         /* RTL Support */
@@ -590,14 +721,14 @@
             text-align: right !important;
         }
 
-        [dir="rtl"] .stock-table th:nth-child(3),
-        [dir="rtl"] .stock-table th:nth-child(4),
-        [dir="rtl"] .stock-table th:nth-child(5),
-        [dir="rtl"] .stock-table th:nth-child(6),
-        [dir="rtl"] .stock-table td:nth-child(3),
-        [dir="rtl"] .stock-table td:nth-child(4),
-        [dir="rtl"] .stock-table td:nth-child(5),
-        [dir="rtl"] .stock-table td:nth-child(6) {
+        [dir="rtl"] .stock-table th.col-cap,
+        [dir="rtl"] .stock-table th.col-price,
+        [dir="rtl"] .stock-table th.col-change,
+        [dir="rtl"] .stock-table th.col-pe,
+        [dir="rtl"] .stock-table td.col-cap,
+        [dir="rtl"] .stock-table td.col-price,
+        [dir="rtl"] .stock-table td.col-change,
+        [dir="rtl"] .stock-table td.col-pe {
             text-align: left !important;
         }
     </style>
@@ -674,6 +805,44 @@
                 <span class="panel-title" id="stocksTitle">◈ MASI ALL SHARES</span>
                 <div class="panel-actions">
                     <input type="text" class="search-box" id="searchBox" placeholder="Filtrer par symbole...">
+
+                    <!-- Column Filter Dropdown -->
+                    <div class="column-filter-container">
+                        <button class="column-filter-btn" id="columnFilterBtn" title="Afficher/Masquer colonnes">
+                            ☰ Colonnes
+                        </button>
+                        <div class="column-filter-dropdown" id="columnFilterDropdown">
+                            <div class="column-filter-item">
+                                <input type="checkbox" id="col-toggle-symbol" checked data-column="col-symbol">
+                                <label for="col-toggle-symbol">Ticker</label>
+                            </div>
+                            <div class="column-filter-item">
+                                <input type="checkbox" id="col-toggle-sector" checked data-column="col-sector">
+                                <label for="col-toggle-sector">Secteur</label>
+                            </div>
+                            <div class="column-filter-item">
+                                <input type="checkbox" id="col-toggle-cap" checked data-column="col-cap">
+                                <label for="col-toggle-cap">Capitalisation</label>
+                            </div>
+                            <div class="column-filter-item">
+                                <input type="checkbox" id="col-toggle-price" checked data-column="col-price">
+                                <label for="col-toggle-price">Cours</label>
+                            </div>
+                            <div class="column-filter-item">
+                                <input type="checkbox" id="col-toggle-change" checked data-column="col-change">
+                                <label for="col-toggle-change">Var %</label>
+                            </div>
+                            <div class="column-filter-item">
+                                <input type="checkbox" id="col-toggle-pe" checked data-column="col-pe">
+                                <label for="col-toggle-pe">P/E</label>
+                            </div>
+                            <div class="column-filter-item">
+                                <input type="checkbox" id="col-toggle-rating" checked data-column="col-rating">
+                                <label for="col-toggle-rating">Sentiment de marché</label>
+                            </div>
+                        </div>
+                    </div>
+
                     <span class="last-update" id="lastUpdate"></span>
                     <button class="refresh-btn" id="refreshBtn" onclick="fetchAllData()">↻</button>
                 </div>
@@ -683,13 +852,19 @@
                 <table class="stock-table">
                     <thead>
                         <tr>
-                            <th style="width: 10%" id="colSymbol">SYMBOL</th>
-                            <th style="width: 18%" id="colSector">SECTOR</th>
-                            <th style="width: 14%" id="colCap">MARKET CAP</th>
-                            <th style="width: 12%" id="colPrice">PRICE</th>
-                            <th style="width: 10%" id="colChange">CHANGE %</th>
-                            <th style="width: 8%" id="colPE">P/E</th>
-                            <th style="width: 14%" id="colRating">RATING</th>
+                            <th class="col-symbol" style="width: 12%" id="colSymbol">Ticker</th>
+                            <th class="col-sector" style="width: 18%" id="colSector">Secteur</th>
+                            <th class="col-cap" style="width: 16%" id="colCap">Capitalisation</th>
+                            <th class="col-price" style="width: 12%" id="colPrice">Cours</th>
+                            <th class="col-change" style="width: 10%" id="colChange">Var %</th>
+                            <th class="col-pe" style="width: 8%" id="colPE">P/E</th>
+                            <th class="col-rating sentiment-header" style="width: 18%" id="colRating">
+                                Sentiment de marché
+                                <div class="sentiment-tooltip">
+                                    Basé sur un résumé de +20 indicateurs techniques<br>
+                                    <span class="legal-note">⚠️ Ne constitue pas un conseil financier</span>
+                                </div>
+                            </th>
                         </tr>
                     </thead>
                     <tbody id="stockTableBody">
@@ -730,13 +905,13 @@
         const translations = {
             fr: {
                 stocksTitle: '◈ MASI ALL SHARES',
-                symbol: 'SYMBOL',
-                sector: 'SECTEUR',
-                cap: 'CAP. BOURSIÈRE',
-                price: 'COURS',
-                change: 'VAR %',
+                ticker: 'Ticker',
+                secteur: 'Secteur',
+                capitalisation: 'Capitalisation',
+                cours: 'Cours',
+                change: 'Var %',
                 pe: 'P/E',
-                rating: 'NOTATION',
+                sentiment: 'Sentiment de marché',
                 marketOpen: 'MARCHÉ OUVERT',
                 marketClosed: 'MARCHÉ FERMÉ',
                 hours: 'Horaires:',
@@ -756,17 +931,20 @@
                 hold: 'CONSERVER',
                 sell: 'VENTE',
                 strongSell: 'VENTE FORTE',
-                searchPlaceholder: 'Filtrer par symbole...'
+                searchPlaceholder: 'Filtrer par symbole...',
+                columnsBtn: '☰ Colonnes',
+                sentimentTooltip: 'Basé sur un résumé de +20 indicateurs techniques',
+                sentimentLegal: '⚠️ Ne constitue pas un conseil financier'
             },
             en: {
                 stocksTitle: '◈ MASI ALL SHARES',
-                symbol: 'SYMBOL',
-                sector: 'SECTOR',
-                cap: 'MARKET CAP',
-                price: 'PRICE',
-                change: 'CHANGE %',
+                ticker: 'Ticker',
+                secteur: 'Sector',
+                capitalisation: 'Market Cap',
+                cours: 'Price',
+                change: 'Change %',
                 pe: 'P/E',
-                rating: 'RATING',
+                sentiment: 'Market Sentiment',
                 marketOpen: 'MARKET OPEN',
                 marketClosed: 'MARKET CLOSED',
                 hours: 'Hours:',
@@ -786,17 +964,20 @@
                 hold: 'HOLD',
                 sell: 'SELL',
                 strongSell: 'STRONG SELL',
-                searchPlaceholder: 'Filter by symbol...'
+                searchPlaceholder: 'Filter by symbol...',
+                columnsBtn: '☰ Columns',
+                sentimentTooltip: 'Based on summary of +20 technical indicators',
+                sentimentLegal: '⚠️ Not financial advice'
             },
             ar: {
                 stocksTitle: '◈ جميع أسهم ماسي',
-                symbol: 'الرمز',
-                sector: 'القطاع',
-                cap: 'القيمة السوقية',
-                price: 'السعر',
+                ticker: 'الرمز',
+                secteur: 'القطاع',
+                capitalisation: 'القيمة السوقية',
+                cours: 'السعر',
                 change: 'التغيير %',
                 pe: 'P/E',
-                rating: 'التقييم',
+                sentiment: 'مشاعر السوق',
                 marketOpen: 'السوق مفتوح',
                 marketClosed: 'السوق مغلق',
                 hours: 'الساعات:',
@@ -816,7 +997,10 @@
                 hold: 'احتفاظ',
                 sell: 'بيع',
                 strongSell: 'بيع قوي',
-                searchPlaceholder: 'تصفية حسب الرمز...'
+                searchPlaceholder: 'تصفية حسب الرمز...',
+                columnsBtn: '☰ الأعمدة',
+                sentimentTooltip: 'بناءً على ملخص +20 مؤشراً تقنياً',
+                sentimentLegal: '⚠️ لا يشكل نصيحة مالية'
             }
         };
 
@@ -828,6 +1012,17 @@
         let masiData = null;
         let marketStatusData = null;
         let searchFilter = '';
+
+        // Column visibility state
+        let columnVisibility = {
+            'col-symbol': true,
+            'col-sector': true,
+            'col-cap': true,
+            'col-price': true,
+            'col-change': true,
+            'col-pe': true,
+            'col-rating': true
+        };
 
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
@@ -852,6 +1047,31 @@
                 renderStocks();
             });
 
+            // Column filter toggle
+            const columnFilterBtn = document.getElementById('columnFilterBtn');
+            const columnFilterDropdown = document.getElementById('columnFilterDropdown');
+
+            columnFilterBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                columnFilterDropdown.classList.toggle('show');
+            });
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!columnFilterDropdown.contains(e.target) && e.target !== columnFilterBtn) {
+                    columnFilterDropdown.classList.remove('show');
+                }
+            });
+
+            // Column toggle checkboxes
+            document.querySelectorAll('.column-filter-item input[type="checkbox"]').forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    const columnClass = this.getAttribute('data-column');
+                    columnVisibility[columnClass] = this.checked;
+                    updateColumnVisibility();
+                });
+            });
+
             // Initial fetch
             fetchAllData();
 
@@ -874,23 +1094,52 @@
         function updateTranslations() {
             const t = translations[currentLang];
             document.getElementById('stocksTitle').textContent = t.stocksTitle;
-            document.getElementById('colSymbol').textContent = t.symbol;
-            document.getElementById('colSector').textContent = t.sector;
-            document.getElementById('colCap').textContent = t.cap;
-            document.getElementById('colPrice').textContent = t.price;
+            document.getElementById('colSymbol').textContent = t.ticker;
+            document.getElementById('colSector').textContent = t.secteur;
+            document.getElementById('colCap').textContent = t.capitalisation;
+            document.getElementById('colPrice').textContent = t.cours;
             document.getElementById('colChange').textContent = t.change;
             document.getElementById('colPE').textContent = t.pe;
-            document.getElementById('colRating').textContent = t.rating;
+            document.getElementById('colRating').childNodes[0].textContent = t.sentiment + ' ';
             document.getElementById('hoursLabel').textContent = t.hours;
             document.getElementById('daysLabel').textContent = t.days;
             document.getElementById('refreshBtn').textContent = t.refresh;
             document.getElementById('loadingMsg').textContent = t.loading;
             document.getElementById('newsLoading').textContent = t.loading;
             document.getElementById('searchBox').placeholder = t.searchPlaceholder;
+            document.getElementById('columnFilterBtn').textContent = t.columnsBtn;
+
+            // Update tooltip content
+            const tooltip = document.querySelector('.sentiment-tooltip');
+            if (tooltip) {
+                tooltip.innerHTML = `${t.sentimentTooltip}<br><span class="legal-note">${t.sentimentLegal}</span>`;
+            }
 
             if (marketStatusData) {
                 updateMarketStatus(marketStatusData);
             }
+        }
+
+        function updateColumnVisibility() {
+            // Update headers
+            document.querySelectorAll('.stock-table th').forEach(th => {
+                const colClass = Array.from(th.classList).find(c => c.startsWith('col-'));
+                if (colClass && columnVisibility[colClass] === false) {
+                    th.classList.add('hidden-column');
+                } else {
+                    th.classList.remove('hidden-column');
+                }
+            });
+
+            // Update data cells
+            document.querySelectorAll('.stock-table td').forEach(td => {
+                const colClass = Array.from(td.classList).find(c => c.startsWith('col-'));
+                if (colClass && columnVisibility[colClass] === false) {
+                    td.classList.add('hidden-column');
+                } else {
+                    td.classList.remove('hidden-column');
+                }
+            });
         }
 
         async function fetchAllData() {
@@ -1013,18 +1262,21 @@
 
                 html += `
                     <tr class="stock-row ${hasData ? '' : 'inactive'}">
-                        <td class="symbol">${stock.symbol}</td>
-                        <td class="sector" title="${stock.sector}">${stock.sector}</td>
-                        <td class="capital">${stock.capital}</td>
-                        <td class="price">${hasData ? stock.price.toFixed(2) : '—'}</td>
-                        <td class="change ${changeClass}">${hasData ? sign + stock.change.toFixed(2) + '%' : '—'}</td>
-                        <td class="pe">${peDisplay}</td>
-                        <td><span class="rating ${ratingClass}">${ratingText}</span></td>
+                        <td class="col-symbol symbol">${stock.symbol}</td>
+                        <td class="col-sector sector" title="${stock.sector}">${stock.sector}</td>
+                        <td class="col-cap capital">${stock.capital}</td>
+                        <td class="col-price price">${hasData ? stock.price.toFixed(2) : '—'}</td>
+                        <td class="col-change change ${changeClass}">${hasData ? sign + stock.change.toFixed(2) + '%' : '—'}</td>
+                        <td class="col-pe pe">${peDisplay}</td>
+                        <td class="col-rating"><span class="rating ${ratingClass}">${ratingText}</span></td>
                     </tr>
                 `;
             });
 
             tbody.innerHTML = html;
+
+            // Apply current column visibility
+            updateColumnVisibility();
 
             // Update title with count
             const liveCount = filteredStocks.filter(s => s.has_live_data).length;
