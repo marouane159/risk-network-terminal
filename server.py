@@ -356,7 +356,7 @@ def scrape_hespress_economy():
     """
     global hespress_news_cache
 
-    url = "https://fr.hespress.com/economie/feed"
+    url = "https://risk.ma"
 
     try:
         r = requests.get(url, timeout=15)
